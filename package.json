@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "lerna run build",
+    "test": "lerna run test",
+    "format": "prettier --write ."
+  },
+  "author": "Muris Ceman <muris@frontsail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "devDependencies": {
+    "lerna": "^5.4.1",
+    "nx": "^14.5.4",
+    "prettier": "^2.7.1"
+  }
+}
