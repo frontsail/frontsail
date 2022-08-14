@@ -1,0 +1,31 @@
+{
+  "name": "@frontsail/utils",
+  "version": "0.1.0",
+  "description": "Opinionated collection of utility functions.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "types/index.d.ts",
+  "scripts": {
+    "build": "rimraf dist types && node esbuild.js && tsc",
+    "dev": "rimraf dist types && concurrently --raw \"node esbuild.js --watch\" \"tsc --watch --preserveWatchOutput\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontsail/frontsail.git"
+  },
+  "keywords": [
+    "frontsail"
+  ],
+  "author": "Muris Ceman <muris@frontsail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/frontsail/frontsail/issues"
+  },
+  "homepage": "https://github.com/frontsail/frontsail/tree/main/packages/utils#readme",
+  "devDependencies": {
+    "concurrently": "^7.3.0",
+    "esbuild": "^0.15.1",
+    "rimraf": "^3.0.2",
+    "typescript": "^4.7.4"
+  }
+}

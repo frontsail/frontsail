@@ -7,6 +7,8 @@
   "scripts": {
     "build": "lerna run build",
     "test": "lerna run test",
+    "dev:utils": "npm run dev -w @frontsail/utils",
+    "dev:core": "npm run dev -w @frontsail/core",
     "format": "prettier --write ."
   },
   "author": "Muris Ceman <muris@frontsail.com>",
