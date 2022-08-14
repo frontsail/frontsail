@@ -1,5 +1,5 @@
 import { clearArray } from '@frontsail/utils'
-import { Diagnostic } from '../types'
+import { Diagnostic } from './types/code'
 
 /**
  * Abstract class for managing code diagnostics organized by types.
