@@ -1,4 +1,3 @@
-import { clearArray } from '@frontsail/utils'
 import { defaultTreeAdapter, parse, parseFragment, serialize } from 'parse5'
 import {
   ChildNode,
@@ -7,7 +6,9 @@ import {
   Element,
   Node,
 } from 'parse5/dist/tree-adapters/default'
-import { Diagnostic, Range } from './types/code'
+import { Diagnostics } from './Diagnostics'
+import { JS } from './JS'
+import { Range } from './types/code'
 import { AttributeValue, HTMLDiagnostics, MustacheTag } from './types/html'
 import { isAttributeName, isEnclosed } from './validation'
 
@@ -19,7 +20,7 @@ enum NS {
 }
 
 /**
- * Transforms an HTML string into an abstract syntax tree using
+ * Parses and transforms an HTML string into an abstract syntax tree using
  * [parse5](https://github.com/inikulin/parse5).
  *
  * The class provides functionalities that meet the needs of FrontSail projects.
@@ -55,7 +56,7 @@ enum NS {
  *   interpolated within a specific template. They are always written in lower snake
  *   case (e.g. 'size', 'shadow_opacity', etc.).
  */
-export class HTML {
+export class HTML extends Diagnostics<HTMLDiagnostics> {
   /**
    * The adapter is a set of utility functions that provides minimal required
    * abstraction layer beetween the parse5 parser and a specific AST format.
@@ -73,51 +74,25 @@ export class HTML {
   protected _ast?: Document | DocumentFragment
 
   /**
-   * List of general error messages generated during AST creation.
-   */
-  protected _errors: string[] = []
-
-  /**
-   * Collection of diagnostics generated during linting.
+   * Collection of diagnostics organized by types.
    */
   protected _diagnostics: HTMLDiagnostics = {
+    syntax: [],
     attributeNames: [],
     ifExpressions: [],
   }
 
   /**
-   * Instantiate an abstract syntax tree.
+   * Instantiate with an abstract syntax tree.
    */
   constructor(html: string) {
+    super()
     this.init(html)
   }
 
   /**
-   * Clear diagnostics specified in `types`. Use a wildcard (`*`) to clear them all.
-   */
-  clearDiagnostics(
-    ...types: [keyof HTMLDiagnostics | '*', ...(keyof HTMLDiagnostics | '*')[]]
-  ): this {
-    Object.keys(this._diagnostics).forEach((type: keyof HTMLDiagnostics) => {
-      if (types.includes('*') || types.includes(type)) {
-        clearArray(this._diagnostics[type])
-      }
-    })
-
-    return this
-  }
-
-  /**
-   * Clear all errors.
-   */
-  clearErrors(): this {
-    clearArray(this._errors)
-    return this
-  }
-
-  /**
    * Create a new instance of this class instance using its raw HTML contents.
-   * Errors and diagnostics are not cloned.
+   * Diagnostics are not cloned.
    */
   clone(): HTML {
     return new HTML(this._html)
@@ -220,23 +195,6 @@ export class HTML {
   }
 
   /**
-   * Get diagnostics of specific `types`. Use a wildcard (`*`) to get them all.
-   */
-  getDiagnostics(
-    ...types: [keyof HTMLDiagnostics | '*', ...(keyof HTMLDiagnostics | '*')[]]
-  ): Diagnostic[] {
-    const diagnostics: Diagnostic[] = []
-
-    Object.keys(this._diagnostics).forEach((type: keyof HTMLDiagnostics) => {
-      if (types.includes('*') || types.includes(type)) {
-        diagnostics.push(...this._diagnostics[type])
-      }
-    })
-
-    return diagnostics
-  }
-
-  /**
    * Extract all `{{ mustache_tags }}` from the HTML code.
    */
   getMustaches(): MustacheTag[] {
@@ -268,24 +226,11 @@ export class HTML {
   }
 
   /**
-   * Check if there are any errors or diagnostics.
-   */
-  hasProblems(): boolean {
-    return (
-      !!this._errors.length ||
-      Object.keys(this._diagnostics).some((type: keyof HTMLDiagnostics) => {
-        return !!this._diagnostics[type].length
-      })
-    )
-  }
-
-  /**
-   * (Re)build the AST with a specified `html` string. Errors and diagnostics are
-   * cleared during this process.
+   * (Re)build the AST with a specified `html` string. Diagnostics are cleared
+   * during this process.
    */
   init(html: string): this {
     this._html = html
-    this.clearErrors()
     this.clearDiagnostics('*')
 
     try {
@@ -293,7 +238,7 @@ export class HTML {
         ? parse(html, { sourceCodeLocationInfo: true })
         : parseFragment(html, { sourceCodeLocationInfo: true })
     } catch (e) {
-      this._errors.push(e.message)
+      this._diagnostics.syntax.push(e.message)
     }
 
     return this
@@ -304,31 +249,57 @@ export class HTML {
    * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
    * `getDiagnostics()`.
    */
-  lint(...check: [keyof HTMLDiagnostics | '*', ...(keyof HTMLDiagnostics | '*')[]]): this {
-    this.clearDiagnostics(...check)
+  lint(
+    ...check: [
+      Exclude<keyof HTMLDiagnostics, 'syntax'> | '*',
+      ...(Exclude<keyof HTMLDiagnostics, 'syntax'> | '*')[],
+    ]
+  ): this {
+    if (!this.hasProblems('syntax')) {
+      this.clearDiagnostics(...check)
 
-    for (const node of this.walk()) {
-      if (HTML.adapter.isElementNode(node)) {
-        if (check.includes('attributeNames') || check.includes('*')) {
-          for (const attr of node.attrs) {
-            if (!isAttributeName(attr.name)) {
-              this._diagnostics.attributeNames.push({
-                message:
-                  attr.name.startsWith('{{') || attr.name.endsWith('}}')
-                    ? 'Mustache syntax is not allowed in attribute names.'
-                    : 'Invalid attribute name.',
-                severity: 'warning',
-                from: node.sourceCodeLocation!.attrs![attr.name].startOffset,
-                to: node.sourceCodeLocation!.attrs![attr.name].startOffset + attr.name.length,
-              })
+      for (const node of this.walk()) {
+        if (HTML.adapter.isElementNode(node)) {
+          if (check.includes('attributeNames') || check.includes('*')) {
+            for (const attr of node.attrs) {
+              if (!isAttributeName(attr.name)) {
+                this._diagnostics.attributeNames.push({
+                  message:
+                    attr.name.startsWith('{{') || attr.name.endsWith('}}')
+                      ? 'Mustache syntax is not allowed in attribute names.'
+                      : 'Invalid attribute name.',
+                  severity: 'warning',
+                  from: node.sourceCodeLocation!.attrs![attr.name].startOffset,
+                  to: node.sourceCodeLocation!.attrs![attr.name].startOffset + attr.name.length,
+                })
+              }
             }
           }
-        }
 
-        if (check.includes('ifExpressions') || check.includes('*')) {
-          for (const attr of node.attrs) {
-            if (attr.name === 'if') {
-              // @todo
+          if (check.includes('ifExpressions') || check.includes('*')) {
+            for (const attr of node.attrs) {
+              if (attr.name === 'if') {
+                const js = new JS(attr.value)
+
+                if (js.isIfAttributeValue()) {
+                  js.evaluate()
+
+                  if (js.hasProblems('*')) {
+                    this._diagnostics.attributeNames.push(
+                      ...js.getDiagnosticsWithOffset(
+                        this.getAttributeValueRange(node, 'if')!.from,
+                        '*',
+                      ),
+                    )
+                  }
+                } else {
+                  this._diagnostics.attributeNames.push({
+                    message: 'Call expressions and declarations are not allowed.',
+                    severity: 'error',
+                    ...this.getAttributeValueRange(node, 'if')!,
+                  })
+                }
+              }
             }
           }
         }
@@ -362,6 +333,8 @@ export class HTML {
 
   /**
    * Walks through all nodes in the AST.
+   *
+   * @throws an error if the AST is not defined.
    */
   protected *walk(): Generator<Node, void, unknown> {
     function* iterator(node: Node) {

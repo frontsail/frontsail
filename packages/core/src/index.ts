@@ -1,4 +1,5 @@
 export { Component } from './Component'
+export { Diagnostics } from './Diagnostics'
 export { HTML } from './HTML'
 export { Page } from './Page'
 export { Project } from './Project'
