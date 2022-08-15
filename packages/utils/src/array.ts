@@ -21,6 +21,18 @@ export function compareArrays(array1: any[], array2: any[]): boolean {
 }
 
 /**
+ * Get the unique difference between two arrays.
+ *
+ * @example
+ * diffArrays(['foo'], ['bar', 'bar']) // ['foo', 'bar']
+ */
+export function diffArrays<T>(array1: T[], array2: T[]): T[] {
+  return array1
+    .filter((item) => !array2.includes(item))
+    .concat(array2.filter((item) => !array1.includes(item)))
+}
+
+/**
  * Compute the intersection of two arrays. Duplicated values are removed from
  * the returned array.
  *
