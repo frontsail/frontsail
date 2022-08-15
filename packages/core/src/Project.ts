@@ -23,7 +23,7 @@ import { ProjectOptions } from './types/ProjectOptions'
  * - **Element** - An HTML element (e.g. `<div></div>`).
  *
  * - **Global** - Refers to a globally accessible string variable that can be
- *   interpolated across templates. Global variables are always written in upper
+ *   interpolated across templates. Global names are always written in upper
  *   snake case and must begin with a letter (e.g. 'YEAR', 'COPYRIGHT_TEXT', etc.).
  *
  * - **Inline CSS** - Refers to a CSS rule written in a custom `css` attribute,
@@ -45,9 +45,9 @@ import { ProjectOptions } from './types/ProjectOptions'
  * - **Project styles** - A single CSS file containing custom styles and inline CSS
  *   rules from all templates.
  *
- * - **Property** - Refers to a scoped variable that can only be accessed and
- *   interpolated within a specific template. They are always written in lower snake
- *   case and must begin with a letter (e.g. 'size', 'shadow_opacity', etc.).
+ * - **Property** - Refers to a scoped string variable that can only be accessed and
+ *   interpolated within a specific template. Property names are always written in
+ *   lower snake case (e.g. 'size', 'shadow_opacity', etc.).
  *
  * - **SCSS variable** - Refers to custom string variable that starts with a dollar
  *   sign (`$`) and can be used in custom and inline CSS code. The variable identifier

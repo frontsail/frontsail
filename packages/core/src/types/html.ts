@@ -15,9 +15,10 @@ export interface AttributeValue extends CodePart {
  * Describes a collection of diagnostics for an HTML AST organized by types (object key).
  */
 export interface HTMLDiagnostics {
-  syntax: Diagnostic[]
   attributeNames: Diagnostic[]
-  ifExpressions: Diagnostic[]
+  ifAttributes: Diagnostic[]
+  includeElements: Diagnostic[]
+  syntax: Diagnostic[]
 }
 
 /**

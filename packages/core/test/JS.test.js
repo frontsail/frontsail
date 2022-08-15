@@ -21,6 +21,15 @@ test('evaluation diagnostics', () => {
   expect(js.getDiagnostics('runtime')).toHaveProperty('0.to', 15)
 })
 
+test('extracting identifiers', () => {
+  expect(new JS('foo').getIdentifiers()).toEqual(['foo'])
+  expect(new JS('foo.bar').getIdentifiers()).toEqual(['foo'])
+  expect(new JS('foo && bar').getIdentifiers()).toEqual(['foo', 'bar'])
+  expect(new JS('foo().bar().baz').getIdentifiers()).toEqual(['foo'])
+  expect(new JS('`${(+foo + +bar)} baz`').getIdentifiers()).toEqual(['foo', 'bar'])
+  expect(() => new JS('{{ foo }} && bar').getIdentifiers()).toThrow()
+})
+
 test('if attribute value validation', () => {
   expect(new JS('foo').isIfAttributeValue()).toBe(true)
   expect(new JS('foo + bar').isIfAttributeValue()).toBe(true)

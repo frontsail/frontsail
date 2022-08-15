@@ -1,3 +1,4 @@
+import { uniqueArray } from '@frontsail/utils'
 import { defaultTreeAdapter, parse, parseFragment, serialize } from 'parse5'
 import {
   ChildNode,
@@ -10,7 +11,7 @@ import { Diagnostics } from './Diagnostics'
 import { JS } from './JS'
 import { Range } from './types/code'
 import { AttributeValue, HTMLDiagnostics, MustacheTag } from './types/html'
-import { isAttributeName, isEnclosed } from './validation'
+import { isAttributeName, isEnclosed, isPropertyName } from './validation'
 
 /**
  * Required HTML namespace which export is missing in parse5.
@@ -36,7 +37,7 @@ enum NS {
  * - **AST** - Refers to the HTML abstract sytax tree built with parse5.
  *
  * - **Global** - Refers to a globally accessible string variable that can be
- *   interpolated across templates. Global variables are always written in upper
+ *   interpolated across templates. Global names are always written in upper
  *   snake case (e.g. 'DESCRIPTION', 'COPYRIGHT_YEAR', etc.).
  *
  * - **Interpolation** - Refers to embedding expressions using the "Mustache" syntax
@@ -52,9 +53,9 @@ enum NS {
  *
  * - **parse5** - An HTML open source parsing and serialization toolset.
  *
- * - **Property** - Refers to a scoped variable that can only be accessed and
- *   interpolated within a specific template. They are always written in lower snake
- *   case (e.g. 'size', 'shadow_opacity', etc.).
+ * - **Property** - Refers to a scoped string variable that can only be accessed and
+ *   interpolated within a specific template. Property names are always written in
+ *   lower snake case (e.g. 'size', 'shadow_opacity', etc.).
  */
 export class HTML extends Diagnostics<HTMLDiagnostics> {
   /**
@@ -74,16 +75,23 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   protected _ast?: Document | DocumentFragment
 
   /**
+   * Alphabetically sorted property names found in mustache tags and if attributes
+   * in the AST.
+   */
+  protected _propertyNames: string[] = []
+
+  /**
    * Collection of diagnostics organized by types.
    */
   protected _diagnostics: HTMLDiagnostics = {
-    syntax: [],
     attributeNames: [],
-    ifExpressions: [],
+    ifAttributes: [],
+    includeElements: [],
+    syntax: [],
   }
 
   /**
-   * Instantiate with an abstract syntax tree.
+   * Instantiate with an abstract syntax tree and extract property names.
    */
   constructor(html: string) {
     super()
@@ -93,6 +101,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
       this._ast = html.trim().startsWith('<!DOCTYPE html>')
         ? parse(html, { sourceCodeLocationInfo: true })
         : parseFragment(html, { sourceCodeLocationInfo: true })
+      this._extractPropertyNames()
     } catch (e) {
       this._diagnostics.syntax.push(e.message)
     }
@@ -115,6 +124,31 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
       NS.HTML,
       Object.entries(attributes).map(([name, value]) => ({ name, value })),
     )
+  }
+
+  /**
+   * Find and store property names used in the HTML.
+   */
+  private _extractPropertyNames(): void {
+    const propertyNames: string[] = []
+
+    this.getMustaches().forEach((mustache) => {
+      if (isPropertyName(mustache.variable)) {
+        propertyNames.push(mustache.variable)
+      }
+    })
+
+    this.getAttributeValues('if').forEach((item) => {
+      if (item.element.tagName !== 'slot') {
+        const js = new JS(item.text)
+
+        if (js.isIfAttributeValue()) {
+          propertyNames.push(...js.getIdentifiers())
+        }
+      }
+    })
+
+    this._propertyNames = uniqueArray(propertyNames).sort()
   }
 
   /**
@@ -156,7 +190,25 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
-   * Get the range of an attribute value in HTML without its surrounding quotes.
+   * Get the range of an attribute name in the HTML.
+   *
+   * @returns null if the `attributeName` doesn't exist in the `element` attributes.
+   */
+  getAttributeNameRange(element: Element, attributeName: string): Range | null {
+    const attr = element.attrs.find((attr) => attr.name === attributeName)
+
+    if (attr) {
+      return {
+        from: element.sourceCodeLocation!.attrs![attributeName].startOffset,
+        to: element.sourceCodeLocation!.attrs![attributeName].startOffset + attributeName.length,
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * Get the range of an attribute value in the HTML without its surrounding quotes.
    *
    * @returns null if the `attributeName` doesn't exist in the `element` attributes.
    */
@@ -234,6 +286,13 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
+   * Get all extracted property names found in the HTML.
+   */
+  getPropertyNames(): string[] {
+    return [...this._propertyNames]
+  }
+
+  /**
    * Analyze all nodes in the AST and run tests specified in `check`. Use a wildcard
    * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
    * `getDiagnostics()`.
@@ -249,6 +308,9 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
 
       for (const node of this.walk()) {
         if (HTML.adapter.isElementNode(node)) {
+          //
+          // Check attribute names
+          //
           if (check.includes('attributeNames') || check.includes('*')) {
             for (const attr of node.attrs) {
               if (!isAttributeName(attr.name)) {
@@ -264,14 +326,24 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
               }
             }
           }
-
-          if (check.includes('ifExpressions') || check.includes('*')) {
+          //
+          // Check if attributes
+          //
+          if (check.includes('ifAttributes') || check.includes('*')) {
             for (const attr of node.attrs) {
               if (attr.name === 'if') {
                 const js = new JS(attr.value)
 
+                if (node.tagName === 'slot') {
+                  this._diagnostics.attributeNames.push({
+                    message: 'If statements cannot be used in slots.',
+                    severity: 'error',
+                    ...this.getAttributeNameRange(node, 'if')!,
+                  })
+                }
+
                 if (js.isIfAttributeValue()) {
-                  js.evaluate()
+                  js.evaluate(Object.fromEntries(this._propertyNames.map((p) => [p, ''])))
 
                   if (js.hasProblems('*')) {
                     this._diagnostics.attributeNames.push(
@@ -290,6 +362,15 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                 }
               }
             }
+          }
+          //
+          // Check include elements
+          //
+          if (
+            (check.includes('includeElements') || check.includes('*')) &&
+            node.tagName === 'include'
+          ) {
+            // @todo
           }
         }
       }

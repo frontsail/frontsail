@@ -59,7 +59,31 @@ test('extracting attribute values', () => {
   expect(html.getAttributeValues('bar')).toHaveLength(0)
 })
 
-test('attribute value ranges (1)', () => {
+test('extracting property names', () => {
+  expect(new HTML('<div if="foo">{{ bar }}</div>').getPropertyNames()).toEqual(['bar', 'foo'])
+  expect(new HTML('<img if="foo && !bar_baz">').getPropertyNames()).toEqual(['bar_baz', 'foo'])
+  expect(new HTML('<img if="{{ foo }}" {{ bar }}>').getPropertyNames()).toEqual(['bar', 'foo'])
+})
+
+test('attribute name range (1)', () => {
+  const html = new HTML('<div foo="bar"></div>')
+  const div = html.findElement('div')
+  const range = html.getAttributeNameRange(div, 'foo')
+
+  expect(range).toHaveProperty('from', 5)
+  expect(range).toHaveProperty('to', 8)
+})
+
+test('attribute name range (2)', () => {
+  const html = new HTML('<div foo = bar></div>')
+  const div = html.findElement('div')
+  const range = html.getAttributeNameRange(div, 'foo')
+
+  expect(range).toHaveProperty('from', 5)
+  expect(range).toHaveProperty('to', 8)
+})
+
+test('attribute value range (1)', () => {
   const html = new HTML('<div foo=" bar "></div>')
   const div = html.findElement('div')
   const range = html.getAttributeValueRange(div, 'foo')
@@ -68,7 +92,7 @@ test('attribute value ranges (1)', () => {
   expect(range).toHaveProperty('to', 15)
 })
 
-test('attribute value ranges (2)', () => {
+test('attribute value range (2)', () => {
   const html = new HTML('<div foo= bar ></div>')
   const div = html.findElement('div')
   const range = html.getAttributeValueRange(div, 'foo')
@@ -77,7 +101,7 @@ test('attribute value ranges (2)', () => {
   expect(range).toHaveProperty('to', 13)
 })
 
-test('attribute value ranges (3)', () => {
+test('attribute value range (3)', () => {
   const html = new HTML(`<div foo='bar'></div>`)
   const div = html.findElement('div')
   const range = html.getAttributeValueRange(div, 'foo')
@@ -86,7 +110,7 @@ test('attribute value ranges (3)', () => {
   expect(range).toHaveProperty('to', 13)
 })
 
-test('attribute value ranges (4)', () => {
+test('attribute value range (4)', () => {
   const html = new HTML(`<div foo=bar"></div>`)
   const div = html.findElement('div')
   const range = html.getAttributeValueRange(div, 'foo')

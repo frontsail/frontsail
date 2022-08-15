@@ -1,6 +1,6 @@
 import { uniqueArray } from '@frontsail/utils'
 import { Node, parse } from 'acorn'
-import { full } from 'acorn-walk'
+import { full, simple, SimpleVisitors } from 'acorn-walk'
 import { Diagnostics } from './Diagnostics'
 import { JSDiagnostics } from './types/js'
 
@@ -102,6 +102,21 @@ export class JS extends Diagnostics<JSDiagnostics> {
   }
 
   /**
+   * Find and return a list of identifiers in the AST.
+   */
+  getIdentifiers(): string[] {
+    const variables: string[] = []
+
+    this.walkSimple({
+      Identifier(node: Node & { name: string }) {
+        variables.push(node.name)
+      },
+    })
+
+    return variables
+  }
+
+  /**
    * Get a list of all nodes in the AST in the order they appear in the JS code.
    */
   getNodes(): Node[] {
@@ -129,9 +144,25 @@ export class JS extends Diagnostics<JSDiagnostics> {
    *
    * @throws an error if the AST is not defined.
    */
-  walk(callback: (node: Node) => void) {
+  walk(callback: (node: Node, type: string) => void) {
     if (this._ast) {
-      full(this._ast, (node) => callback(node))
+      full(this._ast, (node, _, type) => callback(node, type))
+    } else {
+      throw new Error('The abstract syntax tree is not defined.')
+    }
+  }
+
+  /**
+   * Walks through all nodes in the AST using the `simple` acorn-walk function.
+   *
+   * @see {@link https://github.com/acornjs/acorn/tree/master/acorn-walk#readme acorn-walk} for
+   * more detais.
+   *
+   * @throws an error if the AST is not defined.
+   */
+  walkSimple(visitors: SimpleVisitors<unknown>) {
+    if (this._ast) {
+      simple(this._ast, visitors)
     } else {
       throw new Error('The abstract syntax tree is not defined.')
     }
