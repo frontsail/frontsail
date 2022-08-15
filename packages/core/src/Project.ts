@@ -233,11 +233,6 @@ export class Project {
   }
 
   /**
-   * @todo
-   */
-  init(): void {}
-
-  /**
    * Deregister a component from the project by its `name`.
    *
    * @returns true the component has been removed.

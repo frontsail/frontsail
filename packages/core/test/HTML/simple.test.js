@@ -47,12 +47,6 @@ test('extracting mustache tags', () => {
   expect(mustaches).toHaveProperty('1.to', 30)
 })
 
-test('reinstantiation', () => {
-  const html = new HTML('<div></div>')
-
-  expect(html.init('<span></span>').toString()).toBe('<span></span>')
-})
-
 test('extracting attribute values', () => {
   const html = new HTML('<div foo="bar"></div>')
   const attributes = html.getAttributeValues('foo')

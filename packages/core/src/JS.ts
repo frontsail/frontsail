@@ -48,7 +48,13 @@ export class JS extends Diagnostics<JSDiagnostics> {
    */
   constructor(js: string) {
     super()
-    this.init(js)
+    this._js = js
+
+    try {
+      this._ast = parse(js, { ecmaVersion: 2020 })
+    } catch (e) {
+      this._diagnostics.syntax.push(e.message)
+    }
   }
 
   /**
@@ -102,23 +108,6 @@ export class JS extends Diagnostics<JSDiagnostics> {
     const nodes: Node[] = []
     this.walk((node) => nodes.push(node))
     return nodes
-  }
-
-  /**
-   * (Re)build the AST with a specified `js` string. Diagnostics are cleared during
-   * this process.
-   */
-  init(js: string): this {
-    this._js = js
-    this.clearDiagnostics('*')
-
-    try {
-      this._ast = parse(js, { ecmaVersion: 2020 })
-    } catch (e) {
-      this._diagnostics.syntax.push(e.message)
-    }
-
-    return this
   }
 
   /**

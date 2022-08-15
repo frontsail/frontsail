@@ -87,7 +87,15 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
    */
   constructor(html: string) {
     super()
-    this.init(html)
+    this._html = html
+
+    try {
+      this._ast = html.trim().startsWith('<!DOCTYPE html>')
+        ? parse(html, { sourceCodeLocationInfo: true })
+        : parseFragment(html, { sourceCodeLocationInfo: true })
+    } catch (e) {
+      this._diagnostics.syntax.push(e.message)
+    }
   }
 
   /**
@@ -223,25 +231,6 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
    */
   getNodes(): Node[] {
     return [...this.walk()]
-  }
-
-  /**
-   * (Re)build the AST with a specified `html` string. Diagnostics are cleared
-   * during this process.
-   */
-  init(html: string): this {
-    this._html = html
-    this.clearDiagnostics('*')
-
-    try {
-      this._ast = html.trim().startsWith('<!DOCTYPE html>')
-        ? parse(html, { sourceCodeLocationInfo: true })
-        : parseFragment(html, { sourceCodeLocationInfo: true })
-    } catch (e) {
-      this._diagnostics.syntax.push(e.message)
-    }
-
-    return this
   }
 
   /**
