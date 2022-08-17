@@ -48,12 +48,18 @@ export class JS extends Diagnostics<JSDiagnostics> {
    */
   constructor(js: string) {
     super()
+
     this._js = js
 
     try {
       this._ast = parse(js, { ecmaVersion: 2020 })
     } catch (e) {
-      this._diagnostics.syntax.push(e.message)
+      this.addDiagnostics('syntax', {
+        message: e.message,
+        severity: 'error',
+        from: 0,
+        to: js.length,
+      })
     }
   }
 
@@ -92,7 +98,7 @@ export class JS extends Diagnostics<JSDiagnostics> {
     try {
       return Function(`${constants}\nreturn ${this._js}`).call(null)
     } catch (e) {
-      this._diagnostics.runtime.push({
+      this.addDiagnostics('runtime', {
         message: e.toString(),
         severity: 'error',
         from: 0,

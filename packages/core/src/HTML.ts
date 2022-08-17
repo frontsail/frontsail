@@ -1,4 +1,4 @@
-import { uniqueArray } from '@frontsail/utils'
+import { clearArray, uniqueArray } from '@frontsail/utils'
 import { defaultTreeAdapter, parse, parseFragment, serialize } from 'parse5'
 import {
   ChildNode,
@@ -10,8 +10,15 @@ import {
 import { Diagnostics } from './Diagnostics'
 import { JS } from './JS'
 import { Range } from './types/code'
+import { AtLeastOne } from './types/generic'
 import { AttributeValue, HTMLDiagnostics, MustacheTag } from './types/html'
-import { isAttributeName, isEnclosed, isPropertyName } from './validation'
+import {
+  isAssetPath,
+  isAttributeName,
+  isComponentName,
+  isEnclosed,
+  isPropertyName,
+} from './validation'
 
 /**
  * Required HTML namespace which export is missing in parse5.
@@ -34,11 +41,16 @@ enum NS {
  *
  * Glossary:
  *
+ * - **Asset** - A file located in the `assets` directory.
+ *
  * - **AST** - Refers to the HTML abstract sytax tree built with parse5.
  *
  * - **Global** - Refers to a globally accessible string variable that can be
  *   interpolated across templates. Global names are always written in upper
  *   snake case (e.g. 'DESCRIPTION', 'COPYRIGHT_YEAR', etc.).
+ *
+ * - **Include** - Refers to using the special `<include>` tag to render asset file
+ *   contents or components.
  *
  * - **Interpolation** - Refers to embedding expressions using the "Mustache" syntax
  *   (double curly braces). Only globals (e.g. `{{ HOME_URL }}`) and properties
@@ -95,6 +107,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
    */
   constructor(html: string) {
     super()
+
     this._html = html
 
     try {
@@ -103,7 +116,12 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
         : parseFragment(html, { sourceCodeLocationInfo: true })
       this._extractPropertyNames()
     } catch (e) {
-      this._diagnostics.syntax.push(e.message)
+      this.addDiagnostics('syntax', {
+        message: e.message,
+        severity: 'error',
+        from: 0,
+        to: html.length,
+      })
     }
   }
 
@@ -129,7 +147,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   /**
    * Find and store property names used in the HTML.
    */
-  private _extractPropertyNames(): void {
+  protected _extractPropertyNames(): void {
     const propertyNames: string[] = []
 
     this.getMustaches().forEach((mustache) => {
@@ -148,45 +166,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
       }
     })
 
-    this._propertyNames = uniqueArray(propertyNames).sort()
-  }
-
-  /**
-   * Find an element node in the AST by a specified `tagName` and `attributes`. Use the
-   * wildcard (`*`) character to match all elements.
-   */
-  findElement(tagName: string = '*', attributes: { [name: string]: string } = {}): Element | null {
-    return this.findElements(tagName, attributes, 1)[0] ?? null
-  }
-
-  /**
-   * Find element nodes in the AST by a specified `tagName` and `attributes`. Use the
-   * wildcard (`*`) character to match all elements.
-   */
-  findElements(
-    tagName: string = '*',
-    attributes: { [name: string]: string } = {},
-    limitResults: number = Infinity,
-  ): Element[] {
-    const elements: Element[] = []
-
-    for (const node of this.getNodes()) {
-      if (limitResults <= elements.length) {
-        return elements
-      }
-
-      if (
-        HTML.adapter.isElementNode(node) &&
-        (tagName === '*' || node.tagName === tagName) &&
-        Object.entries(attributes).every(([name, value]) => {
-          return node.attrs.find((attr) => attr.name === name)?.value === value
-        })
-      ) {
-        elements.push(node)
-      }
-    }
-
-    return elements
+    clearArray(this._propertyNames).push(...uniqueArray(propertyNames).sort())
   }
 
   /**
@@ -194,7 +174,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
    *
    * @returns null if the `attributeName` doesn't exist in the `element` attributes.
    */
-  getAttributeNameRange(element: Element, attributeName: string): Range | null {
+  static getAttributeNameRange(element: Element, attributeName: string): Range | null {
     const attr = element.attrs.find((attr) => attr.name === attributeName)
 
     if (attr) {
@@ -205,6 +185,16 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     }
 
     return null
+  }
+
+  /**
+   * Get the range of an attribute name in the HTML.
+   *
+   * @alias HTML.getAttributeNameRange
+   * @returns null if the `attributeName` doesn't exist in the `element` attributes.
+   */
+  getAttributeNameRange(element: Element, attributeName: string): Range | null {
+    return HTML.getAttributeNameRange(element, attributeName)
   }
 
   /**
@@ -255,6 +245,44 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
+   * Find an element node in the AST by a specified `tagName` and `attributes`. Use the
+   * wildcard (`*`) character to match all elements.
+   */
+  getElement(tagName: string = '*', attributes: { [name: string]: string } = {}): Element | null {
+    return this.getElements(tagName, attributes, 1)[0] ?? null
+  }
+
+  /**
+   * Find element nodes in the AST by a specified `tagName` and `attributes`. Use the
+   * wildcard (`*`) character to match all elements.
+   */
+  getElements(
+    tagName: string = '*',
+    attributes: { [name: string]: string } = {},
+    limitResults: number = Infinity,
+  ): Element[] {
+    const elements: Element[] = []
+
+    for (const node of this.getNodes()) {
+      if (limitResults <= elements.length) {
+        return elements
+      }
+
+      if (
+        HTML.adapter.isElementNode(node) &&
+        (tagName === '*' || node.tagName === tagName) &&
+        Object.entries(attributes).every(([name, value]) => {
+          return node.attrs.find((attr) => attr.name === name)?.value === value
+        })
+      ) {
+        elements.push(node)
+      }
+    }
+
+    return elements
+  }
+
+  /**
    * Extract all `{{ mustache_tags }}` from the HTML code.
    */
   getMustaches(): MustacheTag[] {
@@ -293,28 +321,23 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
-   * Analyze all nodes in the AST and run tests specified in `check`. Use a wildcard
+   * Analyze all nodes in the AST and run the specified `tests`. Use a wildcard
    * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
    * `getDiagnostics()`.
    */
-  lint(
-    ...check: [
-      Exclude<keyof HTMLDiagnostics, 'syntax'> | '*',
-      ...(Exclude<keyof HTMLDiagnostics, 'syntax'> | '*')[],
-    ]
-  ): this {
+  lint(...tests: AtLeastOne<HTMLDiagnostics>): this {
     if (!this.hasProblems('syntax')) {
-      this.clearDiagnostics(...check)
+      this.clearDiagnostics(...tests)
 
       for (const node of this.walk()) {
         if (HTML.adapter.isElementNode(node)) {
           //
           // Check attribute names
           //
-          if (check.includes('attributeNames') || check.includes('*')) {
+          if (this.shouldTest('attributeNames', tests)) {
             for (const attr of node.attrs) {
               if (!isAttributeName(attr.name)) {
-                this._diagnostics.attributeNames.push({
+                this.addDiagnostics('attributeNames', {
                   message:
                     attr.name.startsWith('{{') || attr.name.endsWith('}}')
                       ? 'Mustache syntax is not allowed in attribute names.'
@@ -329,16 +352,16 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
           //
           // Check if attributes
           //
-          if (check.includes('ifAttributes') || check.includes('*')) {
+          if (this.shouldTest('ifAttributes', tests)) {
             for (const attr of node.attrs) {
               if (attr.name === 'if') {
                 const js = new JS(attr.value)
 
                 if (node.tagName === 'slot') {
-                  this._diagnostics.attributeNames.push({
+                  this.addDiagnostics('ifAttributes', {
                     message: 'If statements cannot be used in slots.',
-                    severity: 'error',
-                    ...this.getAttributeNameRange(node, 'if')!,
+                    severity: 'warning',
+                    ...HTML.getAttributeNameRange(node, attr.name)!,
                   })
                 }
 
@@ -346,18 +369,19 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                   js.evaluate(Object.fromEntries(this._propertyNames.map((p) => [p, ''])))
 
                   if (js.hasProblems('*')) {
-                    this._diagnostics.attributeNames.push(
+                    this.addDiagnostics(
+                      'ifAttributes',
                       ...js.getDiagnosticsWithOffset(
-                        this.getAttributeValueRange(node, 'if')!.from,
+                        this.getAttributeValueRange(node, attr.name)!.from,
                         '*',
                       ),
                     )
                   }
                 } else {
-                  this._diagnostics.attributeNames.push({
+                  this.addDiagnostics('ifAttributes', {
                     message: 'Call expressions and declarations are not allowed.',
                     severity: 'error',
-                    ...this.getAttributeValueRange(node, 'if')!,
+                    ...this.getAttributeValueRange(node, attr.name)!,
                   })
                 }
               }
@@ -366,11 +390,72 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
           //
           // Check include elements
           //
-          if (
-            (check.includes('includeElements') || check.includes('*')) &&
-            node.tagName === 'include'
-          ) {
-            // @todo
+          if (node.tagName === 'include' && this.shouldTest('includeElements', tests)) {
+            let includes: 'asset' | 'component' | 'both' | null = null
+
+            for (const attr of node.attrs) {
+              if ((attr.name === 'asset' || attr.name === 'component') && includes) {
+                includes = 'both'
+
+                this.addDiagnostics('includeElements', {
+                  message: 'Assets and componets cannot be included at the same time.',
+                  severity: 'warning',
+                  from: node.sourceCodeLocation!.startTag!.startOffset,
+                  to: node.sourceCodeLocation!.startTag!.endOffset,
+                })
+              }
+
+              if (attr.name === 'asset') {
+                if (includes !== 'both') {
+                  includes = 'asset'
+                }
+
+                if (!isAssetPath(attr.value)) {
+                  this.addDiagnostics('includeElements', {
+                    message: 'Invalid asset path format.',
+                    severity: 'warning',
+                    ...this.getAttributeValueRange(node, attr.name)!,
+                  })
+                }
+              } else if (attr.name === 'component') {
+                if (includes !== 'both') {
+                  includes = 'component'
+                }
+
+                if (!isComponentName(attr.value)) {
+                  this.addDiagnostics('includeElements', {
+                    message: 'Invalid component name format.',
+                    severity: 'warning',
+                    ...this.getAttributeValueRange(node, attr.name)!,
+                  })
+                }
+              } else if (attr.name !== 'if' && !isPropertyName(attr.name)) {
+                this.addDiagnostics('includeElements', {
+                  message: 'Invalid property name format.',
+                  severity: 'warning',
+                  ...HTML.getAttributeNameRange(node, attr.name)!,
+                })
+              }
+            }
+
+            if (includes === 'asset') {
+              for (const attr of node.attrs) {
+                if (!['asset', 'component', 'if'].includes(attr.name)) {
+                  this.addDiagnostics('includeElements', {
+                    message: 'Properties cannot be used when including an asset.',
+                    severity: 'warning',
+                    ...HTML.getAttributeNameRange(node, attr.name)!,
+                  })
+                }
+              }
+            } else if (!includes) {
+              this.addDiagnostics('includeElements', {
+                message: "Missing attribute 'asset' or 'component'.",
+                severity: 'warning',
+                from: node.sourceCodeLocation!.startTag!.startOffset,
+                to: node.sourceCodeLocation!.startTag!.endOffset,
+              })
+            }
           }
         }
       }
@@ -406,7 +491,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
    *
    * @throws an error if the AST is not defined.
    */
-  protected *walk(): Generator<Node, void, unknown> {
+  *walk(): Generator<Node, void, unknown> {
     function* iterator(node: Node) {
       yield node
 

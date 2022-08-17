@@ -1,6 +1,12 @@
+import { compareArrays, diffArrays, uniqueArray } from '@frontsail/utils'
 import { Component } from './Component'
 import { Page } from './Page'
-import { ProjectOptions } from './types/ProjectOptions'
+import { Template } from './Template'
+import { Diagnostic } from './types/code'
+import { ComponentDiagnostics } from './types/component'
+import { AtLeastOne } from './types/generic'
+import { PageDiagnostics } from './types/page'
+import { ProjectOptions } from './types/project'
 
 /**
  * Manages project variables, components, pages, assets, scripts, and styles.
@@ -10,6 +16,8 @@ import { ProjectOptions } from './types/ProjectOptions'
  * Glossary:
  *
  * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
+ *
+ * - **Asset** - A file located in the `assets` directory.
  *
  * - **Attribute** - An HTML attribute (e.g. `<div attribute-name="value"></div>`).
  *
@@ -25,6 +33,9 @@ import { ProjectOptions } from './types/ProjectOptions'
  * - **Global** - Refers to a globally accessible string variable that can be
  *   interpolated across templates. Global names are always written in upper
  *   snake case and must begin with a letter (e.g. 'YEAR', 'COPYRIGHT_TEXT', etc.).
+ *
+ * - **Include** - Refers to using the special `<include>` tag to render asset file
+ *   contents or components.
  *
  * - **Inline CSS** - Refers to a CSS rule written in a custom `css` attribute,
  *   without a selector, which can have nested SCSS-like ampersand-rules and at-rules.
@@ -169,10 +180,10 @@ export class Project {
           // @todo
           break
         case 'components':
-          options[key]?.forEach((args) => this.addComponent(args.name, args.html))
+          options[key]?.forEach((component) => this.addComponent(component.name, component.html))
           break
         case 'pages':
-          options[key]?.forEach((args) => this.addPage(args.path, args.html))
+          options[key]?.forEach((page) => this.addPage(page.path, page.html))
           break
         case 'js':
           // @todo
@@ -181,7 +192,7 @@ export class Project {
           // @todo
           break
         default:
-          throw new Error(`Unknown option key '${key}'.`)
+          throw new Error(`Unknown option '${key}'.`)
       }
     })
   }
@@ -192,99 +203,257 @@ export class Project {
    *
    * @throws an error if the component name is taken.
    */
-  addComponent(name: string, html: string): void {
+  addComponent(name: string, html: string): this {
     if (this.hasComponent(name)) {
       throw new Error(`A component named '${name}' already exists.`)
     }
 
-    this._components[name] = new Component(name, html)
+    this._components[name] = new Component(name, html, this)
+
+    return this
   }
 
   /**
    * Register a new page to the project. The page `path` must match the pattern
-   * `/^\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/`.
+   * `/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/`.
    *
    * @throws an error if the page path is taken.
    */
-  addPage(path: string, html: string): void {
+  addPage(path: string, html: string): this {
     if (this.hasPage(path)) {
       throw new Error(`A page with the path '${path}' already exists.`)
     }
 
-    this._pages[path] = new Page(path, html)
+    this._pages[path] = new Page(path, html, this)
+
+    return this
   }
 
   /**
-   * Check if a component with a specified `name` exists in the project.
+   * Check if there are any diagnostics of specific `types` in a component named
+   * `name`. Use a wildcard (`*`) to check all types.
+   *
+   * @throws an error if the component does not exist.
+   */
+  componentHasProblems(name: string, ...types: AtLeastOne<ComponentDiagnostics>): boolean {
+    return this._getComponent(name).hasProblems(...types)
+  }
+
+  /**
+   * Verify the existence of a component by its `name`.
+   *
+   * @throws an error if the component does not exist.
+   */
+  protected _ensureComponent(name: string): this {
+    if (!this.hasComponent(name)) {
+      throw new Error(`Component '${name}' does not exist.`)
+    }
+
+    return this
+  }
+
+  /**
+   * Verify the existence of a page by its `path`.
+   *
+   * @throws an error if the page does not exist.
+   */
+  protected _ensurePage(path: string): this {
+    if (!this.hasPage(path)) {
+      throw new Error(`Page '${path}' does not exist.`)
+    }
+
+    return this
+  }
+
+  /**
+   * Get a component by its `name`.
+   *
+   * @throws an error if the component does not exist.
+   */
+  protected _getComponent(name: string): Component {
+    return this._ensureComponent(name)._components[name]
+  }
+
+  /**
+   * Get diagnostics of specific `types` in a component named `name`. Use a wildcard
+   * (`*`) to get diagnostics of all types.
+   *
+   * @throws an error if the page does not exist.
+   */
+  getComponentDiagnostics(name: string, ...types: AtLeastOne<ComponentDiagnostics>): Diagnostic[] {
+    return this._getComponent(name).getDiagnostics(...types)
+  }
+
+  /**
+   * Get a list of all included components recursively from a template identified
+   * with `id`.
+   *
+   * @param id Component name or page path.
+   * @throws an error if the template with the specified `id` does not exist.
+   */
+  getIncludedComponentsInTemplate(id: string): string[] {
+    const components = this._getTemplate(id).getIncludedComponentNames()
+    const checked = this.hasComponent(id) ? [id] : []
+
+    while (!compareArrays(components, checked)) {
+      for (const name of diffArrays(components, checked)) {
+        if (this.hasComponent(name)) {
+          components.push(...this._getComponent(name).getIncludedComponentNames())
+        }
+
+        checked.push(name)
+      }
+    }
+
+    return uniqueArray(components).sort()
+  }
+
+  /**
+   * Get a page by its `path`.
+   *
+   * @throws an error if the page does not exist.
+   */
+  protected _getPage(path: string): Page {
+    return this._ensurePage(path)._pages[path]
+  }
+
+  /**
+   * Get diagnostics of specific `types` from a page with the path `path`. Use a
+   * wildcard (`*`) to get diagnostics of all types.
+   *
+   * @throws an error if the page does not exist.
+   */
+  getPageDiagnostics(path: string, ...types: AtLeastOne<PageDiagnostics>): Diagnostic[] {
+    return this._getPage(path).getDiagnostics(...types)
+  }
+
+  /**
+   * Get a template by its `id` (component name or page path).
+   *
+   * @throws an error if the template does not exist.
+   */
+  protected _getTemplate(id: string): Template {
+    if (this.hasComponent(id)) {
+      return this._getComponent(id)
+    } else if (this.hasPage(id)) {
+      return this._getPage(id)
+    } else {
+      throw new Error(`The template '${id}' does not exist.`)
+    }
+  }
+
+  /**
+   * Check if a component named `name` exists in the project.
    *
    * @returns true the component exists in the project.
    */
   hasComponent(name: string): boolean {
-    return !!this._components[name]
+    return this._components.hasOwnProperty(name)
   }
 
   /**
-   * Check if a page with a specified `path` exists in the project.
+   * Check if a page with the path `path` exists in the project.
    *
    * @returns true the page exists in the project.
    */
   hasPage(path: string): boolean {
-    return !!this._pages[path]
+    return this._pages.hasOwnProperty(path)
   }
 
   /**
-   * Deregister a component from the project by its `name`.
-   *
-   * @returns true the component has been removed.
+   * Get a list of all registered component names in the project.
    */
-  removeComponent(name: string): boolean {
-    if (this.hasComponent(name)) {
-      delete this._components[name]
-      return true
-    }
-
-    return false
+  listComponents(): string[] {
+    return Object.keys(this._components).sort()
   }
 
   /**
-   * Deregister a page from the project by its `path`.
-   *
-   * @returns true the page has been removed.
+   * Get a list of all registered page paths in the project.
    */
-  removePage(path: string): boolean {
-    if (this.hasPage(path)) {
-      delete this._pages[path]
-      return true
-    }
-
-    return false
+  listPages(): string[] {
+    return Object.keys(this._pages).sort()
   }
 
   /**
-   * Reinstantiate an existing component with new `html` content.
+   * Check if a template (component or page) includes a component recursively.
    *
-   * @throws an error if a previous component with the same `name` doesn't exist.
+   * @param templateId ID of the template to search in.
+   * @param componentName Component name to search for.
+   * @throws an error if the template with the specified `templateId` does not exist.
    */
-  updateComponent(name: string, html: string): void {
-    if (!this.hasComponent(name)) {
-      throw new Error(`The component '${name}' does not exist.'`)
-    }
-
-    this.removeComponent(name)
-    this.addComponent(name, html)
+  templateIncludesComponent(templateId: string, componentName: string): boolean {
+    return this.getIncludedComponentsInTemplate(templateId).includes(componentName)
   }
 
   /**
-   * Reinstantiate an existing page with new `html` content.
+   * Analyze a component named `name` by running specified `tests`. Use a wildcard
+   * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
+   * `getComponentDiagnostics()`.
    *
-   * @throws an error if a previous page with the same `path` doesn't exist.
+   * @throws an error if the component does not exist.
    */
-  updatePage(path: string, html: string): void {
-    if (!this.hasPage(path)) {
-      throw new Error(`The page '${path}' does not exist.'`)
-    }
+  lintComponent(name: string, ...tests: AtLeastOne<ComponentDiagnostics>): this {
+    this._getComponent(name).lint(...tests)
+    return this
+  }
 
-    this.removePage(path)
-    this.addPage(path, html)
+  /**
+   * Analyze a page with the path `path` by running specified `tests`. Use a wildcard
+   * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
+   * `getPageDiagnostics()`.
+   *
+   * @throws an error if the component does not exist.
+   */
+  lintPage(path: string, ...tests: AtLeastOne<PageDiagnostics>): this {
+    this._getPage(path).lint(...tests)
+    return this
+  }
+
+  /**
+   * Check if there are any diagnostics of specific `types` in a page with the path
+   * `path`. Use a wildcard (`*`) to check all types.
+   *
+   * @throws an error if the page does not exist.
+   */
+  pageHasProblems(path: string, ...types: AtLeastOne<PageDiagnostics>): boolean {
+    return this._getPage(path).hasProblems(...types)
+  }
+
+  /**
+   * Deregister a component named `name` from the project.
+   *
+   * @throws an error if the component does not exist.
+   */
+  removeComponent(name: string): this {
+    delete this._ensureComponent(name)._components[name]
+    return this
+  }
+
+  /**
+   * Deregister a page with the path `path` from the project.
+   *
+   * @throws an error if the page does not exist.
+   */
+  removePage(path: string): this {
+    delete this._ensurePage(path)._pages[path]
+    return this
+  }
+
+  /**
+   * Reinstantiate an existing component named `name` with new `html` content.
+   *
+   * @throws an error if a previous component with the `name` does not exist.
+   */
+  updateComponent(name: string, html: string): this {
+    return this.removeComponent(name).addComponent(name, html)
+  }
+
+  /**
+   * Reinstantiate an existing page with the path `path` with new `html` content.
+   *
+   * @throws an error if a previous page with the `path` does not exist.
+   */
+  updatePage(path: string, html: string): this {
+    return this.removePage(path).addPage(path, html)
   }
 }

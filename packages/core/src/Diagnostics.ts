@@ -1,5 +1,6 @@
 import { clearArray } from '@frontsail/utils'
 import { Diagnostic } from './types/code'
+import { AtLeastOne } from './types/generic'
 
 /**
  * Abstract class for managing code diagnostics organized by types.
@@ -11,9 +12,28 @@ export abstract class Diagnostics<T extends { [K in keyof T]: Diagnostic[] }> {
   protected _diagnostics: T
 
   /**
-   * Clear diagnostics specified in `types`. Use a wildcard (`*`) to clear them all.
+   * Store `diagnostics` of a specific `type`.
    */
-  clearDiagnostics(...types: [keyof T | '*', ...(keyof T | '*')[]]): this {
+  addDiagnostics(type: keyof T, ...diagnostics: Diagnostic[]): this {
+    this._diagnostics[type].push(...diagnostics)
+    return this
+  }
+
+  /**
+   * Store `diagnostics` of a specific `type`. Unknown `types` are ignored.
+   */
+  addUnknownDiagnostics(type: string | number | symbol, ...diagnostics: Diagnostic[]): this {
+    if (this._diagnostics.hasOwnProperty(type)) {
+      this.addDiagnostics(type as keyof T, ...diagnostics)
+    }
+
+    return this
+  }
+
+  /**
+   * Clear diagnostics of specific `types`. Use a wildcard (`*`) to clear all.
+   */
+  clearDiagnostics(...types: AtLeastOne<T>): this {
     for (const type in this._diagnostics) {
       if (types.includes('*') || types.includes(type)) {
         clearArray(this._diagnostics[type])
@@ -24,9 +44,21 @@ export abstract class Diagnostics<T extends { [K in keyof T]: Diagnostic[] }> {
   }
 
   /**
-   * Get diagnostics of specific `types`. Use a wildcard (`*`) to get them all.
+   * Filter a list of `tests` to include only those specific to the class.
    */
-  getDiagnostics(...types: [keyof T | '*', ...(keyof T | '*')[]]): Diagnostic[] {
+  filterTests(tests: any[]): (keyof T | '*')[] {
+    const types = Object.keys(this._diagnostics)
+
+    return tests.filter((test) => {
+      return test === '*' || types.includes(test)
+    })
+  }
+
+  /**
+   * Get diagnostics of specific `types`. Use a wildcard (`*`) to get diagnostics
+   * of all types.
+   */
+  getDiagnostics(...types: AtLeastOne<T>): Diagnostic[] {
     const diagnostics: Diagnostic[] = []
 
     for (const type in this._diagnostics) {
@@ -42,10 +74,7 @@ export abstract class Diagnostics<T extends { [K in keyof T]: Diagnostic[] }> {
    * Get diagnostics of specific `types` and apply an `offset` that is added to
    * all returned diagnostic ranges. Use a wildcard (`*`) to get all diagnostics.
    */
-  getDiagnosticsWithOffset(
-    offset: number = 0,
-    ...types: [keyof T | '*', ...(keyof T | '*')[]]
-  ): Diagnostic[] {
+  getDiagnosticsWithOffset(offset: number = 0, ...types: AtLeastOne<T>): Diagnostic[] {
     return this.getDiagnostics(...types).map((diagnostic) => ({
       ...diagnostic,
       from: diagnostic.from + offset,
@@ -57,13 +86,49 @@ export abstract class Diagnostics<T extends { [K in keyof T]: Diagnostic[] }> {
    * Check if there are any diagnostics of specific `types`. Use a wildcard (`*`)
    * to check all types.
    */
-  hasProblems(...types: [keyof T | '*', ...(keyof T | '*')[]]): boolean {
+  hasProblems(...types: AtLeastOne<T>): boolean {
     for (const type in this._diagnostics) {
-      if ((types.includes('*') || types.includes(type)) && !!this._diagnostics[type].length) {
+      if ((types.includes('*') || types.includes(type)) && this._diagnostics[type].length > 0) {
         return true
       }
     }
 
     return false
+  }
+
+  /**
+   * Should analyze some code and run the specified `_tests`. A wildcard (`*`) can be
+   * used to run all types of tests.
+   */
+  lint(..._tests: AtLeastOne<T>): this {
+    return this
+  }
+
+  /**
+   * Determines whether a `test` is included in a collection of `tests`.
+   */
+  shouldTest(test: keyof T | '*', tests: (keyof T | '*')[]): boolean {
+    return tests.includes('*') || tests.includes(test)
+  }
+
+  /**
+   * Run `tests` in another instance of `Diagnostics` and merge their diagnostics
+   * into this instance.
+   */
+  testAndMergeDiagnostics<U extends { [K in keyof U]: Diagnostic[] }>(
+    instance: Diagnostics<U>,
+    ...tests: AtLeastOne<T>
+  ): this {
+    const instanceTests = instance.filterTests(tests)
+
+    if (instanceTests.length > 0) {
+      instance.lint(instanceTests[0], ...instanceTests.slice(1))
+
+      for (const test of instanceTests) {
+        this.addUnknownDiagnostics(test, ...instance.getDiagnostics(test))
+      }
+    }
+
+    return this
   }
 }

@@ -1,4 +1,4 @@
-import { HTML } from '@frontsail/core'
+import { HTML } from '../..'
 
 test('serialization and listing nodes', () => {
   const html = new HTML('<div></div>')
@@ -12,23 +12,23 @@ test('serialization and listing nodes', () => {
 test('finding elements', () => {
   const html = new HTML('<header><div></div><div foo="bar"></div></header>')
 
-  expect(html.findElement('header')).toHaveProperty('tagName', 'header')
-  expect(html.findElement('div').attrs).toHaveLength(0)
-  expect(html.findElements('div')).toHaveLength(2)
-  expect(html.findElements('span')).toHaveLength(0)
-  expect(html.findElement('span')).toBe(null)
-  expect(html.findElement('*')).toHaveProperty('tagName', 'header')
-  expect(html.findElements('*')).toHaveLength(3)
-  expect(html.findElements('*')).toHaveProperty('0.tagName', 'header')
-  expect(html.findElements('*', { foo: 'bar' })).toHaveLength(1)
-  expect(html.findElement('*', { foo: 'bar' }).attrs).toHaveLength(1)
+  expect(html.getElement('header')).toHaveProperty('tagName', 'header')
+  expect(html.getElement('div').attrs).toHaveLength(0)
+  expect(html.getElements('div')).toHaveLength(2)
+  expect(html.getElements('span')).toHaveLength(0)
+  expect(html.getElement('span')).toBe(null)
+  expect(html.getElement('*')).toHaveProperty('tagName', 'header')
+  expect(html.getElements('*')).toHaveLength(3)
+  expect(html.getElements('*')).toHaveProperty('0.tagName', 'header')
+  expect(html.getElements('*', { foo: 'bar' })).toHaveLength(1)
+  expect(html.getElement('*', { foo: 'bar' }).attrs).toHaveLength(1)
 })
 
 test('replacing a cloned div element', () => {
   const html = new HTML('<div></div>')
   const clone = html.clone()
 
-  HTML.replaceElement(clone.findElement('div'), HTML.createElement('span'))
+  HTML.replaceElement(clone.getElement('div'), HTML.createElement('span'))
 
   expect(html.toString()).toBe('<div></div>')
   expect(clone.toString()).toBe('<span></span>')
@@ -67,7 +67,7 @@ test('extracting property names', () => {
 
 test('attribute name range (1)', () => {
   const html = new HTML('<div foo="bar"></div>')
-  const div = html.findElement('div')
+  const div = html.getElement('div')
   const range = html.getAttributeNameRange(div, 'foo')
 
   expect(range).toHaveProperty('from', 5)
@@ -76,7 +76,7 @@ test('attribute name range (1)', () => {
 
 test('attribute name range (2)', () => {
   const html = new HTML('<div foo = bar></div>')
-  const div = html.findElement('div')
+  const div = html.getElement('div')
   const range = html.getAttributeNameRange(div, 'foo')
 
   expect(range).toHaveProperty('from', 5)
@@ -85,7 +85,7 @@ test('attribute name range (2)', () => {
 
 test('attribute value range (1)', () => {
   const html = new HTML('<div foo=" bar "></div>')
-  const div = html.findElement('div')
+  const div = html.getElement('div')
   const range = html.getAttributeValueRange(div, 'foo')
 
   expect(range).toHaveProperty('from', 10)
@@ -94,7 +94,7 @@ test('attribute value range (1)', () => {
 
 test('attribute value range (2)', () => {
   const html = new HTML('<div foo= bar ></div>')
-  const div = html.findElement('div')
+  const div = html.getElement('div')
   const range = html.getAttributeValueRange(div, 'foo')
 
   expect(range).toHaveProperty('from', 10)
@@ -103,7 +103,7 @@ test('attribute value range (2)', () => {
 
 test('attribute value range (3)', () => {
   const html = new HTML(`<div foo='bar'></div>`)
-  const div = html.findElement('div')
+  const div = html.getElement('div')
   const range = html.getAttributeValueRange(div, 'foo')
 
   expect(range).toHaveProperty('from', 10)
@@ -112,9 +112,19 @@ test('attribute value range (3)', () => {
 
 test('attribute value range (4)', () => {
   const html = new HTML(`<div foo=bar"></div>`)
-  const div = html.findElement('div')
+  const div = html.getElement('div')
   const range = html.getAttributeValueRange(div, 'foo')
 
   expect(range).toHaveProperty('from', 9)
   expect(range).toHaveProperty('to', 13)
+})
+
+test('filtering tests', () => {
+  const html = new HTML('')
+
+  expect(html.filterTests(['*'])).toEqual(['*'])
+  expect(html.filterTests(['*', 'syntax'])).toEqual(['*', 'syntax'])
+  expect(html.filterTests([])).toEqual([])
+  expect(html.filterTests(['foo'])).toEqual([])
+  expect(html.filterTests(['foo', '*'])).toEqual(['*'])
 })

@@ -1,4 +1,15 @@
 /**
+ * Check if an asset `path` matches the required pattern.
+ *
+ * @example
+ * isAssetPath('/assets/foo.svg') // true
+ * isAssetPath('/foo.svg) // false
+ */
+export function isAssetPath(path: string): boolean {
+  return /^\/assets\/[a-zA-Z0-9 \(\),\._-]+(?:\/[a-zA-Z0-9 \(\),\._-]+)*$/.test(path)
+}
+
+/**
  * Check if an attribute `name` matches the required pattern.
  *
  * @example
@@ -61,7 +72,7 @@ export function isComponentName(name: string): boolean {
  * isPagePath('foo-bar/baz') // false
  */
 export function isPagePath(path: string): boolean {
-  return /^\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/.test(path)
+  return /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/.test(path)
 }
 
 /**

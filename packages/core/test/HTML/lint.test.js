@@ -1,4 +1,4 @@
-import { HTML } from '@frontsail/core'
+import { HTML } from '../..'
 
 test('linting attribute names', () => {
   const diagnostics = new HTML('<div {{ foo }} bar_baz></div>').lint('*').getDiagnostics('*')
@@ -27,4 +27,46 @@ test('linting if attributes', () => {
   expect(diagnostics).toHaveProperty('1.from', 25)
   expect(diagnostics).toHaveProperty('1.to', 30)
   expect(diagnostics[1].message).toMatch(/expression/i)
+})
+
+test('linting include elements (1)', () => {
+  const diagnostics = new HTML('<include if="foo" bar="baz" data-baz />')
+    .lint('*')
+    .getDiagnostics('*')
+
+  expect(diagnostics).toHaveLength(2)
+  expect(diagnostics).toHaveProperty('0.from', 28)
+  expect(diagnostics).toHaveProperty('0.to', 36)
+  expect(diagnostics[0].message).toMatch(/property/i)
+  expect(diagnostics).toHaveProperty('1.from', 0)
+  expect(diagnostics).toHaveProperty('1.to', 39)
+  expect(diagnostics[1].message).toMatch(/missing/i)
+})
+
+test('linting include elements (2)', () => {
+  const diagnostics = new HTML('<include component="/foo" asset="bar" />')
+    .lint('*')
+    .getDiagnostics('*')
+
+  expect(diagnostics).toHaveLength(3)
+  expect(diagnostics).toHaveProperty('0.from', 20)
+  expect(diagnostics).toHaveProperty('0.to', 24)
+  expect(diagnostics[0].message).toMatch(/component/i)
+  expect(diagnostics).toHaveProperty('1.from', 0)
+  expect(diagnostics).toHaveProperty('1.to', 40)
+  expect(diagnostics[1].message).toMatch(/same time/i)
+  expect(diagnostics).toHaveProperty('2.from', 33)
+  expect(diagnostics).toHaveProperty('2.to', 36)
+  expect(diagnostics[2].message).toMatch(/asset/i)
+})
+
+test('linting include elements (3)', () => {
+  const diagnostics = new HTML('<include if="foo" asset="/assets/bar" baz>')
+    .lint('*')
+    .getDiagnostics('*')
+
+  expect(diagnostics).toHaveLength(1)
+  expect(diagnostics).toHaveProperty('0.from', 38)
+  expect(diagnostics).toHaveProperty('0.to', 41)
+  expect(diagnostics[0].message).toMatch(/asset/i)
 })

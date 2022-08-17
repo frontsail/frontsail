@@ -1,4 +1,4 @@
-import { JS } from '@frontsail/core'
+import { JS } from '..'
 
 test('initialization', () => {
   expect(new JS('foo').hasProblems('*')).toBe(false)

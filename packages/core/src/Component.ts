@@ -1,3 +1,4 @@
+import { Project } from './Project'
 import { Template } from './Template'
 import { isComponentName } from './validation'
 
@@ -10,11 +11,13 @@ export class Component extends Template {
    *
    * @throws an error if the component name is not valid.
    */
-  constructor(name: string, html: string) {
+  constructor(name: string, html: string, project?: Project) {
     if (!isComponentName(name)) {
       throw new Error(`The component name '${name}' is not valid.`)
     }
 
-    super(name, html)
+    super(name, html, project)
   }
+
+  // @todo Components must have one root element (must be a div, p, h, span, header, footer, etc. tag).
 }

@@ -4,11 +4,17 @@ export { HTML } from './HTML'
 export { JS } from './JS'
 export { Page } from './Page'
 export { Project } from './Project'
+export { Template } from './Template'
 export { CodePart, Diagnostic, Range } from './types/code'
+export { ComponentDiagnostics } from './types/component'
+export { AtLeastOne } from './types/generic'
 export { AttributeValue, HTMLDiagnostics, MustacheTag } from './types/html'
 export { JSDiagnostics } from './types/js'
-export { ProjectOptions } from './types/ProjectOptions'
+export { PageDiagnostics } from './types/page'
+export { ProjectOptions } from './types/project'
+export { Dependencies, TemplateDiagnostics } from './types/template'
 export {
+  isAssetPath,
   isAttributeName,
   isComponentName,
   isEnclosed,

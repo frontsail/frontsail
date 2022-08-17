@@ -1,4 +1,5 @@
 import {
+  isAssetPath,
   isAttributeName,
   isComponentName,
   isEnclosed,
@@ -6,7 +7,22 @@ import {
   isPagePath,
   isPropertyName,
   isSafeSlug,
-} from '@frontsail/core'
+} from '..'
+
+test('asset path validation', () => {
+  expect(isAssetPath('/assets/foo')).toBe(true)
+  expect(isAssetPath('/assets/foo.bar')).toBe(true)
+  expect(isAssetPath('/assets/foo.bar.baz')).toBe(true)
+  expect(isAssetPath('/assets/foo/bar')).toBe(true)
+  expect(isAssetPath('/assets/foo-bar')).toBe(true)
+  expect(isAssetPath('/assets/foo_bar')).toBe(true)
+  expect(isAssetPath('/assets/foo (bar)')).toBe(true)
+  expect(isAssetPath('/assets/-')).toBe(true)
+  expect(isAssetPath('/assets/')).toBe(false)
+  expect(isAssetPath('/assets//foo')).toBe(false)
+  expect(isAssetPath('/assets//foo')).toBe(false)
+  expect(isAssetPath('/foo')).toBe(false)
+})
 
 test('attribute name validation', () => {
   expect(isAttributeName('foo')).toBe(true)
@@ -81,6 +97,7 @@ test('component name validation', () => {
 })
 
 test('page path validation', () => {
+  expect(isPagePath('/')).toBe(true)
   expect(isPagePath('/foo')).toBe(true)
   expect(isPagePath('/foo/bar')).toBe(true)
   expect(isPagePath('/foo/bar/baz')).toBe(true)
