@@ -64,6 +64,11 @@ export interface ProjectOptions {
   pages?: { path: string; html: string }[]
 
   /**
+   * List of asset paths (e.g. '/assets/share.png', '/assets/images/logo.svg', etc.).
+   */
+  assets?: string[]
+
+  /**
    * JavaScript code appended after the auto-generated Alpine data registrations in
    * the project scripts.
    */

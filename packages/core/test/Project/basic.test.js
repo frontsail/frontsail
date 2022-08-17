@@ -3,13 +3,14 @@ import { Project } from '../..'
 const project = new Project({
   components: [
     { name: 'foo', html: '<div><include component="bar" /></div>' },
-    { name: 'bar', html: '<span>bar</span>' },
+    { name: 'bar', html: '<include asset="/assets/baz" />' },
   ],
   pages: [
     { path: '/', html: '<h1>Hello, World!</h1>' },
     { path: '/foo', html: '<include component="foo" />' },
     { path: '/bar', html: '<include component="bar" />' },
   ],
+  assets: ['/assets/baz'],
 })
 
 test('listing components', () => {
@@ -20,11 +21,19 @@ test('listing pages', () => {
   expect(project.listPages()).toEqual(['/', '/bar', '/foo'])
 })
 
+test('listing assets', () => {
+  expect(project.listAssets()).toEqual(['/assets/baz'])
+})
+
 test('adding component with invalid name', () => {
   expect(() => project.addComponent('foo_bar', '')).toThrow()
 })
 
 test('adding page with invalid path', () => {
+  expect(() => project.addPage('foo_bar', '')).toThrow()
+})
+
+test('adding asset with invalid path', () => {
   expect(() => project.addPage('foo_bar', '')).toThrow()
 })
 
@@ -37,9 +46,17 @@ test('linting', () => {
 })
 
 test('getting included components', () => {
-  expect(project.getIncludedComponentsInTemplate('foo')).toEqual(['bar'])
-  expect(project.getIncludedComponentsInTemplate('bar')).toEqual([])
-  expect(project.getIncludedComponentsInTemplate('/')).toEqual([])
-  expect(project.getIncludedComponentsInTemplate('/foo')).toEqual(['bar', 'foo'])
-  expect(project.getIncludedComponentsInTemplate('/bar')).toEqual(['bar'])
+  expect(project.getIncludedComponentNamesInTemplate('foo', true)).toEqual(['bar'])
+  expect(project.getIncludedComponentNamesInTemplate('bar', true)).toEqual([])
+  expect(project.getIncludedComponentNamesInTemplate('/', true)).toEqual([])
+  expect(project.getIncludedComponentNamesInTemplate('/foo', true)).toEqual(['bar', 'foo'])
+  expect(project.getIncludedComponentNamesInTemplate('/bar', true)).toEqual(['bar'])
+})
+
+test('getting included assets', () => {
+  expect(project.getIncludedAssetPathsInTemplate('foo', true)).toEqual(['/assets/baz'])
+  expect(project.getIncludedAssetPathsInTemplate('bar', true)).toEqual(['/assets/baz'])
+  expect(project.getIncludedAssetPathsInTemplate('/', true)).toEqual([])
+  expect(project.getIncludedAssetPathsInTemplate('/foo', true)).toEqual(['/assets/baz'])
+  expect(project.getIncludedAssetPathsInTemplate('/bar', true)).toEqual(['/assets/baz'])
 })

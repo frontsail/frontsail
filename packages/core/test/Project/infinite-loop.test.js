@@ -18,7 +18,7 @@ const project = new Project({
 })
 
 test('getting included components', () => {
-  expect(project.getIncludedComponentsInTemplate('loop')).toEqual(['loop'])
+  expect(project.getIncludedComponentNamesInTemplate('loop')).toEqual(['loop'])
 })
 
 it('should stop rendering after 10 loops', () => {

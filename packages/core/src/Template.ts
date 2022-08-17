@@ -127,14 +127,13 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
             if (node.tagName === 'include' && this.shouldTest('dependencies', tests)) {
               for (const attr of node.attrs) {
                 if (attr.name === 'asset') {
-                  // @todo
-                  /*if (!this._project.hasAsset(attr.value)) {
+                  if (!this._project?.hasAsset(attr.value)) {
                     this.addDiagnostics('attributeNames', {
                       message: 'Asset does not exist.',
                       severity: 'warning',
                       ...this._html.getAttributeValueRange(node, attr.name)!,
                     })
-                  }*/
+                  }
                 } else if (attr.name === 'component') {
                   if (!this._project?.hasComponent(attr.value)) {
                     this.addDiagnostics('attributeNames', {

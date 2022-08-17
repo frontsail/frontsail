@@ -148,6 +148,12 @@ export class Project {
   protected _pages: { [name: string]: Page } = {}
 
   /**
+   * List of registered asset paths in the project. The paths must start with '/assets/'.
+   * Examples: '/assets/share.png', '/assets/images/logo.svg', etc.
+   */
+  protected _assets: string[] = []
+
+  /**
    * JavaScript code appended after the auto-generated Alpine data registrations in
    * the project scripts.
    */
@@ -185,6 +191,9 @@ export class Project {
         case 'pages':
           options[key]?.forEach((page) => this.addPage(page.path, page.html))
           break
+        case 'assets':
+          options[key]?.forEach((asset) => this.addAsset(asset))
+          break
         case 'js':
           // @todo
           break
@@ -195,6 +204,22 @@ export class Project {
           throw new Error(`Unknown option '${key}'.`)
       }
     })
+  }
+
+  /**
+   * Register a new asset to the project. The asset `path` must match the pattern
+   * `/^\/assets\/[a-zA-Z0-9 \(\),\._-]+(?:\/[a-zA-Z0-9 \(\),\._-]+)*$/`.
+   *
+   * @throws an error if the asset path already exists.
+   */
+  addAsset(path: string): this {
+    if (this.hasAsset(path)) {
+      throw new Error(`An asset with the path '${path}' already exists.`)
+    }
+
+    this._assets.push(path)
+
+    return this
   }
 
   /**
@@ -237,6 +262,19 @@ export class Project {
    */
   componentHasProblems(name: string, ...types: AtLeastOne<ComponentDiagnostics>): boolean {
     return this._getComponent(name).hasProblems(...types)
+  }
+
+  /**
+   * Verify the existence of an asset by its `path`.
+   *
+   * @throws an error if the asset does not exist.
+   */
+  protected _ensureAsset(path: string): this {
+    if (!this.hasComponent(path)) {
+      throw new Error(`Asset '${path}' does not exist.`)
+    }
+
+    return this
   }
 
   /**
@@ -285,23 +323,47 @@ export class Project {
   }
 
   /**
-   * Get a list of all included components recursively from a template identified
-   * with `id`.
+   * Get a list of all included assets in a template identified by `id`.
    *
    * @param id Component name or page path.
+   * @param recursive Whether to aggregate results from deeply included components.
    * @throws an error if the template with the specified `id` does not exist.
    */
-  getIncludedComponentsInTemplate(id: string): string[] {
+  getIncludedAssetPathsInTemplate(id: string, recursive: boolean = false): string[] {
+    const assets = this._getTemplate(id).getIncludedAssetPaths()
+
+    if (recursive) {
+      const components = this.getIncludedComponentNamesInTemplate(id, true)
+
+      for (const name of components.filter((name) => name !== id)) {
+        assets.push(...this._getComponent(name).getIncludedAssetPaths())
+      }
+    }
+
+    return uniqueArray(assets).sort()
+  }
+
+  /**
+   * Get a list of all included components in a template identified by `id`.
+   *
+   * @param id Component name or page path.
+   * @param recursive Whether to aggregate results from deeply included components.
+   * @throws an error if the template with the specified `id` does not exist.
+   */
+  getIncludedComponentNamesInTemplate(id: string, recursive: boolean = false): string[] {
     const components = this._getTemplate(id).getIncludedComponentNames()
-    const checked = this.hasComponent(id) ? [id] : []
 
-    while (!compareArrays(components, checked)) {
-      for (const name of diffArrays(components, checked)) {
-        if (this.hasComponent(name)) {
-          components.push(...this._getComponent(name).getIncludedComponentNames())
+    if (recursive) {
+      const checked = this.hasComponent(id) ? [id] : []
+
+      while (!compareArrays(components, checked)) {
+        for (const name of diffArrays(components, checked)) {
+          if (this.hasComponent(name)) {
+            components.push(...this._getComponent(name).getIncludedComponentNames())
+          }
+
+          checked.push(name)
         }
-
-        checked.push(name)
       }
     }
 
@@ -343,6 +405,15 @@ export class Project {
   }
 
   /**
+   * Check if an asset with the path `path` exists in the project.
+   *
+   * @returns true the asset exists in the project.
+   */
+  hasAsset(path: string): boolean {
+    return this._assets.includes(path)
+  }
+
+  /**
    * Check if a component named `name` exists in the project.
    *
    * @returns true the component exists in the project.
@@ -361,6 +432,13 @@ export class Project {
   }
 
   /**
+   * Get a list of all registered asset paths in the project.
+   */
+  listAssets(): string[] {
+    return [...this._assets].sort()
+  }
+
+  /**
    * Get a list of all registered component names in the project.
    */
   listComponents(): string[] {
@@ -375,14 +453,39 @@ export class Project {
   }
 
   /**
-   * Check if a template (component or page) includes a component recursively.
+   * Check if a template (component or page) includes an asset.
+   *
+   * @param templateId ID of the template to search in.
+   * @param assetPath Asset path to search for.
+   * @param recursive Whether to aggregate results from deeply included components.
+   * @throws an error if the template with the specified `templateId` does not exist.
+   */
+  templateIncludesAsset(
+    templateId: string,
+    assetPath: string,
+    recursive: boolean = false,
+  ): boolean {
+    return recursive
+      ? this.getIncludedAssetPathsInTemplate(templateId).includes(assetPath)
+      : this._getTemplate(templateId).includesAsset(assetPath)
+  }
+
+  /**
+   * Check if a template (component or page) includes a component.
    *
    * @param templateId ID of the template to search in.
    * @param componentName Component name to search for.
+   * @param recursive Whether to aggregate results from deeply included components.
    * @throws an error if the template with the specified `templateId` does not exist.
    */
-  templateIncludesComponent(templateId: string, componentName: string): boolean {
-    return this.getIncludedComponentsInTemplate(templateId).includes(componentName)
+  templateIncludesComponent(
+    templateId: string,
+    componentName: string,
+    recursive: boolean = false,
+  ): boolean {
+    return recursive
+      ? this.getIncludedComponentNamesInTemplate(templateId).includes(componentName)
+      : this._getTemplate(templateId).includesComponent(componentName)
   }
 
   /**
@@ -417,6 +520,16 @@ export class Project {
    */
   pageHasProblems(path: string, ...types: AtLeastOne<PageDiagnostics>): boolean {
     return this._getPage(path).hasProblems(...types)
+  }
+
+  /**
+   * Deregister an asset with the path `path` from the project.
+   *
+   * @throws an error if the asset does not exist.
+   */
+  removeAsset(path: string): this {
+    delete this._ensureAsset(path)._assets[path]
+    return this
   }
 
   /**
