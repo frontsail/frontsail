@@ -5,4 +5,13 @@
  * @example
  * foo(...bar: AtLeastOne<Baz>)
  */
-export type AtLeastOne<T extends object> = [keyof T | '*', ...(keyof T | '*')[]]
+export type AtLeastOne<T extends object> = [WithWildcard<T>, ...(keyof T)[]]
+
+/**
+ * Generates a type from keys in object `T` and wildcard (`*`) that stands for
+ * all keys.
+ *
+ * @example
+ * foo(...bar: WithWildcard<Baz>)
+ */
+export type WithWildcard<T extends object> = keyof T | '*'

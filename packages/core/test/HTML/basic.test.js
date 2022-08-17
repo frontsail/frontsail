@@ -121,10 +121,11 @@ test('attribute value range (4)', () => {
 
 test('filtering tests', () => {
   const html = new HTML('')
+  const types = ['attributeNames', 'ifAttributes', 'includeElements', 'syntax']
 
-  expect(html.filterTests(['*'])).toEqual(['*'])
-  expect(html.filterTests(['*', 'syntax'])).toEqual(['*', 'syntax'])
+  expect(html.filterTests(['*'])).toEqual(types)
+  expect(html.filterTests(['*', 'syntax'])).toEqual(types)
   expect(html.filterTests([])).toEqual([])
   expect(html.filterTests(['foo'])).toEqual([])
-  expect(html.filterTests(['foo', '*'])).toEqual(['*'])
+  expect(html.filterTests(['foo', '*'])).toEqual(types)
 })

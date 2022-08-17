@@ -46,12 +46,14 @@ export abstract class Diagnostics<T extends { [K in keyof T]: Diagnostic[] }> {
   /**
    * Filter a list of `tests` to include only those specific to the class.
    */
-  filterTests(tests: any[]): (keyof T | '*')[] {
-    const types = Object.keys(this._diagnostics)
+  filterTests(tests: any[]): (keyof T)[] {
+    const types = Object.keys(this._diagnostics) as (keyof T)[]
 
-    return tests.filter((test) => {
-      return test === '*' || types.includes(test)
-    })
+    if (tests.includes('*')) {
+      return types
+    }
+
+    return types.filter((type) => tests.includes(type))
   }
 
   /**
