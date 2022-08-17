@@ -323,19 +323,19 @@ export class Project {
   }
 
   /**
-   * Get a list of all included assets in a template identified by `id`.
+   * Get a list of all included assets in a template identified by `templateId`.
    *
-   * @param id Component name or page path.
+   * @param templateId Component name or page path.
    * @param recursive Whether to aggregate results from deeply included components.
-   * @throws an error if the template with the specified `id` does not exist.
+   * @throws an error if the template with the specified `templateId` does not exist.
    */
-  getIncludedAssetPathsInTemplate(id: string, recursive: boolean = false): string[] {
-    const assets = this._getTemplate(id).getIncludedAssetPaths()
+  getIncludedAssetPaths(templateId: string, recursive: boolean = false): string[] {
+    const assets = this._getTemplate(templateId).getIncludedAssetPaths()
 
     if (recursive) {
-      const components = this.getIncludedComponentNamesInTemplate(id, true)
+      const components = this.getIncludedComponentNames(templateId, true)
 
-      for (const name of components.filter((name) => name !== id)) {
+      for (const name of components.filter((name) => name !== templateId)) {
         assets.push(...this._getComponent(name).getIncludedAssetPaths())
       }
     }
@@ -344,17 +344,17 @@ export class Project {
   }
 
   /**
-   * Get a list of all included components in a template identified by `id`.
+   * Get a list of all included components in a template identified by `templateId`.
    *
-   * @param id Component name or page path.
+   * @param templateId Component name or page path.
    * @param recursive Whether to aggregate results from deeply included components.
-   * @throws an error if the template with the specified `id` does not exist.
+   * @throws an error if the template with the specified `templateId` does not exist.
    */
-  getIncludedComponentNamesInTemplate(id: string, recursive: boolean = false): string[] {
-    const components = this._getTemplate(id).getIncludedComponentNames()
+  getIncludedComponentNames(templateId: string, recursive: boolean = false): string[] {
+    const components = this._getTemplate(templateId).getIncludedComponentNames()
 
     if (recursive) {
-      const checked = this.hasComponent(id) ? [id] : []
+      const checked = this.hasComponent(templateId) ? [templateId] : []
 
       while (!compareArrays(components, checked)) {
         for (const name of diffArrays(components, checked)) {
@@ -387,6 +387,13 @@ export class Project {
    */
   getPageDiagnostics(path: string, ...types: AtLeastOne<PageDiagnostics>): Diagnostic[] {
     return this._getPage(path).getDiagnostics(...types)
+  }
+
+  /**
+   * Get a list of property names in a template identified by `templateId`.
+   */
+  getPropertyNames(templateId: string): string[] {
+    return this._getTemplate(templateId).getPropertyNames()
   }
 
   /**
@@ -432,6 +439,38 @@ export class Project {
   }
 
   /**
+   * Check if a template (component or page) includes an asset.
+   *
+   * @param templateId ID of the template to search in.
+   * @param assetPath Asset path to search for.
+   * @param recursive Whether to aggregate results from deeply included components.
+   * @throws an error if the template with the specified `templateId` does not exist.
+   */
+  includesAsset(templateId: string, assetPath: string, recursive: boolean = false): boolean {
+    return recursive
+      ? this.getIncludedAssetPaths(templateId).includes(assetPath)
+      : this._getTemplate(templateId).includesAsset(assetPath)
+  }
+
+  /**
+   * Check if a template (component or page) includes a component.
+   *
+   * @param templateId ID of the template to search in.
+   * @param componentName Component name to search for.
+   * @param recursive Whether to aggregate results from deeply included components.
+   * @throws an error if the template with the specified `templateId` does not exist.
+   */
+  includesComponent(
+    templateId: string,
+    componentName: string,
+    recursive: boolean = false,
+  ): boolean {
+    return recursive
+      ? this.getIncludedComponentNames(templateId).includes(componentName)
+      : this._getTemplate(templateId).includesComponent(componentName)
+  }
+
+  /**
    * Get a list of all registered asset paths in the project.
    */
   listAssets(): string[] {
@@ -450,42 +489,6 @@ export class Project {
    */
   listPages(): string[] {
     return Object.keys(this._pages).sort()
-  }
-
-  /**
-   * Check if a template (component or page) includes an asset.
-   *
-   * @param templateId ID of the template to search in.
-   * @param assetPath Asset path to search for.
-   * @param recursive Whether to aggregate results from deeply included components.
-   * @throws an error if the template with the specified `templateId` does not exist.
-   */
-  templateIncludesAsset(
-    templateId: string,
-    assetPath: string,
-    recursive: boolean = false,
-  ): boolean {
-    return recursive
-      ? this.getIncludedAssetPathsInTemplate(templateId).includes(assetPath)
-      : this._getTemplate(templateId).includesAsset(assetPath)
-  }
-
-  /**
-   * Check if a template (component or page) includes a component.
-   *
-   * @param templateId ID of the template to search in.
-   * @param componentName Component name to search for.
-   * @param recursive Whether to aggregate results from deeply included components.
-   * @throws an error if the template with the specified `templateId` does not exist.
-   */
-  templateIncludesComponent(
-    templateId: string,
-    componentName: string,
-    recursive: boolean = false,
-  ): boolean {
-    return recursive
-      ? this.getIncludedComponentNamesInTemplate(templateId).includes(componentName)
-      : this._getTemplate(templateId).includesComponent(componentName)
   }
 
   /**

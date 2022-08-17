@@ -77,7 +77,9 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   }
 
   /**
-   * Get a list of all included assets in the template.
+   * Get a list of all included assets in the template. This method does not
+   * recursively get the dependencies of the included components. For depth checks,
+   * use the method `getIncludedAssetPaths` in the `Project` class.
    */
   getIncludedAssetPaths(): string[] {
     return [...this._dependencies.assets]
@@ -86,14 +88,23 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   /**
    * Get a list of all included components in the template. This method does not
    * recursively get the dependencies of the included components. For depth checks,
-   * use the method `getIncludedComponentsInTemplate` in the `Project` class.
+   * use the method `getIncludedComponentNames` in the `Project` class.
    */
   getIncludedComponentNames(): string[] {
     return [...this._dependencies.components]
   }
 
   /**
-   * Check if the template includes a specific asset.
+   * Get all extracted property names found in the HTML.
+   */
+  getPropertyNames(): string[] {
+    return this._html.getPropertyNames()
+  }
+
+  /**
+   * Check if the template includes a specific asset. This method does not
+   * recursively check dependencies of the included components. For depth checks,
+   * use the method `includesAsset` in the `Project` class.
    */
   includesAsset(path: string): boolean {
     return this._dependencies.assets.includes(path)
@@ -102,7 +113,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   /**
    * Check if the template includes a specific component. This method does not
    * recursively check dependencies of the included components. For depth checks,
-   * use the method `templateIncludesComponent` in the `Project` class.
+   * use the method `includesComponent` in the `Project` class.
    */
   includesComponent(name: string): boolean {
     return this._dependencies.components.includes(name)
@@ -125,6 +136,11 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
             // Check dependencies
             //
             if (node.tagName === 'include' && this.shouldTest('dependencies', tests)) {
+              const component: { name: string | null; properties: string[] } = {
+                name: null,
+                properties: [],
+              }
+
               for (const attr of node.attrs) {
                 if (attr.name === 'asset') {
                   if (!this._project?.hasAsset(attr.value)) {
@@ -135,11 +151,29 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
                     })
                   }
                 } else if (attr.name === 'component') {
-                  if (!this._project?.hasComponent(attr.value)) {
+                  if (this._project?.hasComponent(attr.value)) {
+                    component.name = attr.value
+                    component.properties.push(...this._project.getPropertyNames(attr.value))
+                  } else {
                     this.addDiagnostics('attributeNames', {
                       message: 'Component does not exist.',
                       severity: 'warning',
                       ...this._html.getAttributeValueRange(node, attr.name)!,
+                    })
+                  }
+                }
+              }
+
+              if (component.name) {
+                for (const attr of node.attrs) {
+                  if (
+                    !['if', 'asset', 'component'].includes(attr.name) &&
+                    !component.properties.includes(attr.name)
+                  ) {
+                    this.addDiagnostics('attributeNames', {
+                      message: `Property '${attr.name}' does not exist in component '${component.name}'.`,
+                      severity: 'warning',
+                      ...this._html.getAttributeNameRange(node, attr.name)!,
                     })
                   }
                 }

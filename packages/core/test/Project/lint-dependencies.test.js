@@ -20,9 +20,11 @@ const project = new Project({
 test('linting page dependencies', () => {
   const diagnostics = project.lintPage('/', '*').getPageDiagnostics('/', '*')
 
-  expect(diagnostics).toHaveLength(1)
-  expect(diagnostics).toHaveProperty('0.from', 307)
-  expect(diagnostics).toHaveProperty('0.to', 310)
+  expect(diagnostics).toHaveLength(2)
+  expect(diagnostics).toHaveProperty('0.from', 280)
+  expect(diagnostics).toHaveProperty('0.to', 283)
+  expect(diagnostics).toHaveProperty('1.from', 323)
+  expect(diagnostics).toHaveProperty('1.to', 326)
 })
 
 test('linting component dependencies', () => {
