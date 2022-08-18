@@ -66,6 +66,10 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
 
   /**
    * Instantiate with an abstract syntax tree and resolve its direct dependencies.
+   *
+   * @param id A unique template identifier.
+   * @param html The HTML code to parse.
+   * @param project A `Project` instance used for linting dependencies.
    */
   constructor(id: string, html: string, project?: Project) {
     super()
@@ -144,7 +148,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
               for (const attr of node.attrs) {
                 if (attr.name === 'asset') {
                   if (!this._project?.hasAsset(attr.value)) {
-                    this.addDiagnostics('attributeNames', {
+                    this.addDiagnostics('dependencies', {
                       message: 'Asset does not exist.',
                       severity: 'warning',
                       ...this._html.getAttributeValueRange(node, attr.name)!,
@@ -155,7 +159,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
                     component.name = attr.value
                     component.properties.push(...this._project.getPropertyNames(attr.value))
                   } else {
-                    this.addDiagnostics('attributeNames', {
+                    this.addDiagnostics('dependencies', {
                       message: 'Component does not exist.',
                       severity: 'warning',
                       ...this._html.getAttributeValueRange(node, attr.name)!,
@@ -170,7 +174,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
                     !['if', 'asset', 'component'].includes(attr.name) &&
                     !component.properties.includes(attr.name)
                   ) {
-                    this.addDiagnostics('attributeNames', {
+                    this.addDiagnostics('dependencies', {
                       message: `Property '${attr.name}' does not exist in component '${component.name}'.`,
                       severity: 'warning',
                       ...this._html.getAttributeNameRange(node, attr.name)!,
