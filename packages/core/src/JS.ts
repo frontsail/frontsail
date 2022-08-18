@@ -1,6 +1,6 @@
 import { uniqueArray } from '@frontsail/utils'
 import { Node, parse } from 'acorn'
-import { full, simple, SimpleVisitors } from 'acorn-walk'
+import { findNodeAt, full, simple, SimpleVisitors } from 'acorn-walk'
 import { Diagnostics } from './Diagnostics'
 import { JSDiagnostics } from './types/js'
 
@@ -31,6 +31,12 @@ export class JS extends Diagnostics<JSDiagnostics> {
   protected _js: string
 
   /**
+   * A declaration prefix used for invalid JS inputs like anonymous objects in Alpine
+   * directives (e.g. `{ foo: 'bar' }`).
+   */
+  protected _declarator: string
+
+  /**
    * The abstract syntax tree created from the input JS.
    */
   protected _ast?: Node
@@ -45,20 +51,24 @@ export class JS extends Diagnostics<JSDiagnostics> {
 
   /**
    * Instantiate with an abstract syntax tree.
+   *
+   * @param js The JavaScript code.
+   * @param declarator Whether to prefix the `js` code with a pseudo declarator.
    */
-  constructor(js: string) {
+  constructor(js: string, declarator: boolean = false) {
     super()
 
-    this._js = js
+    this._declarator = declarator ? 'const $ = ' : ''
+    this._js = this._declarator + js
 
     try {
-      this._ast = parse(js, { ecmaVersion: 2020 })
+      this._ast = parse(this._js, { ecmaVersion: 2020 })
     } catch (e) {
       this.addDiagnostics('syntax', {
-        message: e.message,
+        message: e.message.replace(/ \([0-9]+:[0-9]+\)$/, '.'),
         severity: 'error',
-        from: 0,
-        to: js.length,
+        from: e.pos - this._declarator.length,
+        to: e.pos - this._declarator.length,
       })
     }
   }
@@ -102,13 +112,15 @@ export class JS extends Diagnostics<JSDiagnostics> {
         message: e.toString(),
         severity: 'error',
         from: 0,
-        to: this._js.length,
+        to: this._js.length - this._declarator.length,
       })
     }
   }
 
   /**
    * Find and return a list of identifiers in the AST.
+   *
+   * @throws an error if the AST is not defined.
    */
   getIdentifiers(): string[] {
     const variables: string[] = []
@@ -124,6 +136,8 @@ export class JS extends Diagnostics<JSDiagnostics> {
 
   /**
    * Get a list of all nodes in the AST in the order they appear in the JS code.
+   *
+   * @throws an error if the AST is not defined.
    */
   getNodes(): Node[] {
     const nodes: Node[] = []
@@ -134,6 +148,8 @@ export class JS extends Diagnostics<JSDiagnostics> {
   /**
    * Check if the JS code is a valid expression that can be used in `if` attributes.
    * These expressions can be safely evaluated.
+   *
+   * @throws an error if the AST is not defined.
    */
   isIfAttributeValue(): boolean {
     for (const node of this.getNodes()) {
@@ -146,15 +162,40 @@ export class JS extends Diagnostics<JSDiagnostics> {
   }
 
   /**
+   * Check if the JS code is an object.
+   *
+   * @throws an error if the AST is not defined.
+   */
+  isObject(): boolean {
+    if (this._ast) {
+      return (
+        findNodeAt(this._ast, this._declarator.length, this._js.length)?.node.type ===
+        'ObjectExpression'
+      )
+    } else {
+      this._throw()
+    }
+  }
+
+  /**
+   * Helper method for throwing an error when the AST is not defined.
+   *
+   * @throws an error.
+   */
+  protected _throw(): never {
+    throw new Error('The abstract syntax tree is not defined.')
+  }
+
+  /**
    * Walks through all nodes in the AST and invoke a `callback` for each node found.
    *
    * @throws an error if the AST is not defined.
    */
-  walk(callback: (node: Node, type: string) => void) {
+  walk(callback: (node: Node, type: string) => void): void {
     if (this._ast) {
       full(this._ast, (node, _, type) => callback(node, type))
     } else {
-      throw new Error('The abstract syntax tree is not defined.')
+      this._throw()
     }
   }
 
@@ -166,11 +207,11 @@ export class JS extends Diagnostics<JSDiagnostics> {
    *
    * @throws an error if the AST is not defined.
    */
-  walkSimple(visitors: SimpleVisitors<unknown>) {
+  walkSimple(visitors: SimpleVisitors<unknown>): void {
     if (this._ast) {
       simple(this._ast, visitors)
     } else {
-      throw new Error('The abstract syntax tree is not defined.')
+      this._throw()
     }
   }
 }

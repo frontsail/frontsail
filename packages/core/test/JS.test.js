@@ -30,7 +30,7 @@ test('extracting identifiers', () => {
   expect(() => new JS('{{ foo }} && bar').getIdentifiers()).toThrow()
 })
 
-test('if attribute value validation', () => {
+test('if attribute value check', () => {
   expect(new JS('foo').isIfAttributeValue()).toBe(true)
   expect(new JS('foo + bar').isIfAttributeValue()).toBe(true)
   expect(new JS('`${foo}Bar`').isIfAttributeValue()).toBe(true)
@@ -44,4 +44,13 @@ test('if attribute value validation', () => {
   expect(new JS('foo()').isIfAttributeValue()).toBe(false)
   expect(new JS('foo.some(bar => !!bar)').isIfAttributeValue()).toBe(false)
   expect(new JS("const foo = 'bar'").isIfAttributeValue()).toBe(false)
+})
+
+test('object check', () => {
+  expect(new JS('{}', true).isObject()).toBe(true)
+  expect(new JS("{ foo: 'bar' }", true).isObject()).toBe(true)
+  expect(new JS('{}').isObject()).toBe(false)
+  expect(new JS('const foo = {}').isObject()).toBe(false)
+  expect(new JS('foo').isObject()).toBe(false)
+  expect(() => new JS('foo bar').isObject()).toThrow()
 })
