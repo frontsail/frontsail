@@ -22,8 +22,7 @@ import { ProjectOptions } from './types/project'
  * - **Attribute** - An HTML attribute (e.g. `<div attribute-name="value"></div>`).
  *
  * - **Base class** - Class name of an inline CSS rule that is automatically generated
- *   from template keys by default. Alternatively, it can be specified in a `css`
- *   attribute name by using dot notation (e.g. `css.my-class`).
+ *   from template keys.
  *
  * - **Directive** - Refers to an Alpine [directive](https://alpinejs.dev/start-here)
  *   or the custom CSS at-rule `@inlineCSS` (depending on the context).
@@ -86,7 +85,7 @@ export class Project {
   /**
    * **Development** mode specifics:
    *
-   * - Template keys are generated from the template name/path (e.g. 'ui/text-input'
+   * - Template keys are generated from the template ID (e.g. 'ui/text-input'
    *   resolves to 'ui__text_input', and '/foo/bar-baz' to '__foo__bar_baz').
    *
    * - Alpine data and directives remain in the HTML as attributes.
@@ -171,6 +170,7 @@ export class Project {
    * Instantiate the `Project` with predefined variables, components, pages, assets,
    * scripts, or styles.
    *
+   * @param options Initialization options.
    * @throws an error if `options` are malformed.
    */
   constructor(options: ProjectOptions = {}) {

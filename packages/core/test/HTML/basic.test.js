@@ -24,6 +24,15 @@ test('finding elements', () => {
   expect(html.getElement('*', { foo: 'bar' }).attrs).toHaveLength(1)
 })
 
+test('finding template elements', () => {
+  const html = new HTML('<header><template><div><span></span></div></template></header>')
+
+  expect(html.getElement('header')).not.toBe(null)
+  expect(html.getElement('template')).not.toBe(null)
+  expect(html.getElement('div')).not.toBe(null)
+  expect(html.getElement('span')).not.toBe(null)
+})
+
 test('replacing a cloned div element', () => {
   const html = new HTML('<div></div>')
   const clone = html.clone()
@@ -32,6 +41,16 @@ test('replacing a cloned div element', () => {
 
   expect(html.toString()).toBe('<div></div>')
   expect(clone.toString()).toBe('<span></span>')
+})
+
+test('finding parent element', () => {
+  const html = new HTML('<header><template><div><span></span></div></template></header>')
+  const span = html.getElement('span')
+
+  expect(HTML.hasParent(span, 'div')).toBe(true)
+  expect(HTML.hasParent(span, 'template')).toBe(false)
+  expect(HTML.hasParent(span, 'header')).toBe(false)
+  expect(HTML.hasParent(span, 'footer')).toBe(false)
 })
 
 test('extracting mustache tags', () => {
@@ -121,7 +140,15 @@ test('attribute value range (4)', () => {
 
 test('filtering tests', () => {
   const html = new HTML('')
-  const types = ['attributeNames', 'ifAttributes', 'includeElements', 'syntax']
+  const types = [
+    'alpineDirectives',
+    'attributeNames',
+    'ifAttributes',
+    'includeElements',
+    'mustacheLocations',
+    'mustacheValues',
+    'syntax',
+  ]
 
   expect(html.filterTests(['*'])).toEqual(types)
   expect(html.filterTests(['*', 'syntax'])).toEqual(types)

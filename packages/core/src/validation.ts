@@ -1,4 +1,11 @@
 /**
+ * Check if an attribute `name` is a valid Alpine directive.
+ */
+export function isAlpineDirective(name: string): boolean {
+  return isAttributeName(name) && /^(?:x-|:|@)/.test(name)
+}
+
+/**
  * Check if an asset `path` matches the required pattern.
  *
  * @example

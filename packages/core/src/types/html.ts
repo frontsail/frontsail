@@ -16,9 +16,12 @@ export interface AttributeValue extends CodePart {
  * (object keys).
  */
 export interface HTMLDiagnostics {
+  alpineDirectives: Diagnostic[]
   attributeNames: Diagnostic[]
   ifAttributes: Diagnostic[]
   includeElements: Diagnostic[]
+  mustacheLocations: Diagnostic[]
+  mustacheValues: Diagnostic[]
   syntax: Diagnostic[]
 }
 

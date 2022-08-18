@@ -57,10 +57,13 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
    * Collection of diagnostics organized by types.
    */
   protected _diagnostics: TemplateDiagnostics = {
+    alpineDirectives: [],
     attributeNames: [],
     dependencies: [],
     ifAttributes: [],
     includeElements: [],
+    mustacheLocations: [],
+    mustacheValues: [],
     syntax: [],
   }
 

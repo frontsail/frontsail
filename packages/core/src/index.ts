@@ -14,6 +14,7 @@ export { PageDiagnostics } from './types/page'
 export { ProjectOptions } from './types/project'
 export { Dependencies, TemplateDiagnostics } from './types/template'
 export {
+  isAlpineDirective,
   isAssetPath,
   isAttributeName,
   isComponentName,

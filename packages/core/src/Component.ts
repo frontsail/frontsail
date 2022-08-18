@@ -4,11 +4,20 @@ import { isComponentName } from './validation'
 
 /**
  * @todo
+ *
+ * ---
+ *
+ * Glossary:
+ *
+ * @todo
  */
 export class Component extends Template {
   /**
    * Validate the component `name` and instantiate.
    *
+   * @param name A unique component name.
+   * @param html The HTML code to parse.
+   * @param project A `Project` instance used for linting dependencies.
    * @throws an error if the component name is not valid.
    */
   constructor(name: string, html: string, project?: Project) {

@@ -18,13 +18,18 @@ const project = new Project({
 })
 
 test('linting page dependencies', () => {
-  const diagnostics = project.lintPage('/', '*').getPageDiagnostics('/', '*')
+  const diagnostics = project.lintPage('/', 'dependencies').getPageDiagnostics('/', 'dependencies')
 
   expect(diagnostics).toHaveLength(2)
-  expect(diagnostics).toHaveProperty('0.from', 280)
-  expect(diagnostics).toHaveProperty('0.to', 283)
-  expect(diagnostics).toHaveProperty('1.from', 323)
-  expect(diagnostics).toHaveProperty('1.to', 326)
+  expect(diagnostics).toHaveProperty('0.from', 288)
+  expect(diagnostics).toHaveProperty('0.to', 291)
+  expect(diagnostics).toHaveProperty(
+    '0.message',
+    "Property 'bar' does not exist in component 'foo'.",
+  )
+  expect(diagnostics).toHaveProperty('1.from', 331)
+  expect(diagnostics).toHaveProperty('1.to', 334)
+  expect(diagnostics).toHaveProperty('1.message', 'Component does not exist.')
 })
 
 test('linting component dependencies', () => {
@@ -33,6 +38,8 @@ test('linting component dependencies', () => {
   expect(diagnostics).toHaveLength(2)
   expect(diagnostics).toHaveProperty('0.from', 28)
   expect(diagnostics).toHaveProperty('0.to', 31)
+  expect(diagnostics).toHaveProperty('0.message', 'Component does not exist.')
   expect(diagnostics).toHaveProperty('1.from', 54)
   expect(diagnostics).toHaveProperty('1.to', 65)
+  expect(diagnostics).toHaveProperty('1.message', 'Asset does not exist.')
 })

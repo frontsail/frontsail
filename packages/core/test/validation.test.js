@@ -1,4 +1,5 @@
 import {
+  isAlpineDirective,
   isAssetPath,
   isAttributeName,
   isComponentName,
@@ -8,6 +9,19 @@ import {
   isPropertyName,
   isSafeSlug,
 } from '..'
+
+test('alpine directive validation', () => {
+  expect(isAlpineDirective('x-data')).toBe(true)
+  expect(isAlpineDirective('x-on:click')).toBe(true)
+  expect(isAlpineDirective('@click')).toBe(true)
+  expect(isAlpineDirective('x-on:keyup.shift.enter')).toBe(true)
+  expect(isAlpineDirective('@keyup.shift.enter')).toBe(true)
+  expect(isAlpineDirective(':class')).toBe(true)
+  expect(isAlpineDirective('data')).toBe(false)
+  expect(isAlpineDirective('y-data')).toBe(false)
+  expect(isAlpineDirective('-click')).toBe(false)
+  expect(isAlpineDirective('x-')).toBe(false)
+})
 
 test('asset path validation', () => {
   expect(isAssetPath('/assets/foo')).toBe(true)

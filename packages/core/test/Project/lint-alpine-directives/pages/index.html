@@ -7,9 +7,9 @@
     <title>Test</title>
   </head>
   <body x-cloak>
-    <include component="foo" bar="1" baz="1" />
-    <include component="bar">
-      <div></div>
+    <include component="foo" foo="1" />
+    <include component="bar" bar="1">
+      <div x-foo :bar="{{ bar }}" @click="baz"></div>
     </include>
   </body>
 </html>

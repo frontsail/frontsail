@@ -6,6 +6,7 @@ import {
   DocumentFragment,
   Element,
   Node,
+  Template,
 } from 'parse5/dist/tree-adapters/default'
 import { Diagnostics } from './Diagnostics'
 import { JS } from './JS'
@@ -13,10 +14,12 @@ import { Range } from './types/code'
 import { AtLeastOne } from './types/generic'
 import { AttributeValue, HTMLDiagnostics, MustacheTag } from './types/html'
 import {
+  isAlpineDirective,
   isAssetPath,
   isAttributeName,
   isComponentName,
   isEnclosed,
+  isGlobalName,
   isPropertyName,
 } from './validation'
 
@@ -96,14 +99,19 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
    * Collection of diagnostics organized by types.
    */
   protected _diagnostics: HTMLDiagnostics = {
+    alpineDirectives: [],
     attributeNames: [],
     ifAttributes: [],
     includeElements: [],
+    mustacheLocations: [],
+    mustacheValues: [],
     syntax: [],
   }
 
   /**
    * Instantiate with an abstract syntax tree and extract property names.
+   *
+   * @param html The HTML code to parse.
    */
   constructor(html: string) {
     super()
@@ -223,6 +231,8 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
 
   /**
    * Get attribute values from all elements in the AST by a specified `attributeName`.
+   *
+   * @throws an error if the AST is not defined.
    */
   getAttributeValues(attributeName: string): AttributeValue[] {
     const attributes: AttributeValue[] = []
@@ -247,6 +257,8 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   /**
    * Find an element node in the AST by a specified `tagName` and `attributes`. Use the
    * wildcard (`*`) character to match all elements.
+   *
+   * @throws an error if the AST is not defined.
    */
   getElement(tagName: string = '*', attributes: { [name: string]: string } = {}): Element | null {
     return this.getElements(tagName, attributes, 1)[0] ?? null
@@ -255,6 +267,8 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   /**
    * Find element nodes in the AST by a specified `tagName` and `attributes`. Use the
    * wildcard (`*`) character to match all elements.
+   *
+   * @throws an error if the AST is not defined.
    */
   getElements(
     tagName: string = '*',
@@ -283,15 +297,15 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
-   * Extract all `{{ mustache_tags }}` from the HTML code.
+   * Extract all `{{ mustache_tags }}` from a HTML code.
    */
-  getMustaches(): MustacheTag[] {
+  static getMustaches(html: string): MustacheTag[] {
     const regex = /{{\s*(.*?)\s*}}/g
     const mustaches: MustacheTag[] = []
     let match: RegExpExecArray | null
 
     do {
-      match = regex.exec(this._html)
+      match = regex.exec(html)
 
       if (match) {
         mustaches.push({
@@ -307,7 +321,16 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
+   * Extract all `{{ mustache_tags }}` from the HTML code.
+   */
+  getMustaches(): MustacheTag[] {
+    return HTML.getMustaches(this._html)
+  }
+
+  /**
    * Get a list of all nodes in the AST in the order they appear in the HTML.
+   *
+   * @throws an error if the AST is not defined.
    */
   getNodes(): Node[] {
     return [...this.walk()]
@@ -321,6 +344,23 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
+   * Check if a `node` has a parent element with a specific `tagName`.
+   */
+  static hasParent(node: Node, tagName: string): boolean {
+    let parent = this.adapter.getParentNode(node)
+
+    while (parent && this.adapter.isElementNode(parent)) {
+      if (parent.tagName === tagName) {
+        return true
+      }
+
+      parent = this.adapter.getParentNode(parent)
+    }
+
+    return false
+  }
+
+  /**
    * Analyze all nodes in the AST and run the specified `tests`. Use a wildcard
    * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
    * `getDiagnostics()`.
@@ -329,8 +369,53 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     if (!this.hasProblems('syntax')) {
       this.clearDiagnostics(...tests)
 
+      // Check mustache values
+      //
+      if (this.shouldTest('mustacheValues', tests)) {
+        for (const mustache of this.getMustaches()) {
+          if (!isPropertyName(mustache.variable) && !isGlobalName(mustache.variable)) {
+            const from = mustache.from + mustache.text.indexOf(mustache.variable)
+
+            this.addDiagnostics('mustacheValues', {
+              message: 'Invalid variable name.',
+              severity: 'error',
+              from,
+              to: from + mustache.variable.length,
+            })
+          }
+        }
+      }
+
       for (const node of this.walk()) {
         if (HTML.adapter.isElementNode(node)) {
+          //
+          // Check Alpine directives
+          //
+          if (this.shouldTest('alpineDirectives', tests)) {
+            for (const attr of node.attrs) {
+              if (isAlpineDirective(attr.name) && attr.value) {
+                const js = new JS(attr.value, true)
+
+                if (js.hasProblems('*')) {
+                  this.addDiagnostics(
+                    'alpineDirectives',
+                    ...js.getDiagnosticsWithOffset(
+                      this.getAttributeValueRange(node, attr.name)!.from,
+                      '*',
+                    ),
+                  )
+                }
+
+                if (attr.name === 'x-data' && !js.isObject()) {
+                  this.addDiagnostics('alpineDirectives', {
+                    message: 'Alpine data must be an object.',
+                    severity: 'error',
+                    ...this.getAttributeValueRange(node, attr.name)!,
+                  })
+                }
+              }
+            }
+          }
           //
           // Check attribute names
           //
@@ -457,6 +542,25 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
               })
             }
           }
+          //
+          // Check mustaches
+          //
+          if (this.shouldTest('mustacheLocations', tests)) {
+            for (const attr of node.attrs) {
+              if (isAlpineDirective(attr.name)) {
+                for (const mustache of HTML.getMustaches(attr.value)) {
+                  const attributeValueRange = this.getAttributeValueRange(node, attr.name)!
+
+                  this.addDiagnostics('mustacheLocations', {
+                    message: 'Mustaches cannot be used in Alpine directives.',
+                    severity: 'error',
+                    from: attributeValueRange.from + mustache.from,
+                    to: attributeValueRange.from + mustache.to,
+                  })
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -500,7 +604,12 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
         node.nodeName === '#document' ||
         node.nodeName === '#document-fragment'
       ) {
-        for (const childNode of HTML.adapter.getChildNodes(node)) {
+        const childNodes =
+          node.nodeName === 'template'
+            ? HTML.adapter.getTemplateContent(node as Template).childNodes
+            : HTML.adapter.getChildNodes(node)
+
+        for (const childNode of childNodes) {
           yield* iterator(childNode)
         }
       }

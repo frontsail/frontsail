@@ -5,7 +5,7 @@ export interface ProjectOptions {
   /**
    * **Development** mode specifics:
    *
-   * - Template keys are generated from the template name/path (e.g. 'ui/text-input'
+   * - Template keys are generated from the template ID (e.g. 'ui/text-input'
    *   resolves to 'ui__text_input', and '/foo/bar-baz' to '__foo__bar_baz').
    *
    * - Alpine data and directives remain in the HTML as attributes.
