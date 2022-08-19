@@ -33,8 +33,7 @@ import { ProjectOptions } from './types/project'
  *   interpolated across templates. Global names are always written in upper
  *   snake case and must begin with a letter (e.g. 'YEAR', 'COPYRIGHT_TEXT', etc.).
  *
- * - **Include** - Refers to a special `<include>` element for rendering asset file
- *   contents or components.
+ * - **Include** - Refers to using the special `<include>` tag to render components.
  *
  * - **Inject** - Refers to a special `<inject>` element for inserting its child nodes
  *   into a component outlet. These elements must be directly nested within `<include>`
@@ -282,7 +281,7 @@ export class Project {
    * @throws an error if the asset does not exist.
    */
   protected _ensureAsset(path: string): this {
-    if (!this.hasComponent(path)) {
+    if (!this.hasAsset(path)) {
       throw new Error(`Asset '${path}' does not exist.`)
     }
 
@@ -332,27 +331,6 @@ export class Project {
    */
   getComponentDiagnostics(name: string, ...types: AtLeastOne<ComponentDiagnostics>): Diagnostic[] {
     return this._getComponent(name).getDiagnostics(...types)
-  }
-
-  /**
-   * Get a list of all included assets in a template identified by `templateId`.
-   *
-   * @param templateId Component name or page path.
-   * @param recursive Whether to aggregate results from deeply included components.
-   * @throws an error if the template with the specified `templateId` does not exist.
-   */
-  getIncludedAssetPaths(templateId: string, recursive: boolean = false): string[] {
-    const assets = this._getTemplate(templateId).getIncludedAssetPaths()
-
-    if (recursive) {
-      const components = this.getIncludedComponentNames(templateId, true)
-
-      for (const name of components.filter((name) => name !== templateId)) {
-        assets.push(...this._getComponent(name).getIncludedAssetPaths())
-      }
-    }
-
-    return uniqueArray(assets).sort()
   }
 
   /**
@@ -457,20 +435,6 @@ export class Project {
    */
   hasPage(path: string): boolean {
     return this._pages.hasOwnProperty(path)
-  }
-
-  /**
-   * Check if a template (component or page) includes an asset.
-   *
-   * @param templateId ID of the template to search in.
-   * @param assetPath Asset path to search for.
-   * @param recursive Whether to aggregate results from deeply included components.
-   * @throws an error if the template with the specified `templateId` does not exist.
-   */
-  includesAsset(templateId: string, assetPath: string, recursive: boolean = false): boolean {
-    return recursive
-      ? this.getIncludedAssetPaths(templateId).includes(assetPath)
-      : this._getTemplate(templateId).includesAsset(assetPath)
   }
 
   /**

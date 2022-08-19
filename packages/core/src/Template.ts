@@ -3,8 +3,8 @@ import { Diagnostics } from './Diagnostics'
 import { HTML } from './HTML'
 import { Project } from './Project'
 import { AtLeastOne } from './types/generic'
-import { Dependencies, TemplateDiagnostics } from './types/template'
-import { isAssetPath, isComponentName, isPropertyName } from './validation'
+import { TemplateDiagnostics } from './types/template'
+import { isComponentName, isPropertyName } from './validation'
 
 /**
  * Handles common features of components and pages, such as abstract syntax trees,
@@ -14,14 +14,11 @@ import { isAssetPath, isComponentName, isPropertyName } from './validation'
  *
  * Glossary:
  *
- * - **Asset** - A file located in the `assets` directory.
- *
  * - **AST** - Refers to an HTML abstract sytax tree.
  *
- * - **Dependency** - An asset or component included with the `<include>` tag.
+ * - **Dependency** - A component included in the template.
  *
- * - **Include** - Refers to using the special `<include>` tag to render asset file
- *   contents or components.
+ * - **Include** - Refers to using the special `<include>` tag to render components.
  *
  * - **Inject** - Refers to a special `<inject>` element for inserting its child nodes
  *   into a component outlet. These elements must be directly nested within `<include>`
@@ -59,12 +56,9 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   protected _project?: Project
 
   /**
-   * Collection of component names and asset paths directly included in this template.
+   * List of component names directly included in this template.
    */
-  protected _dependencies: Dependencies = {
-    components: [],
-    assets: [],
-  }
+  protected _dependencies: string[] = []
 
   /**
    * Collection of diagnostics organized by types.
@@ -99,21 +93,12 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   }
 
   /**
-   * Get a list of all included assets in the template. This method does not
-   * recursively get the dependencies of the included components. For depth checks,
-   * use the method `getIncludedAssetPaths` in the `Project` class.
-   */
-  getIncludedAssetPaths(): string[] {
-    return [...this._dependencies.assets]
-  }
-
-  /**
    * Get a list of all included components in the template. This method does not
    * recursively get the dependencies of the included components. For depth checks,
    * use the method `getIncludedComponentNames` in the `Project` class.
    */
   getIncludedComponentNames(): string[] {
-    return [...this._dependencies.components]
+    return [...this._dependencies]
   }
 
   /**
@@ -124,21 +109,12 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   }
 
   /**
-   * Check if the template includes a specific asset. This method does not
-   * recursively check dependencies of the included components. For depth checks,
-   * use the method `includesAsset` in the `Project` class.
-   */
-  includesAsset(path: string): boolean {
-    return this._dependencies.assets.includes(path)
-  }
-
-  /**
    * Check if the template includes a specific component. This method does not
    * recursively check dependencies of the included components. For depth checks,
    * use the method `includesComponent` in the `Project` class.
    */
   includesComponent(name: string): boolean {
-    return this._dependencies.components.includes(name)
+    return this._dependencies.includes(name)
   }
 
   /**
@@ -164,15 +140,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
               }
 
               for (const attr of node.attrs) {
-                if (attr.name === 'asset') {
-                  if (!this._project?.hasAsset(attr.value)) {
-                    this.addDiagnostics('dependencies', {
-                      message: 'Asset does not exist.',
-                      severity: 'warning',
-                      ...this._html.getAttributeValueRange(node, attr.name)!,
-                    })
-                  }
-                } else if (attr.name === 'component') {
+                if (attr.name === 'component') {
                   if (this._project?.hasComponent(attr.value)) {
                     component.name = attr.value
                     component.properties.push(...this._project.getPropertyNames(attr.value))
@@ -189,7 +157,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
               if (component.name) {
                 for (const attr of node.attrs) {
                   if (
-                    !['if', 'asset', 'component'].includes(attr.name) &&
+                    !['if', 'component'].includes(attr.name) &&
                     isPropertyName(attr.name) &&
                     !component.properties.includes(attr.name)
                   ) {
@@ -268,25 +236,19 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   }
 
   /**
-   * Extract component names and asset paths from the HTML AST.
+   * Extract included component names from the HTML AST.
    */
   protected _resolveDependencies(): void {
-    const assets: string[] = []
-    const components: string[] = []
+    const names: string[] = []
 
     this._html.getElements('include').forEach((element) => {
       for (const attr of element.attrs) {
-        if (attr.name === 'asset' && isAssetPath(attr.value)) {
-          assets.push(attr.value)
-        }
-
         if (attr.name === 'component' && isComponentName(attr.value)) {
-          components.push(attr.value)
+          names.push(attr.value)
         }
       }
     })
 
-    clearArray(this._dependencies.assets).push(...uniqueArray(assets).sort())
-    clearArray(this._dependencies.components).push(...uniqueArray(components).sort())
+    clearArray(this._dependencies).push(...uniqueArray(names).sort())
   }
 }

@@ -34,7 +34,7 @@ test('linting attribute names', () => {
   )
   expect(diagnostics).toHaveProperty('2.from', 15)
   expect(diagnostics).toHaveProperty('2.to', 22)
-  expect(diagnostics[2].message).toBe('Invalid attribute name.')
+  expect(diagnostics).toHaveProperty('2.message', 'Invalid attribute name.')
 })
 
 test('linting if attributes', () => {
@@ -65,61 +65,21 @@ test('linting include elements (1)', () => {
   expect(diagnostics).toHaveProperty('0.message', 'Invalid property name.')
   expect(diagnostics).toHaveProperty('1.from', 0)
   expect(diagnostics).toHaveProperty('1.to', 37)
-  expect(diagnostics).toHaveProperty('1.message', "Missing attribute 'asset' or 'component'.")
+  expect(diagnostics).toHaveProperty('1.message', "Missing 'component' attribute.")
 })
 
 test('linting include elements (2)', () => {
-  const diagnostics = new HTML('<include component="/foo" asset="bar"></include>')
+  const diagnostics = new HTML('<include component="/foo" bar-baz="baz"></include>')
     .lint('includeElements')
     .getDiagnostics('includeElements')
 
-  expect(diagnostics).toHaveLength(4)
+  expect(diagnostics).toHaveLength(2)
   expect(diagnostics).toHaveProperty('0.from', 20)
   expect(diagnostics).toHaveProperty('0.to', 24)
   expect(diagnostics).toHaveProperty('0.message', 'Invalid component name.')
   expect(diagnostics).toHaveProperty('1.from', 26)
-  expect(diagnostics).toHaveProperty('1.to', 31)
-  expect(diagnostics).toHaveProperty(
-    '1.message',
-    'Assets and componets cannot be included at the same time.',
-  )
-  expect(diagnostics).toHaveProperty('2.from', 9)
-  expect(diagnostics).toHaveProperty('2.to', 18)
-  expect(diagnostics).toHaveProperty(
-    '2.message',
-    'Assets and componets cannot be included at the same time.',
-  )
-  expect(diagnostics).toHaveProperty('3.from', 33)
-  expect(diagnostics).toHaveProperty('3.to', 36)
-  expect(diagnostics[3].message).toBe('Invalid asset path.')
-})
-
-test('linting include elements (3)', () => {
-  const diagnostics = new HTML('<include if="foo" asset="/assets/bar" baz>')
-    .lint('includeElements')
-    .getDiagnostics('includeElements')
-
-  expect(diagnostics).toHaveLength(1)
-  expect(diagnostics).toHaveProperty('0.from', 38)
-  expect(diagnostics).toHaveProperty('0.to', 41)
-  expect(diagnostics).toHaveProperty(
-    '0.message',
-    'Properties cannot be used when including an asset.',
-  )
-})
-
-test('linting include elements (4)', () => {
-  const diagnostics = new HTML('<include asset="/assets/foo"><inject><inject></include>')
-    .lint('includeElements')
-    .getDiagnostics('includeElements')
-
-  expect(diagnostics).toHaveLength(1)
-  expect(diagnostics).toHaveProperty('0.from', 29)
-  expect(diagnostics).toHaveProperty('0.to', 45)
-  expect(diagnostics).toHaveProperty(
-    '0.message',
-    'Injections are only available when including components.',
-  )
+  expect(diagnostics).toHaveProperty('1.to', 33)
+  expect(diagnostics).toHaveProperty('1.message', 'Invalid property name.')
 })
 
 test('linting inject elements (1)', () => {

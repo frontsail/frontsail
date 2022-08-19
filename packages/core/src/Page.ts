@@ -14,14 +14,11 @@ import { isAlpineDirective, isPagePath } from './validation'
  *
  * Glossary:
  *
- * - **Asset** - A file located in the `assets` directory.
- *
  * - **AST** - Refers to an HTML abstract sytax tree.
  *
  * - **Attribute** - An HTML attribute (e.g. `<div attribute-name="value"></div>`).
  *
- * - **Include** - Refers to using the special `<include>` tag to render asset file
- *   contents or components.
+ * - **Include** - Refers to using the special `<include>` tag to render components.
  *
  * - **Inject** - Refers to a special `<inject>` element for inserting its child nodes
  *   into a component outlet. These elements must be directly nested within `<include>`

@@ -47,11 +47,8 @@ test('linting component dependencies', () => {
     .lintComponent('foo', 'dependencies')
     .getComponentDiagnostics('foo', 'dependencies')
 
-  expect(diagnostics).toHaveLength(2)
+  expect(diagnostics).toHaveLength(1)
   expect(diagnostics).toHaveProperty('0.from', 28)
   expect(diagnostics).toHaveProperty('0.to', 31)
   expect(diagnostics).toHaveProperty('0.message', 'Component does not exist.')
-  expect(diagnostics).toHaveProperty('1.from', 62)
-  expect(diagnostics).toHaveProperty('1.to', 73)
-  expect(diagnostics).toHaveProperty('1.message', 'Asset does not exist.')
 })

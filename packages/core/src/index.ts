@@ -12,7 +12,7 @@ export { AttributeValue, HTMLDiagnostics, MustacheTag } from './types/html'
 export { JSDiagnostics } from './types/js'
 export { PageDiagnostics } from './types/page'
 export { ProjectOptions } from './types/project'
-export { Dependencies, TemplateDiagnostics } from './types/template'
+export { TemplateDiagnostics } from './types/template'
 export {
   isAlpineDirective,
   isAssetPath,

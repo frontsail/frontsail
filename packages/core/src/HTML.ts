@@ -15,7 +15,6 @@ import { AtLeastOne } from './types/generic'
 import { AttributeValue, HTMLDiagnostics, MustacheTag } from './types/html'
 import {
   isAlpineDirective,
-  isAssetPath,
   isAttributeName,
   isComponentName,
   isEnclosed,
@@ -44,16 +43,13 @@ enum NS {
  *
  * Glossary:
  *
- * - **Asset** - A file located in the `assets` directory.
- *
  * - **AST** - Refers to the HTML abstract sytax tree built with parse5.
  *
  * - **Global** - Refers to a globally accessible string variable that can be
  *   interpolated across templates. Global names are always written in upper
  *   snake case (e.g. 'DESCRIPTION', 'COPYRIGHT_YEAR', etc.).
  *
- * - **Include** - Refers to using the special `<include>` tag to render asset file
- *   contents or components.
+ * - **Include** - Refers to using the special `<include>` tag to render components.
  *
  * - **Inject** - Refers to a special `<inject>` element for inserting its child nodes
  *   into a component outlet. These elements must be directly nested within `<include>`
@@ -508,38 +504,8 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
           // Check include elements
           //
           if (node.tagName === 'include' && this.shouldTest('includeElements', tests)) {
-            let includes: 'asset' | 'component' | 'both' | null = null
-
             for (const attr of node.attrs) {
-              if ((attr.name === 'asset' || attr.name === 'component') && includes) {
-                includes = 'both'
-
-                for (const name of ['asset', 'component']) {
-                  this.addDiagnostics('includeElements', {
-                    message: 'Assets and componets cannot be included at the same time.',
-                    severity: 'warning',
-                    ...this.getAttributeNameRange(node, name)!,
-                  })
-                }
-              }
-
-              if (attr.name === 'asset') {
-                if (includes !== 'both') {
-                  includes = 'asset'
-                }
-
-                if (!isAssetPath(attr.value)) {
-                  this.addDiagnostics('includeElements', {
-                    message: 'Invalid asset path.',
-                    severity: 'warning',
-                    ...this.getAttributeValueRange(node, attr.name)!,
-                  })
-                }
-              } else if (attr.name === 'component') {
-                if (includes !== 'both') {
-                  includes = 'component'
-                }
-
+              if (attr.name === 'component') {
                 if (!isComponentName(attr.value)) {
                   this.addDiagnostics('includeElements', {
                     message: 'Invalid component name.',
@@ -556,30 +522,9 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
               }
             }
 
-            if (includes === 'asset') {
-              for (const attr of node.attrs) {
-                if (!['asset', 'component', 'if'].includes(attr.name)) {
-                  this.addDiagnostics('includeElements', {
-                    message: 'Properties cannot be used when including an asset.',
-                    severity: 'warning',
-                    ...HTML.getAttributeNameRange(node, attr.name)!,
-                  })
-                }
-
-                if (node.childNodes.length > 0) {
-                  this.addDiagnostics('includeElements', {
-                    message: 'Injections are only available when including components.',
-                    severity: 'warning',
-                    from: node.sourceCodeLocation!.startTag!.endOffset,
-                    to:
-                      node.sourceCodeLocation!.endTag?.startOffset ??
-                      node.sourceCodeLocation!.endOffset,
-                  })
-                }
-              }
-            } else if (!includes) {
+            if (!node.attrs.some((attr) => attr.name === 'component')) {
               this.addDiagnostics('includeElements', {
-                message: "Missing attribute 'asset' or 'component'.",
+                message: "Missing 'component' attribute.",
                 severity: 'warning',
                 from: node.sourceCodeLocation!.startTag!.startOffset,
                 to: node.sourceCodeLocation!.startTag!.endOffset,
@@ -821,5 +766,3 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     }
   }
 }
-
-// @todo remove include[asset] support

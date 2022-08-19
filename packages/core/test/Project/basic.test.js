@@ -3,7 +3,7 @@ import { Project } from '../..'
 const project = new Project({
   components: [
     { name: 'foo', html: '<div><include component="bar"></include></div>' },
-    { name: 'bar', html: '<div><include asset="/assets/baz"></include></div>' },
+    { name: 'bar', html: '<div><include component="baz"></include></div>' },
     { name: 'baz', html: '<div><outlet></outlet><outlet name="baz"><span></span></outlet></div>' },
   ],
   pages: [
@@ -48,28 +48,15 @@ test('linting', () => {
 
 test('getting included components', () => {
   expect(project.getIncludedComponentNames('foo')).toEqual(['bar'])
-  expect(project.getIncludedComponentNames('bar')).toEqual([])
+  expect(project.getIncludedComponentNames('bar')).toEqual(['baz'])
   expect(project.getIncludedComponentNames('/')).toEqual([])
   expect(project.getIncludedComponentNames('/foo')).toEqual(['foo'])
   expect(project.getIncludedComponentNames('/bar')).toEqual(['bar'])
-  expect(project.getIncludedComponentNames('foo', true)).toEqual(['bar'])
-  expect(project.getIncludedComponentNames('bar', true)).toEqual([])
+  expect(project.getIncludedComponentNames('foo', true)).toEqual(['bar', 'baz'])
+  expect(project.getIncludedComponentNames('bar', true)).toEqual(['baz'])
   expect(project.getIncludedComponentNames('/', true)).toEqual([])
-  expect(project.getIncludedComponentNames('/foo', true)).toEqual(['bar', 'foo'])
-  expect(project.getIncludedComponentNames('/bar', true)).toEqual(['bar'])
-})
-
-test('getting included assets', () => {
-  expect(project.getIncludedAssetPaths('foo')).toEqual([])
-  expect(project.getIncludedAssetPaths('bar')).toEqual(['/assets/baz'])
-  expect(project.getIncludedAssetPaths('/')).toEqual([])
-  expect(project.getIncludedAssetPaths('/foo')).toEqual([])
-  expect(project.getIncludedAssetPaths('/bar')).toEqual([])
-  expect(project.getIncludedAssetPaths('foo', true)).toEqual(['/assets/baz'])
-  expect(project.getIncludedAssetPaths('bar', true)).toEqual(['/assets/baz'])
-  expect(project.getIncludedAssetPaths('/', true)).toEqual([])
-  expect(project.getIncludedAssetPaths('/foo', true)).toEqual(['/assets/baz'])
-  expect(project.getIncludedAssetPaths('/bar', true)).toEqual(['/assets/baz'])
+  expect(project.getIncludedComponentNames('/foo', true)).toEqual(['bar', 'baz', 'foo'])
+  expect(project.getIncludedComponentNames('/bar', true)).toEqual(['bar', 'baz'])
 })
 
 test('getting outlet names', () => {
