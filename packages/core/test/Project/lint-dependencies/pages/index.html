@@ -7,9 +7,22 @@
     <title>Test</title>
   </head>
   <body x-cloak>
-    <include component="foo" bar="1" baz="1" />
+    <include component="foo" bar="1" baz="1"></include>
     <include component="bar">
+      <inject into="main">
+        <div></div>
+      </inject>
+      <inject into="bar">
+        <div></div>
+      </inject>
+      <inject into="baz">
+        <div></div>
+      </inject>
+    </include>
+    <include component="baz">
       <div></div>
     </include>
+    <include component="foo">foo</include>
+    <inject></inject>
   </body>
 </html>

@@ -119,17 +119,17 @@ export class JS extends Diagnostics<JSDiagnostics> {
 
   /**
    * Find and return a list of identifiers in the AST.
-   *
-   * @throws an error if the AST is not defined.
    */
   getIdentifiers(): string[] {
     const variables: string[] = []
 
-    this.walkSimple({
-      Identifier(node: Node & { name: string }) {
-        variables.push(node.name)
-      },
-    })
+    if (this._ast) {
+      this.walkSimple({
+        Identifier(node: Node & { name: string }) {
+          variables.push(node.name)
+        },
+      })
+    }
 
     return variables
   }
@@ -148,10 +148,12 @@ export class JS extends Diagnostics<JSDiagnostics> {
   /**
    * Check if the JS code is a valid expression that can be used in `if` attributes.
    * These expressions can be safely evaluated.
-   *
-   * @throws an error if the AST is not defined.
    */
   isIfAttributeValue(): boolean {
+    if (!this._ast) {
+      return false
+    }
+
     for (const node of this.getNodes()) {
       if (['CallExpression', 'VariableDeclaration'].includes(node.type)) {
         return false
@@ -163,8 +165,6 @@ export class JS extends Diagnostics<JSDiagnostics> {
 
   /**
    * Check if the JS code is an object.
-   *
-   * @throws an error if the AST is not defined.
    */
   isObject(): boolean {
     if (this._ast) {
@@ -172,9 +172,9 @@ export class JS extends Diagnostics<JSDiagnostics> {
         findNodeAt(this._ast, this._declarator.length, this._js.length)?.node.type ===
         'ObjectExpression'
       )
-    } else {
-      this._throw()
     }
+
+    return false
   }
 
   /**

@@ -1,4 +1,4 @@
-import { clearArray, uniqueArray } from '@frontsail/utils'
+import { clearArray, split, uniqueArray } from '@frontsail/utils'
 import { defaultTreeAdapter, parse, parseFragment, serialize } from 'parse5'
 import {
   ChildNode,
@@ -55,6 +55,11 @@ enum NS {
  * - **Include** - Refers to using the special `<include>` tag to render asset file
  *   contents or components.
  *
+ * - **Inject** - Refers to a special `<inject>` element for inserting its child nodes
+ *   into a component outlet. These elements must be directly nested within `<include>`
+ *   elements. Inject tags can have an `into` attribute whose value must match an
+ *   existing outlet name. If omitted, the 'main' outlet is targeted by default.
+ *
  * - **Interpolation** - Refers to embedding expressions using the "Mustache" syntax
  *   (double curly braces). Only globals (e.g. `{{ HOME_URL }}`) and properties
  *   (e.g. `{{ icon_size }}`) can be interpolated. Interpolation cannot be used in
@@ -66,11 +71,20 @@ enum NS {
  * - **Mustache variable** - Refers to the text between the curly braces in a mustache
  *   tag. The expected value is a global or property.
  *
+ * - **Outlet** - Refers to a special component-only `<outlet>` element that is replaced
+ *   during the render phase by child nodes of `<inject>` elements used in parent
+ *   templates. Outlets can only have one `name` attribute, which must be unique within
+ *   the component. If omitted, the output is named 'main' by default. Outlet elements
+ *   can contain child nodes that are rendered if the parent template does not specify
+ *   an associated `<inject>` tag.
+ *
  * - **parse5** - An HTML open source parsing and serialization toolset.
  *
  * - **Property** - Refers to a scoped string variable that can only be accessed and
  *   interpolated within a specific template. Property names are always written in
  *   lower snake case (e.g. 'size', 'shadow_opacity', etc.).
+ *
+ * - **Template** - Refers to a component or page.
  */
 export class HTML extends Diagnostics<HTMLDiagnostics> {
   /**
@@ -103,8 +117,10 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     attributeNames: [],
     ifAttributes: [],
     includeElements: [],
+    injectElements: [],
     mustacheLocations: [],
     mustacheValues: [],
+    outletElements: [],
     syntax: [],
   }
 
@@ -154,6 +170,8 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
 
   /**
    * Find and store property names used in the HTML.
+   *
+   * @throws an error if the AST is not defined.
    */
   protected _extractPropertyNames(): void {
     const propertyNames: string[] = []
@@ -165,7 +183,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     })
 
     this.getAttributeValues('if').forEach((item) => {
-      if (item.element.tagName !== 'slot') {
+      if (item.element.tagName !== 'outlet') {
         const js = new JS(item.text)
 
         if (js.isIfAttributeValue()) {
@@ -297,7 +315,14 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
-   * Extract all `{{ mustache_tags }}` from a HTML code.
+   * Get the outlet name from an `<inject>` `element` by looking up its `into` attribute.
+   */
+  static getInjectIntoValue(element: Element): string {
+    return element.attrs.find((attr) => attr.name === 'into')?.value ?? 'main'
+  }
+
+  /**
+   * Get a list of all `{{ mustache_tags }}` in a HTML code.
    */
   static getMustaches(html: string): MustacheTag[] {
     const regex = /{{\s*(.*?)\s*}}/g
@@ -321,7 +346,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
-   * Extract all `{{ mustache_tags }}` from the HTML code.
+   * Get a list of all `{{ mustache_tags }}` in the HTML code.
    */
   getMustaches(): MustacheTag[] {
     return HTML.getMustaches(this._html)
@@ -334,6 +359,13 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
    */
   getNodes(): Node[] {
     return [...this.walk()]
+  }
+
+  /**
+   * Get the outlet name from an `<outlet>` `element` by looking up its `name` attribute.
+   */
+  static getOutletName(element: Element): string {
+    return element.attrs.find((attr) => attr.name === 'name')?.value ?? 'main'
   }
 
   /**
@@ -442,9 +474,9 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
               if (attr.name === 'if') {
                 const js = new JS(attr.value)
 
-                if (node.tagName === 'slot') {
+                if (node.tagName === 'outlet') {
                   this.addDiagnostics('ifAttributes', {
-                    message: 'If statements cannot be used in slots.',
+                    message: 'If statements cannot be used in outlets.',
                     severity: 'warning',
                     ...HTML.getAttributeNameRange(node, attr.name)!,
                   })
@@ -482,12 +514,13 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
               if ((attr.name === 'asset' || attr.name === 'component') && includes) {
                 includes = 'both'
 
-                this.addDiagnostics('includeElements', {
-                  message: 'Assets and componets cannot be included at the same time.',
-                  severity: 'warning',
-                  from: node.sourceCodeLocation!.startTag!.startOffset,
-                  to: node.sourceCodeLocation!.startTag!.endOffset,
-                })
+                for (const name of ['asset', 'component']) {
+                  this.addDiagnostics('includeElements', {
+                    message: 'Assets and componets cannot be included at the same time.',
+                    severity: 'warning',
+                    ...this.getAttributeNameRange(node, name)!,
+                  })
+                }
               }
 
               if (attr.name === 'asset') {
@@ -497,7 +530,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
 
                 if (!isAssetPath(attr.value)) {
                   this.addDiagnostics('includeElements', {
-                    message: 'Invalid asset path format.',
+                    message: 'Invalid asset path.',
                     severity: 'warning',
                     ...this.getAttributeValueRange(node, attr.name)!,
                   })
@@ -509,14 +542,14 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
 
                 if (!isComponentName(attr.value)) {
                   this.addDiagnostics('includeElements', {
-                    message: 'Invalid component name format.',
+                    message: 'Invalid component name.',
                     severity: 'warning',
                     ...this.getAttributeValueRange(node, attr.name)!,
                   })
                 }
               } else if (attr.name !== 'if' && !isPropertyName(attr.name)) {
                 this.addDiagnostics('includeElements', {
-                  message: 'Invalid property name format.',
+                  message: 'Invalid property name.',
                   severity: 'warning',
                   ...HTML.getAttributeNameRange(node, attr.name)!,
                 })
@@ -532,6 +565,17 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                     ...HTML.getAttributeNameRange(node, attr.name)!,
                   })
                 }
+
+                if (node.childNodes.length > 0) {
+                  this.addDiagnostics('includeElements', {
+                    message: 'Injections are only available when including components.',
+                    severity: 'warning',
+                    from: node.sourceCodeLocation!.startTag!.endOffset,
+                    to:
+                      node.sourceCodeLocation!.endTag?.startOffset ??
+                      node.sourceCodeLocation!.endOffset,
+                  })
+                }
               }
             } else if (!includes) {
               this.addDiagnostics('includeElements', {
@@ -543,21 +587,176 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             }
           }
           //
-          // Check mustaches
+          // Check inject elements
+          //
+          if (node.tagName === 'inject' && this.shouldTest('injectElements', tests)) {
+            const parent = HTML.adapter.getParentNode(node)
+
+            if (parent && HTML.adapter.isElementNode(parent) && parent.tagName === 'include') {
+              const intoValue = HTML.getInjectIntoValue(node)
+              const siblings = parent.childNodes.filter((childNode) => {
+                return (
+                  (HTML.adapter.isElementNode(childNode) && childNode !== node) ||
+                  (HTML.adapter.isTextNode(childNode) && childNode.value.trim())
+                )
+              }) as Node[]
+              const duplicateExists = siblings.some((sibling) => {
+                return (
+                  HTML.adapter.isElementNode(sibling) &&
+                  sibling.tagName === 'inject' &&
+                  HTML.getInjectIntoValue(sibling) === intoValue
+                )
+              })
+
+              if (!intoValue) {
+                this.addDiagnostics('injectElements', {
+                  message: 'Missing outlet name.',
+                  severity: 'warning',
+                  ...this.getAttributeNameRange(node, 'into')!,
+                })
+              } else if (duplicateExists) {
+                const valueRange = this.getAttributeValueRange(node, 'into')
+                const from = valueRange?.from ?? node.sourceCodeLocation!.startTag!.startOffset
+                const to = valueRange?.to ?? node.sourceCodeLocation!.startTag!.endOffset
+
+                this.addDiagnostics('injectElements', {
+                  message: 'Duplicate injection.',
+                  severity: 'warning',
+                  from,
+                  to,
+                })
+              }
+
+              for (const sibling of siblings) {
+                if (
+                  (HTML.adapter.isElementNode(sibling) && sibling.tagName !== 'inject') ||
+                  HTML.adapter.isTextNode(sibling)
+                ) {
+                  this.addDiagnostics('injectElements', {
+                    message: 'When using inject tags, all other nodes must be nested inside them.',
+                    severity: 'error',
+                    from: sibling.sourceCodeLocation!.startOffset,
+                    to: sibling.sourceCodeLocation!.endOffset,
+                  })
+                }
+              }
+            } else {
+              this.addDiagnostics('injectElements', {
+                message: "Inject tags must be directly nested within 'include' elements.",
+                severity: 'error',
+                from: node.sourceCodeLocation!.startOffset,
+                to: node.sourceCodeLocation!.endOffset,
+              })
+            }
+
+            for (const attr of node.attrs) {
+              if (!['if', 'into'].includes(attr.name)) {
+                this.addDiagnostics('injectElements', {
+                  message: 'Unsupported attribute.',
+                  severity: 'warning',
+                  ...this.getAttributeNameRange(node, attr.name)!,
+                })
+              }
+            }
+          }
+          //
+          // Check mustache locations
           //
           if (this.shouldTest('mustacheLocations', tests)) {
             for (const attr of node.attrs) {
-              if (isAlpineDirective(attr.name)) {
-                for (const mustache of HTML.getMustaches(attr.value)) {
-                  const attributeValueRange = this.getAttributeValueRange(node, attr.name)!
+              for (const mustache of HTML.getMustaches(attr.value)) {
+                const attributeValueRange = this.getAttributeValueRange(node, attr.name)!
+                const from = attributeValueRange.from + mustache.from
+                const to = attributeValueRange.from + mustache.to
 
+                if (isAlpineDirective(attr.name)) {
                   this.addDiagnostics('mustacheLocations', {
                     message: 'Mustaches cannot be used in Alpine directives.',
                     severity: 'error',
-                    from: attributeValueRange.from + mustache.from,
-                    to: attributeValueRange.from + mustache.to,
+                    from,
+                    to,
+                  })
+                } else if (
+                  attr.name === 'if' ||
+                  (node.tagName === 'include' && attr.name === 'component') ||
+                  (node.tagName === 'inject' && attr.name === 'into') ||
+                  (node.tagName === 'outlet' && ['allow', 'name'].includes(attr.name))
+                ) {
+                  this.addDiagnostics('mustacheLocations', {
+                    message: `Mustaches cannot be used in '${attr.name}' attributes.`,
+                    severity: 'error',
+                    from,
+                    to,
                   })
                 }
+              }
+            }
+          }
+          //
+          // Check outlet elements
+          //
+          if (node.tagName === 'outlet' && this.shouldTest('outletElements', tests)) {
+            const name = HTML.getOutletName(node)
+            const siblings = this.getElements('outlet').filter((sibling) => sibling !== node)
+            const duplicateExists = siblings.some((sibling) => HTML.getOutletName(sibling) === name)
+
+            if (!name) {
+              this.addDiagnostics('outletElements', {
+                message: 'Missing outlet name.',
+                severity: 'warning',
+                ...this.getAttributeNameRange(node, 'name')!,
+              })
+            } else if (duplicateExists) {
+              const valueRange = this.getAttributeValueRange(node, 'name')
+              const from = valueRange?.from ?? node.sourceCodeLocation!.startTag!.startOffset
+              const to = valueRange?.to ?? node.sourceCodeLocation!.startTag!.endOffset
+
+              this.addDiagnostics('outletElements', {
+                message: 'Duplicate outlet name.',
+                severity: 'warning',
+                from,
+                to,
+              })
+            }
+
+            if (HTML.hasParent(node, 'outlet')) {
+              this.addDiagnostics('outletElements', {
+                message: 'Outlets cannot be nested within each other.',
+                severity: 'error',
+                from: node.sourceCodeLocation!.startOffset,
+                to: node.sourceCodeLocation!.endOffset,
+              })
+            } else if (HTML.hasParent(node, 'include')) {
+              this.addDiagnostics('outletElements', {
+                message: "Outlets cannot be nested within 'include' elements.",
+                severity: 'error',
+                from: node.sourceCodeLocation!.startOffset,
+                to: node.sourceCodeLocation!.endOffset,
+              })
+            }
+
+            for (const attr of node.attrs) {
+              if (attr.name === 'allow') {
+                const componentNames = split(attr.value)
+
+                for (const componentName of componentNames) {
+                  if (!isComponentName(componentName.value.trim())) {
+                    const attributeValueRange = this.getAttributeValueRange(node, attr.name)!
+
+                    this.addDiagnostics('outletElements', {
+                      message: 'Invalid component name.',
+                      severity: 'warning',
+                      from: attributeValueRange.from + componentName.from,
+                      to: attributeValueRange.from + componentName.to,
+                    })
+                  }
+                }
+              } else if (attr.name !== 'name') {
+                this.addDiagnostics('outletElements', {
+                  message: 'Unsupported attribute.',
+                  severity: 'warning',
+                  ...this.getAttributeNameRange(node, attr.name)!,
+                })
               }
             }
           }
@@ -622,3 +821,5 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     }
   }
 }
+
+// @todo remove include[asset] support

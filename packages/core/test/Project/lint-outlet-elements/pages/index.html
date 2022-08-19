@@ -6,10 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Test</title>
   </head>
-  <body x-cloak>
-    <include component="foo" foo="1"></include>
-    <include component="bar" bar="1">
-      <div x-foo :bar="{{ bar }}" @click="baz"></div>
-    </include>
+  <body>
+    <outlet></outlet>
   </body>
 </html>

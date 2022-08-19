@@ -2,19 +2,20 @@ import { Project } from '../..'
 
 const project = new Project({
   components: [
-    { name: 'foo', html: '<div><include component="bar" /></div>' },
-    { name: 'bar', html: '<include asset="/assets/baz" />' },
+    { name: 'foo', html: '<div><include component="bar"></include></div>' },
+    { name: 'bar', html: '<div><include asset="/assets/baz"></include></div>' },
+    { name: 'baz', html: '<div><outlet></outlet><outlet name="baz"><span></span></outlet></div>' },
   ],
   pages: [
     { path: '/', html: '<h1>Hello, World!</h1>' },
-    { path: '/foo', html: '<include component="foo" />' },
-    { path: '/bar', html: '<include component="bar" />' },
+    { path: '/foo', html: '<include component="foo"></include>' },
+    { path: '/bar', html: '<include component="bar"></include>' },
   ],
   assets: ['/assets/baz'],
 })
 
 test('listing components', () => {
-  expect(project.listComponents()).toEqual(['bar', 'foo'])
+  expect(project.listComponents()).toEqual(['bar', 'baz', 'foo'])
 })
 
 test('listing pages', () => {
@@ -69,4 +70,11 @@ test('getting included assets', () => {
   expect(project.getIncludedAssetPaths('/', true)).toEqual([])
   expect(project.getIncludedAssetPaths('/foo', true)).toEqual(['/assets/baz'])
   expect(project.getIncludedAssetPaths('/bar', true)).toEqual(['/assets/baz'])
+})
+
+test('getting outlet names', () => {
+  expect(project.getOutletNames('foo')).toEqual([])
+  expect(project.getOutletNames('bar')).toEqual([])
+  expect(project.getOutletNames('baz')).toEqual(['baz', 'main'])
+  expect(() => project.getOutletNames('/')).toThrow()
 })

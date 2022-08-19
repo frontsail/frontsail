@@ -33,8 +33,13 @@ import { ProjectOptions } from './types/project'
  *   interpolated across templates. Global names are always written in upper
  *   snake case and must begin with a letter (e.g. 'YEAR', 'COPYRIGHT_TEXT', etc.).
  *
- * - **Include** - Refers to using the special `<include>` tag to render asset file
+ * - **Include** - Refers to a special `<include>` element for rendering asset file
  *   contents or components.
+ *
+ * - **Inject** - Refers to a special `<inject>` element for inserting its child nodes
+ *   into a component outlet. These elements must be directly nested within `<include>`
+ *   elements. Inject tags can have an `into` attribute whose value must match an
+ *   existing outlet name. If omitted, the 'main' outlet is targeted by default.
  *
  * - **Inline CSS** - Refers to a CSS rule written in a custom `css` attribute,
  *   without a selector, which can have nested SCSS-like ampersand-rules and at-rules.
@@ -44,6 +49,13 @@ import { ProjectOptions } from './types/project'
  *   (double curly braces). Only globals (e.g. `{{ HOME_URL }}`) and properties
  *   (e.g. `{{ icon_size }}`) can be interpolated. Interpolation cannot be used in
  *   attribute names and special attributes, like `css` and Alpine directives.
+ *
+ * - **Outlet** - Refers to a special component-only `<outlet>` element that is replaced
+ *   during the render phase by child nodes of `<inject>` elements used in parent
+ *   templates. Outlets can only have one `name` attribute, which must be unique within
+ *   the component. If omitted, the output is named 'main' by default. Outlet elements
+ *   can contain child nodes that are rendered if the parent template does not specify
+ *   an associated `<inject>` tag.
  *
  * - **Parent selector** - A special selector (`&`) invented by Sass that's used in
  *   nested selectors to refer to the outer selector. It makes it possible to re-use
@@ -371,6 +383,15 @@ export class Project {
   }
 
   /**
+   * Get outlet names from a component named `componentName`.
+   *
+   * @throws an error if the component does not exist.
+   */
+  getOutletNames(componentName: string): string[] {
+    return this._getComponent(componentName).getOutletNames()
+  }
+
+  /**
    * Get a page by its `path`.
    *
    * @throws an error if the page does not exist.
@@ -390,7 +411,7 @@ export class Project {
   }
 
   /**
-   * Get a list of property names in a template identified by `templateId`.
+   * Get a list of property names from a template identified by `templateId`.
    */
   getPropertyNames(templateId: string): string[] {
     return this._getTemplate(templateId).getPropertyNames()

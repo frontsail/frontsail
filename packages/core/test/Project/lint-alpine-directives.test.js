@@ -27,8 +27,8 @@ test('linting alpine directives (page)', () => {
     .getPageDiagnostics('/', 'alpineDirectives')
 
   expect(diagnostics).toHaveLength(2)
-  expect(diagnostics).toHaveProperty('0.from', 361)
-  expect(diagnostics).toHaveProperty('0.to', 361)
+  expect(diagnostics).toHaveProperty('0.from', 369)
+  expect(diagnostics).toHaveProperty('0.to', 369)
   expect(diagnostics).toHaveProperty('0.message', 'Unexpected token.')
   expect(diagnostics).toHaveProperty('1.from', 250)
   expect(diagnostics).toHaveProperty('1.to', 257)
@@ -42,14 +42,14 @@ test('full lint (page)', () => {
   const diagnostics = project.lintPage('/', '*').getPageDiagnostics('/', '*')
 
   expect(diagnostics).toHaveLength(4)
-  expect(diagnostics).toHaveProperty('2.from', 328)
-  expect(diagnostics).toHaveProperty('2.to', 331)
+  expect(diagnostics).toHaveProperty('2.from', 336)
+  expect(diagnostics).toHaveProperty('2.to', 339)
   expect(diagnostics).toHaveProperty(
     '2.message',
     "Property 'bar' does not exist in component 'bar'.",
   )
-  expect(diagnostics).toHaveProperty('3.from', 360)
-  expect(diagnostics).toHaveProperty('3.to', 369)
+  expect(diagnostics).toHaveProperty('3.from', 368)
+  expect(diagnostics).toHaveProperty('3.to', 377)
   expect(diagnostics).toHaveProperty('3.message', 'Mustaches cannot be used in Alpine directives.')
 })
 

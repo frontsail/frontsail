@@ -145,8 +145,10 @@ test('filtering tests', () => {
     'attributeNames',
     'ifAttributes',
     'includeElements',
+    'injectElements',
     'mustacheLocations',
     'mustacheValues',
+    'outletElements',
     'syntax',
   ]
 
@@ -155,4 +157,28 @@ test('filtering tests', () => {
   expect(html.filterTests([])).toEqual([])
   expect(html.filterTests(['foo'])).toEqual([])
   expect(html.filterTests(['foo', '*'])).toEqual(types)
+})
+
+test('getting into attribute value from injects', () => {
+  const html = new HTML(
+    '<inject></inject><inject into="foo"></inject><inject into></inject><inject into=""></inject>',
+  )
+  const elements = html.getElements('inject')
+
+  expect(HTML.getInjectIntoValue(elements[0])).toBe('main')
+  expect(HTML.getInjectIntoValue(elements[1])).toBe('foo')
+  expect(HTML.getInjectIntoValue(elements[2])).toBe('')
+  expect(HTML.getInjectIntoValue(elements[3])).toBe('')
+})
+
+test('getting name attribute value from outlets', () => {
+  const html = new HTML(
+    '<outlet></outlet><outlet name="foo"></outlet><outlet name></outlet><outlet name=""></outlet>',
+  )
+  const elements = html.getElements('outlet')
+
+  expect(HTML.getOutletName(elements[0])).toBe('main')
+  expect(HTML.getOutletName(elements[1])).toBe('foo')
+  expect(HTML.getOutletName(elements[2])).toBe('')
+  expect(HTML.getOutletName(elements[3])).toBe('')
 })

@@ -20,8 +20,10 @@ export interface HTMLDiagnostics {
   attributeNames: Diagnostic[]
   ifAttributes: Diagnostic[]
   includeElements: Diagnostic[]
+  injectElements: Diagnostic[]
   mustacheLocations: Diagnostic[]
   mustacheValues: Diagnostic[]
+  outletElements: Diagnostic[]
   syntax: Diagnostic[]
 }
 
