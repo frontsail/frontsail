@@ -3,10 +3,9 @@ import { Component } from './Component'
 import { Page } from './Page'
 import { Template } from './Template'
 import { Diagnostic } from './types/code'
-import { ComponentDiagnostics } from './types/component'
 import { AtLeastOne } from './types/generic'
-import { PageDiagnostics } from './types/page'
 import { ProjectOptions } from './types/project'
+import { TemplateDiagnostics } from './types/template'
 
 /**
  * Manages project variables, components, pages, assets, scripts, and styles.
@@ -271,7 +270,7 @@ export class Project {
    *
    * @throws an error if the component does not exist.
    */
-  componentHasProblems(name: string, ...types: AtLeastOne<ComponentDiagnostics>): boolean {
+  componentHasProblems(name: string, ...types: AtLeastOne<TemplateDiagnostics>): boolean {
     return this._getComponent(name).hasProblems(...types)
   }
 
@@ -329,7 +328,7 @@ export class Project {
    *
    * @throws an error if the page does not exist.
    */
-  getComponentDiagnostics(name: string, ...types: AtLeastOne<ComponentDiagnostics>): Diagnostic[] {
+  getComponentDiagnostics(name: string, ...types: AtLeastOne<TemplateDiagnostics>): Diagnostic[] {
     return this._getComponent(name).getDiagnostics(...types)
   }
 
@@ -384,7 +383,7 @@ export class Project {
    *
    * @throws an error if the page does not exist.
    */
-  getPageDiagnostics(path: string, ...types: AtLeastOne<PageDiagnostics>): Diagnostic[] {
+  getPageDiagnostics(path: string, ...types: AtLeastOne<TemplateDiagnostics>): Diagnostic[] {
     return this._getPage(path).getDiagnostics(...types)
   }
 
@@ -483,7 +482,7 @@ export class Project {
    *
    * @throws an error if the component does not exist.
    */
-  lintComponent(name: string, ...tests: AtLeastOne<ComponentDiagnostics>): this {
+  lintComponent(name: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
     this._getComponent(name).lint(...tests)
     return this
   }
@@ -495,7 +494,7 @@ export class Project {
    *
    * @throws an error if the component does not exist.
    */
-  lintPage(path: string, ...tests: AtLeastOne<PageDiagnostics>): this {
+  lintPage(path: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
     this._getPage(path).lint(...tests)
     return this
   }
@@ -506,7 +505,7 @@ export class Project {
    *
    * @throws an error if the page does not exist.
    */
-  pageHasProblems(path: string, ...types: AtLeastOne<PageDiagnostics>): boolean {
+  pageHasProblems(path: string, ...types: AtLeastOne<TemplateDiagnostics>): boolean {
     return this._getPage(path).hasProblems(...types)
   }
 

@@ -2,8 +2,8 @@ import { split, uniqueArray } from '@frontsail/utils'
 import { HTML } from './HTML'
 import { Project } from './Project'
 import { Template } from './Template'
-import { ComponentDiagnostics } from './types/component'
 import { AtLeastOne } from './types/generic'
+import { TemplateDiagnostics } from './types/template'
 import { isComponentName } from './validation'
 
 /**
@@ -83,8 +83,23 @@ export class Component extends Template {
    * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
    * `getDiagnostics()`.
    */
-  lint(...tests: AtLeastOne<ComponentDiagnostics>): this {
+  lint(...tests: AtLeastOne<TemplateDiagnostics>): this {
     super.lint(...tests)
+
+    const rootNodes = this._html.getRootNodes()
+
+    // Check template
+    //
+    if (this.shouldTest('templateSpecific', tests)) {
+      for (let i = 1; i < rootNodes.length; i++) {
+        this.addDiagnostics('templateSpecific', {
+          message: 'Components can have only one root node.',
+          severity: 'error',
+          from: rootNodes[i].sourceCodeLocation!.startOffset,
+          to: rootNodes[i].sourceCodeLocation!.endOffset,
+        })
+      }
+    }
 
     if (this.shouldTest('alpineDirectives', tests) || this.shouldTest('outletElements', tests)) {
       for (const node of this._html.walk()) {
@@ -93,15 +108,21 @@ export class Component extends Template {
           // Check Alpine directives
           //
           if (this.shouldTest('alpineDirectives', tests)) {
-            // @todo x-data can only be used once in the root element
+            for (const attr of node.attrs) {
+              if (attr.name === 'x-data' && !rootNodes.includes(node)) {
+                this.addDiagnostics('outletElements', {
+                  message: "The 'x-data' directive can only be used in the root element.",
+                  severity: 'error',
+                  ...HTML.getAttributeNameRange(node, attr.name)!,
+                })
+              }
+            }
           }
           //
           // Check outlet elements
           //
           if (node.tagName === 'outlet' && this.shouldTest('outletElements', tests)) {
-            const parent = HTML.adapter.getParentNode(node)
-
-            if (!parent || parent.nodeName === '#document-fragment') {
+            if (rootNodes.includes(node)) {
               this.addDiagnostics('outletElements', {
                 message: 'Outlets cannot be used as root elements.',
                 severity: 'error',
@@ -138,6 +159,4 @@ export class Component extends Template {
 
     return this
   }
-
-  // @todo Components must have one root element (must be a div, p, h, span, header, footer, etc. tag).
 }

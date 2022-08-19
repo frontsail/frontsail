@@ -2,7 +2,7 @@ import { HTML } from './HTML'
 import { Project } from './Project'
 import { Template } from './Template'
 import { AtLeastOne } from './types/generic'
-import { PageDiagnostics } from './types/page'
+import { TemplateDiagnostics } from './types/template'
 import { isAlpineDirective, isPagePath } from './validation'
 
 /**
@@ -56,7 +56,7 @@ export class Page extends Template {
    * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
    * `getDiagnostics()`.
    */
-  lint(...tests: AtLeastOne<PageDiagnostics>): this {
+  lint(...tests: AtLeastOne<TemplateDiagnostics>): this {
     super.lint(...tests)
 
     if (this.shouldTest('alpineDirectives', tests) || this.shouldTest('outletElements', tests)) {

@@ -372,6 +372,20 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
+   * Get the root elements and non-empty text nodes from the AST by looking into
+   * child nodes of the '#document' or '#document-fragment'.
+   */
+  getRootNodes(): Node[] {
+    return (
+      this._ast?.childNodes.filter((node) => {
+        return (
+          HTML.adapter.isElementNode(node) || (HTML.adapter.isTextNode(node) && node.value.trim())
+        )
+      }) ?? []
+    )
+  }
+
+  /**
    * Check if a `node` has a parent element with a specific `tagName`.
    */
   static hasParent(node: Node, tagName: string): boolean {

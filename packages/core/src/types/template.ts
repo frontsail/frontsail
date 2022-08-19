@@ -7,4 +7,5 @@ import { HTMLDiagnostics } from './html'
  */
 export interface TemplateDiagnostics extends HTMLDiagnostics {
   dependencies: Diagnostic[]
+  templateSpecific: Diagnostic[]
 }

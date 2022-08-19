@@ -74,6 +74,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     mustacheValues: [],
     outletElements: [],
     syntax: [],
+    templateSpecific: [],
   }
 
   /**
