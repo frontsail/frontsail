@@ -27,9 +27,11 @@ export function compareArrays(array1: any[], array2: any[]): boolean {
  * diffArrays(['foo'], ['bar', 'bar']) // ['foo', 'bar']
  */
 export function diffArrays<T>(array1: T[], array2: T[]): T[] {
-  return array1
-    .filter((item) => !array2.includes(item))
-    .concat(array2.filter((item) => !array1.includes(item)))
+  return uniqueArray(
+    array1
+      .filter((item) => !array2.includes(item))
+      .concat(array2.filter((item) => !array1.includes(item))),
+  )
 }
 
 /**
