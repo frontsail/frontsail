@@ -37,21 +37,32 @@ test('linting attribute names', () => {
   expect(diagnostics).toHaveProperty('2.message', 'Invalid attribute name.')
 })
 
-test('linting if attributes', () => {
-  const diagnostics = new HTML('<div if="+foo"><outlet if="bar()"></outlet></div>')
+test('linting if attributes (1)', () => {
+  const diagnostics = new HTML('<div if="+foo()"><outlet if="bar()"></outlet></div>')
+    .lint('ifAttributes')
+    .getDiagnostics('ifAttributes')
+
+  expect(diagnostics).toHaveLength(1)
+  expect(diagnostics).toHaveProperty('0.from', 9)
+  expect(diagnostics).toHaveProperty('0.to', 15)
+  expect(diagnostics).toHaveProperty(
+    '0.message',
+    'Call expressions and declarations are not allowed.',
+  )
+})
+
+test('linting if attributes (2)', () => {
+  const diagnostics = new HTML('<div if><inject if=""></inject><outlet if></outlet></div>')
     .lint('ifAttributes')
     .getDiagnostics('ifAttributes')
 
   expect(diagnostics).toHaveLength(2)
-  expect(diagnostics).toHaveProperty('0.from', 23)
-  expect(diagnostics).toHaveProperty('0.to', 25)
-  expect(diagnostics).toHaveProperty('0.message', 'If statements cannot be used in outlets.')
-  expect(diagnostics).toHaveProperty('1.from', 27)
-  expect(diagnostics).toHaveProperty('1.to', 32)
-  expect(diagnostics).toHaveProperty(
-    '1.message',
-    'Call expressions and declarations are not allowed.',
-  )
+  expect(diagnostics).toHaveProperty('0.from', 5)
+  expect(diagnostics).toHaveProperty('0.to', 7)
+  expect(diagnostics).toHaveProperty('0.message', 'Empty if statement.')
+  expect(diagnostics).toHaveProperty('1.from', 16)
+  expect(diagnostics).toHaveProperty('1.to', 18)
+  expect(diagnostics).toHaveProperty('1.message', 'Empty if statement.')
 })
 
 test('linting include elements (1)', () => {
@@ -80,6 +91,17 @@ test('linting include elements (2)', () => {
   expect(diagnostics).toHaveProperty('1.from', 26)
   expect(diagnostics).toHaveProperty('1.to', 33)
   expect(diagnostics).toHaveProperty('1.message', 'Invalid property name.')
+})
+
+test('linting include elements (3)', () => {
+  const diagnostics = new HTML('<include if into component="foo"></include>')
+    .lint('includeElements')
+    .getDiagnostics('includeElements')
+
+  expect(diagnostics).toHaveLength(1)
+  expect(diagnostics).toHaveProperty('0.from', 12)
+  expect(diagnostics).toHaveProperty('0.to', 16)
+  expect(diagnostics).toHaveProperty('0.message', 'Invalid property name.')
 })
 
 test('linting inject elements (1)', () => {
@@ -136,6 +158,17 @@ test('linting inject elements (3)', () => {
     '1.message',
     'When using inject tags, all other nodes must be nested inside them.',
   )
+})
+
+test('linting inject elements (4)', () => {
+  const diagnostics = new HTML('<include><inject if foo></inject></include>')
+    .lint('injectElements')
+    .getDiagnostics('injectElements')
+
+  expect(diagnostics).toHaveLength(1)
+  expect(diagnostics).toHaveProperty('0.from', 20)
+  expect(diagnostics).toHaveProperty('0.to', 23)
+  expect(diagnostics).toHaveProperty('0.message', 'Unsupported attribute.')
 })
 
 test('linting mustache locations (1)', () => {
@@ -238,7 +271,7 @@ test('linting outlet elements (2)', () => {
   expect(diagnostics).toHaveProperty('2.message', 'Outlets cannot be nested within each other.')
 })
 
-test('linting outlet elements (2)', () => {
+test('linting outlet elements (3)', () => {
   const diagnostics = new HTML('<include><outlet allow="foo,Bar" baz></outlet></include>')
     .lint('outletElements')
     .getDiagnostics('outletElements')
@@ -255,5 +288,22 @@ test('linting outlet elements (2)', () => {
   expect(diagnostics).toHaveProperty('1.message', 'Invalid component name.')
   expect(diagnostics).toHaveProperty('2.from', 33)
   expect(diagnostics).toHaveProperty('2.to', 36)
+  expect(diagnostics).toHaveProperty('2.message', 'Unsupported attribute.')
+})
+
+test('linting outlet elements (4)', () => {
+  const diagnostics = new HTML('<outlet if into foo></outlet>')
+    .lint('outletElements')
+    .getDiagnostics('outletElements')
+
+  expect(diagnostics).toHaveLength(3)
+  expect(diagnostics).toHaveProperty('0.from', 8)
+  expect(diagnostics).toHaveProperty('0.to', 10)
+  expect(diagnostics).toHaveProperty('0.message', 'Unsupported attribute.')
+  expect(diagnostics).toHaveProperty('1.from', 11)
+  expect(diagnostics).toHaveProperty('1.to', 15)
+  expect(diagnostics).toHaveProperty('1.message', 'Unsupported attribute.')
+  expect(diagnostics).toHaveProperty('2.from', 16)
+  expect(diagnostics).toHaveProperty('2.to', 19)
   expect(diagnostics).toHaveProperty('2.message', 'Unsupported attribute.')
 })

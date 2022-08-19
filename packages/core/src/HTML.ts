@@ -467,34 +467,34 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
           //
           if (this.shouldTest('ifAttributes', tests)) {
             for (const attr of node.attrs) {
-              if (attr.name === 'if') {
-                const js = new JS(attr.value)
+              if (attr.name === 'if' && node.tagName !== 'outlet') {
+                if (attr.value.trim()) {
+                  const js = new JS(attr.value)
 
-                if (node.tagName === 'outlet') {
-                  this.addDiagnostics('ifAttributes', {
-                    message: 'If statements cannot be used in outlets.',
-                    severity: 'warning',
-                    ...HTML.getAttributeNameRange(node, attr.name)!,
-                  })
-                }
+                  if (js.isIfAttributeValue()) {
+                    js.evaluate(Object.fromEntries(this._propertyNames.map((p) => [p, ''])))
 
-                if (js.isIfAttributeValue()) {
-                  js.evaluate(Object.fromEntries(this._propertyNames.map((p) => [p, ''])))
-
-                  if (js.hasProblems('*')) {
-                    this.addDiagnostics(
-                      'ifAttributes',
-                      ...js.getDiagnosticsWithOffset(
-                        this.getAttributeValueRange(node, attr.name)!.from,
-                        '*',
-                      ),
-                    )
+                    if (js.hasProblems('*')) {
+                      this.addDiagnostics(
+                        'ifAttributes',
+                        ...js.getDiagnosticsWithOffset(
+                          this.getAttributeValueRange(node, attr.name)!.from,
+                          '*',
+                        ),
+                      )
+                    }
+                  } else {
+                    this.addDiagnostics('ifAttributes', {
+                      message: 'Call expressions and declarations are not allowed.',
+                      severity: 'error',
+                      ...this.getAttributeValueRange(node, attr.name)!,
+                    })
                   }
                 } else {
                   this.addDiagnostics('ifAttributes', {
-                    message: 'Call expressions and declarations are not allowed.',
+                    message: 'Empty if statement.',
                     severity: 'error',
-                    ...this.getAttributeValueRange(node, attr.name)!,
+                    ...this.getAttributeNameRange(node, attr.name)!,
                   })
                 }
               }

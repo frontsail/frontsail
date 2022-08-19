@@ -136,4 +136,6 @@ test('property name validation', () => {
   expect(isPropertyName('foo_')).toBe(false)
   expect(isPropertyName('1foo')).toBe(false)
   expect(isPropertyName('$foo')).toBe(false)
+  expect(isPropertyName('if')).toBe(false)
+  expect(isPropertyName('into')).toBe(false)
 })

@@ -90,5 +90,5 @@ export function isPagePath(path: string): boolean {
  * isPropertyName('FOO_BAR') // false
  */
 export function isPropertyName(name: string): boolean {
-  return /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(name)
+  return !['if', 'into'].includes(name) && /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(name)
 }
