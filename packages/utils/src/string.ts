@@ -1,4 +1,21 @@
 /**
+ * Convert `html` special characters to their entity equivalents.
+ */
+export function escape(html: string): string {
+  return html.replace(
+    /[&<>'"]/g,
+    (tag) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;',
+      }[tag] || tag),
+  )
+}
+
+/**
  * Split a `text` with a specified `delimiter` into chunks with offset ranges.
  *
  * @example
