@@ -38,3 +38,10 @@ export interface Range {
    */
   to: number
 }
+
+export interface RenderDiagnostic extends Diagnostic {
+  /**
+   * A component name or page path related to the diagnostic.
+   */
+  templateId: string
+}

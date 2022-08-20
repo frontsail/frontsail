@@ -65,3 +65,9 @@ test('getting outlet names', () => {
   expect(project.getOutletNames('baz')).toEqual(['baz', 'main'])
   expect(() => project.getOutletNames('/')).toThrow()
 })
+
+test('setting globals', () => {
+  expect(project.setGlobals({ FOO: 'bar' })).toBe(project)
+  expect(() => project.setGlobals({ bar: 'baz' })).toThrow()
+  expect(project.getGlobals()).toEqual({ FOO: 'bar' })
+})

@@ -5,12 +5,12 @@ export { JS } from './JS'
 export { Page } from './Page'
 export { Project } from './Project'
 export { Template } from './Template'
-export { CodePart, Diagnostic, Range } from './types/code'
+export { CodePart, Diagnostic, Range, RenderDiagnostic } from './types/code'
 export { AtLeastOne, WithWildcard } from './types/generic'
 export { AttributeValue, HTMLDiagnostics, MustacheTag } from './types/html'
 export { JSDiagnostics } from './types/js'
-export { ProjectOptions } from './types/project'
-export { TemplateDiagnostics } from './types/template'
+export { ProjectOptions, RenderResults } from './types/project'
+export { Injections, TemplateDiagnostics, TemplateRenderResults } from './types/template'
 export {
   isAlpineDirective,
   isAssetPath,

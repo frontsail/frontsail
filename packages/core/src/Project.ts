@@ -1,11 +1,12 @@
-import { compareArrays, diffArrays, uniqueArray } from '@frontsail/utils'
+import { clearObject, compareArrays, diffArrays, uniqueArray } from '@frontsail/utils'
 import { Component } from './Component'
 import { Page } from './Page'
 import { Template } from './Template'
 import { Diagnostic } from './types/code'
 import { AtLeastOne } from './types/generic'
-import { ProjectOptions } from './types/project'
+import { ProjectOptions, RenderResults } from './types/project'
 import { TemplateDiagnostics } from './types/template'
+import { isGlobalName, isPagePath } from './validation'
 
 /**
  * Manages project variables, components, pages, assets, scripts, and styles.
@@ -187,22 +188,22 @@ export class Project {
     Object.keys(options).forEach((key: keyof ProjectOptions) => {
       switch (key) {
         case 'environment':
-          // @todo
+          this._environment = options[key]!
           break
         case 'globals':
-          // @todo
+          this.setGlobals(options[key]!)
           break
         case 'scssVariables':
           // @todo
           break
         case 'components':
-          options[key]?.forEach((component) => this.addComponent(component.name, component.html))
+          options[key]!.forEach((component) => this.addComponent(component.name, component.html))
           break
         case 'pages':
-          options[key]?.forEach((page) => this.addPage(page.path, page.html))
+          options[key]!.forEach((page) => this.addPage(page.path, page.html))
           break
         case 'assets':
-          options[key]?.forEach((asset) => this.addAsset(asset))
+          options[key]!.forEach((asset) => this.addAsset(asset))
           break
         case 'js':
           // @todo
@@ -271,7 +272,7 @@ export class Project {
    * @throws an error if the component does not exist.
    */
   componentHasProblems(name: string, ...types: AtLeastOne<TemplateDiagnostics>): boolean {
-    return this._getComponent(name).hasProblems(...types)
+    return this.getComponent(name).hasProblems(...types)
   }
 
   /**
@@ -318,7 +319,7 @@ export class Project {
    *
    * @throws an error if the component does not exist.
    */
-  protected _getComponent(name: string): Component {
+  getComponent(name: string): Component {
     return this._ensureComponent(name)._components[name]
   }
 
@@ -329,7 +330,14 @@ export class Project {
    * @throws an error if the page does not exist.
    */
   getComponentDiagnostics(name: string, ...types: AtLeastOne<TemplateDiagnostics>): Diagnostic[] {
-    return this._getComponent(name).getDiagnostics(...types)
+    return this.getComponent(name).getDiagnostics(...types)
+  }
+
+  /**
+   * Get the project's global variables.
+   */
+  getGlobals(): { [name: string]: string } {
+    return { ...this._globals }
   }
 
   /**
@@ -348,7 +356,7 @@ export class Project {
       while (!compareArrays(components, checked)) {
         for (const name of diffArrays(components, checked)) {
           if (this.hasComponent(name)) {
-            components.push(...this._getComponent(name).getIncludedComponentNames())
+            components.push(...this.getComponent(name).getIncludedComponentNames())
           }
 
           checked.push(name)
@@ -365,7 +373,7 @@ export class Project {
    * @throws an error if the component does not exist.
    */
   getOutletNames(componentName: string): string[] {
-    return this._getComponent(componentName).getOutletNames()
+    return this.getComponent(componentName).getOutletNames()
   }
 
   /**
@@ -373,7 +381,7 @@ export class Project {
    *
    * @throws an error if the page does not exist.
    */
-  protected _getPage(path: string): Page {
+  getPage(path: string): Page {
     return this._ensurePage(path)._pages[path]
   }
 
@@ -384,7 +392,7 @@ export class Project {
    * @throws an error if the page does not exist.
    */
   getPageDiagnostics(path: string, ...types: AtLeastOne<TemplateDiagnostics>): Diagnostic[] {
-    return this._getPage(path).getDiagnostics(...types)
+    return this.getPage(path).getDiagnostics(...types)
   }
 
   /**
@@ -401,9 +409,9 @@ export class Project {
    */
   protected _getTemplate(id: string): Template {
     if (this.hasComponent(id)) {
-      return this._getComponent(id)
+      return this.getComponent(id)
     } else if (this.hasPage(id)) {
-      return this._getPage(id)
+      return this.getPage(id)
     } else {
       throw new Error(`The template '${id}' does not exist.`)
     }
@@ -455,6 +463,20 @@ export class Project {
   }
 
   /**
+   * Check if the current environment is set to 'development'.
+   */
+  isDevelopment(): boolean {
+    return this._environment === 'development'
+  }
+
+  /**
+   * Check if the current environment is set to 'production'.
+   */
+  isProduction(): boolean {
+    return this._environment === 'production'
+  }
+
+  /**
    * Get a list of all registered asset paths in the project.
    */
   listAssets(): string[] {
@@ -483,7 +505,7 @@ export class Project {
    * @throws an error if the component does not exist.
    */
   lintComponent(name: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
-    this._getComponent(name).lint(...tests)
+    this.getComponent(name).lint(...tests)
     return this
   }
 
@@ -495,7 +517,7 @@ export class Project {
    * @throws an error if the component does not exist.
    */
   lintPage(path: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
-    this._getPage(path).lint(...tests)
+    this.getPage(path).lint(...tests)
     return this
   }
 
@@ -506,7 +528,7 @@ export class Project {
    * @throws an error if the page does not exist.
    */
   pageHasProblems(path: string, ...types: AtLeastOne<TemplateDiagnostics>): boolean {
-    return this._getPage(path).hasProblems(...types)
+    return this.getPage(path).hasProblems(...types)
   }
 
   /**
@@ -536,6 +558,62 @@ export class Project {
    */
   removePage(path: string): this {
     delete this._ensurePage(path)._pages[path]
+    return this
+  }
+
+  /**
+   * Render a template identified by `templateId` with specified `properties`.
+   *
+   * @returns the rendered HTML and diagnostics.
+   * @throws an error if the template with the specified `templateId` does not exist.
+   */
+  render(templateId: string, properties: { [name: string]: string } = {}): RenderResults {
+    const dependencies = this.getIncludedComponentNames(templateId, true)
+    const results: RenderResults = { html: '', diagnostics: [] }
+
+    if (isPagePath(templateId)) {
+      results.diagnostics.push(
+        ...this.lintPage(templateId, '*').getPageDiagnostics(templateId, '*'),
+      )
+    } else {
+      results.diagnostics.push(
+        ...this.lintComponent(templateId, '*').getComponentDiagnostics(templateId, '*'),
+      )
+    }
+
+    dependencies.forEach((dependency) => {
+      results.diagnostics.push(
+        ...this.lintComponent(dependency, '*').getComponentDiagnostics(dependency, '*'),
+      )
+    })
+
+    if (results.diagnostics.length === 0) {
+      const templateResults = this._getTemplate(templateId).render(properties)
+      results.html = templateResults.html.toString(this.isProduction())
+      results.diagnostics.push(...templateResults.diagnostics)
+    }
+
+    return results
+  }
+
+  /**
+   * Set the project's global variables from a collection of `globals`.
+   *
+   * @throws an error if a global name is not valid.
+   */
+  setGlobals(globals: { [name: string]: string }): this {
+    for (const name in globals) {
+      if (!isGlobalName(name)) {
+        throw new Error(`Invalid global name '${name}'.`)
+      }
+    }
+
+    clearObject(this._globals)
+
+    for (const name in globals) {
+      this._globals[name] = globals[name]
+    }
+
     return this
   }
 

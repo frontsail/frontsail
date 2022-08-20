@@ -1,10 +1,12 @@
 import { clearArray, uniqueArray } from '@frontsail/utils'
 import { Diagnostics } from './Diagnostics'
 import { HTML } from './HTML'
+import { JS } from './JS'
 import { Project } from './Project'
+import { RenderDiagnostic } from './types/code'
 import { AtLeastOne } from './types/generic'
-import { TemplateDiagnostics } from './types/template'
-import { isComponentName, isPropertyName } from './validation'
+import { TemplateDiagnostics, TemplateRenderResults } from './types/template'
+import { isAlpineDirective, isComponentName, isPropertyName } from './validation'
 
 /**
  * Handles common features of components and pages, such as abstract syntax trees,
@@ -91,6 +93,14 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     this._html = new HTML(html)
     this._project = project
     this._resolveDependencies()
+  }
+
+  /**
+   * Create a new instance of this class instance using its id and raw HTML contents.
+   * Diagnostics are not cloned.
+   */
+  clone(): Template {
+    return new Template(this._id, this._html.getRawHTML(), this._project)
   }
 
   /**
@@ -209,7 +219,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
                 if (intoValue && this._project?.hasComponent(componentName)) {
                   const outletNames = this._project.getOutletNames(componentName)
 
-                  if (outletNames.length > 1) {
+                  if (outletNames.length > 0) {
                     if (!outletNames.includes(intoValue)) {
                       this.addDiagnostics('dependencies', {
                         message: `Outlet '${intoValue}' does not exist in component '${componentName}'.`,
@@ -234,6 +244,95 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     }
 
     return this
+  }
+
+  /**
+   * Render the template with specified `properties`.
+   *
+   * @returns the rendered HTML instance and diagnostics.
+   */
+  render(
+    properties: { [name: string]: string },
+    _iterations: string[] = [],
+  ): TemplateRenderResults {
+    const variables = this._project ? { ...properties, ...this._project.getGlobals() } : properties
+    const html = this._html.replaceMustaches(variables)
+    const diagnostics: RenderDiagnostic[] = []
+
+    for (const node of html.walk()) {
+      if (HTML.adapter.isElementNode(node)) {
+        const ifAttribute = node.attrs.find((attr) => attr.name === 'if')
+
+        if (ifAttribute && node.tagName !== 'outlet') {
+          if (!new JS(ifAttribute.value).evaluate(variables)) {
+            HTML.adapter.detachNode(node)
+            continue
+          }
+        }
+
+        for (const attr of node.attrs) {
+          if (
+            this._project?.isProduction() &&
+            isAlpineDirective(attr.name) &&
+            !['x-data', 'x-bind'].includes(attr.name)
+          ) {
+            attr.name = ''
+          } else if (attr.name === 'css') {
+            attr.name = ''
+          }
+        }
+
+        node.attrs = node.attrs.filter((attr) => attr.name)
+
+        if (node.tagName === 'include') {
+          if (this._project) {
+            const componentName = node.attrs.find((attr) => attr.name === 'component')!.value
+            const componentClone = this._project.getComponent(componentName).clone()
+            const includeProperties = HTML.getIncludeProperties(node)
+            const injections = HTML.getInjections(node)
+
+            componentClone._html = componentClone._html.inject(injections)
+
+            const iteration =
+              componentName + JSON.stringify(includeProperties) + componentClone._html.getRawHTML()
+
+            if (_iterations.includes(iteration)) {
+              HTML.adapter.detachNode(node)
+
+              diagnostics.push({
+                templateId: this._id,
+                message: `The included component '${componentName}' caused an infinite loop.`,
+                severity: 'error',
+                from: node.sourceCodeLocation!.startOffset,
+                to: node.sourceCodeLocation!.endOffset,
+              })
+
+              continue
+            }
+
+            _iterations.push(iteration)
+
+            const componentRenderResults = componentClone.render(includeProperties, _iterations)
+            const rootNodes = componentRenderResults.html.getRootNodes()
+
+            HTML.replaceElement(node, ...rootNodes)
+
+            diagnostics.push(
+              ...componentRenderResults.diagnostics.map((diagnostic) => ({
+                templateId: this._id,
+                ...diagnostic,
+              })),
+            )
+          }
+        } else if (node.tagName === 'inject') {
+          HTML.adapter.detachNode(node)
+        } else if (node.tagName === 'outlet') {
+          HTML.replaceElement(node, ...node.childNodes)
+        }
+      }
+    }
+
+    return { html: new HTML(html.toString()), diagnostics }
   }
 
   /**

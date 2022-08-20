@@ -113,7 +113,7 @@ export class Component extends Template {
                 this.addDiagnostics('outletElements', {
                   message: "The 'x-data' directive can only be used in the root element.",
                   severity: 'error',
-                  ...HTML.getAttributeNameRange(node, attr.name)!,
+                  ...this._html.getAttributeNameRange(node, attr.name)!,
                 })
               }
             }

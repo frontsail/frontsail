@@ -1,4 +1,4 @@
-import { clearArray, split, uniqueArray } from '@frontsail/utils'
+import { clearArray, escape, split, uniqueArray } from '@frontsail/utils'
 import { defaultTreeAdapter, parse, parseFragment, serialize } from 'parse5'
 import {
   ChildNode,
@@ -13,6 +13,7 @@ import { JS } from './JS'
 import { Range } from './types/code'
 import { AtLeastOne } from './types/generic'
 import { AttributeValue, HTMLDiagnostics, MustacheTag } from './types/html'
+import { Injections } from './types/template'
 import {
   isAlpineDirective,
   isAttributeName,
@@ -311,10 +312,51 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
+   * Get properties from an `<include>` `element`.
+   */
+  static getIncludeProperties(element: Element): { [name: string]: string } {
+    return Object.fromEntries(
+      element.attrs
+        .filter((attr) => !['if', 'component'].includes(attr.name))
+        .map((attr) => [attr.name, attr.value]),
+    )
+  }
+
+  /**
    * Get the outlet name from an `<inject>` `element` by looking up its `into` attribute.
    */
   static getInjectIntoValue(element: Element): string {
     return element.attrs.find((attr) => attr.name === 'into')?.value ?? 'main'
+  }
+
+  /**
+   * Get injections from an `<include>` `element`.
+   */
+  static getInjections(element: Element): Injections {
+    const injections: Injections = {}
+
+    for (const childNode of element.childNodes) {
+      if (HTML.adapter.isElementNode(childNode) && childNode.tagName === 'inject') {
+        const outletName = HTML.getInjectIntoValue(childNode)
+
+        if (!injections[outletName]) {
+          injections[outletName] = []
+        }
+
+        injections[outletName].push(...childNode.childNodes)
+      } else if (
+        HTML.adapter.isElementNode(childNode) ||
+        (HTML.adapter.isTextNode(childNode) && childNode.value.trim())
+      ) {
+        if (!injections['main']) {
+          injections['main'] = []
+        }
+
+        injections['main'].push(childNode)
+      }
+    }
+
+    return injections
   }
 
   /**
@@ -372,10 +414,17 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
+   * Return the raw HTML content.
+   */
+  getRawHTML(): string {
+    return this._html
+  }
+
+  /**
    * Get the root elements and non-empty text nodes from the AST by looking into
    * child nodes of the '#document' or '#document-fragment'.
    */
-  getRootNodes(): Node[] {
+  getRootNodes(): ChildNode[] {
     return (
       this._ast?.childNodes.filter((node) => {
         return (
@@ -400,6 +449,29 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     }
 
     return false
+  }
+
+  /**
+   * Replace `<outlet>` elements with contents from `injections` and return a new
+   * HTML instance with the injected content.
+   */
+  inject(injections: Injections): HTML {
+    const html = this.clone()
+
+    html.getElements('outlet').forEach((element) => {
+      const name = HTML.getOutletName(element)
+
+      if (injections[name]) {
+        HTML.replaceElement(element, ...injections[name])
+      } else {
+        HTML.adapter.detachNode(element)
+      }
+    })
+
+    html._html = html.toString()
+    html._extractPropertyNames()
+
+    return html
   }
 
   /**
@@ -531,7 +603,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                 this.addDiagnostics('includeElements', {
                   message: 'Invalid property name.',
                   severity: 'warning',
-                  ...HTML.getAttributeNameRange(node, attr.name)!,
+                  ...this.getAttributeNameRange(node, attr.name)!,
                 })
               }
             }
@@ -731,21 +803,54 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
    *
    * @returns true if the `element` has been replaced.
    */
-  static replaceElement(element: Element, replacement: ChildNode): boolean {
+  static replaceElement(element: Element, ...replacement: ChildNode[]): boolean {
     const index = element.parentNode?.childNodes.findIndex((node) => node === element)
 
     if (index === undefined || index === -1) {
       return false
     }
 
-    return element.parentNode!.childNodes.splice(index, 1, replacement).length === 1
+    return element.parentNode!.childNodes.splice(index, 1, ...replacement).length === 1
+  }
+
+  /**
+   * Replace `{{ mustaches }}` with escaped values from `variables` and return a new
+   * HTML instance with the replaced content.
+   */
+  replaceMustaches(variables: { [name: string]: string }): HTML {
+    let html = this._html
+
+    this.getMustaches().forEach((mustache) => {
+      const value = escape(variables[mustache.variable] ?? '')
+      html = html.replace(mustache.text, value)
+    })
+
+    return new HTML(html)
   }
 
   /**
    * Serialize the AST to an HTML string.
    */
-  toString(): string {
-    return this._ast ? serialize(this._ast) : ''
+  toString(minify: boolean = false): string {
+    if (!this._ast) {
+      return ''
+    }
+
+    if (minify) {
+      const html = this.clone()
+
+      for (const node of html.walk()) {
+        if (HTML.adapter.isTextNode(node)) {
+          node.value = node.value.trim().replace(/\s+/g, ' ')
+        } else if (HTML.adapter.isCommentNode(node)) {
+          HTML.adapter.detachNode(node)
+        }
+      }
+
+      return html.toString()
+    }
+
+    return serialize(this._ast)
   }
 
   /**

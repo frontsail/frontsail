@@ -26,7 +26,7 @@ test('linting alpine directives (page)', () => {
     .lintPage('/', 'alpineDirectives')
     .getPageDiagnostics('/', 'alpineDirectives')
 
-  expect(diagnostics).toHaveLength(2)
+  expect(diagnostics).toHaveLength(3)
   expect(diagnostics).toHaveProperty('0.from', 369)
   expect(diagnostics).toHaveProperty('0.to', 369)
   expect(diagnostics).toHaveProperty('0.message', 'Unexpected token.')
@@ -36,21 +36,27 @@ test('linting alpine directives (page)', () => {
     '1.message',
     "Alpine directives in pages cannot be used outside of 'include' elements.",
   )
+  expect(diagnostics).toHaveProperty('2.from', 410)
+  expect(diagnostics).toHaveProperty('2.to', 416)
+  expect(diagnostics).toHaveProperty(
+    '2.message',
+    "The 'x-data' directive can only be used in components.",
+  )
 })
 
 test('full lint (page)', () => {
   const diagnostics = project.lintPage('/', '*').getPageDiagnostics('/', '*')
 
-  expect(diagnostics).toHaveLength(4)
-  expect(diagnostics).toHaveProperty('2.from', 336)
-  expect(diagnostics).toHaveProperty('2.to', 339)
+  expect(diagnostics).toHaveLength(5)
+  expect(diagnostics).toHaveProperty('3.from', 336)
+  expect(diagnostics).toHaveProperty('3.to', 339)
   expect(diagnostics).toHaveProperty(
-    '2.message',
+    '3.message',
     "Property 'bar' does not exist in component 'bar'.",
   )
-  expect(diagnostics).toHaveProperty('3.from', 368)
-  expect(diagnostics).toHaveProperty('3.to', 377)
-  expect(diagnostics).toHaveProperty('3.message', 'Mustaches cannot be used in Alpine directives.')
+  expect(diagnostics).toHaveProperty('4.from', 368)
+  expect(diagnostics).toHaveProperty('4.to', 377)
+  expect(diagnostics).toHaveProperty('4.message', 'Mustaches cannot be used in Alpine directives.')
 })
 
 test('linting alpine directives (component 1)', () => {

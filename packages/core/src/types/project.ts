@@ -1,5 +1,6 @@
 import { Component } from '../Component'
 import { Page } from '../Page'
+import { Diagnostic } from './code'
 
 export interface ProjectOptions {
   /**
@@ -81,4 +82,19 @@ export interface ProjectOptions {
    * during the build process.
    */
   css?: string
+}
+
+/**
+ * Describes results of a render process called from a `Project`.
+ */
+export interface RenderResults {
+  /**
+   * The rendered HTML code.
+   */
+  html: string
+
+  /**
+   * List of diagnostics created during the render process.
+   */
+  diagnostics: Diagnostic[]
 }

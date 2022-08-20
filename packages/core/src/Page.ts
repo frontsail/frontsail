@@ -67,7 +67,13 @@ export class Page extends Template {
           //
           if (this.shouldTest('alpineDirectives', tests)) {
             for (const attr of node.attrs) {
-              if (isAlpineDirective(attr.name) && !HTML.hasParent(node, 'include')) {
+              if (attr.name === 'x-data') {
+                this.addDiagnostics('alpineDirectives', {
+                  message: "The 'x-data' directive can only be used in components.",
+                  severity: 'error',
+                  ...this._html.getAttributeNameRange(node, attr.name)!,
+                })
+              } else if (isAlpineDirective(attr.name) && !HTML.hasParent(node, 'include')) {
                 this.addDiagnostics('alpineDirectives', {
                   message:
                     "Alpine directives in pages cannot be used outside of 'include' elements.",

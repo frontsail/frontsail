@@ -1,11 +1,11 @@
 import { HTML } from '../..'
 
 test('serialization and listing nodes', () => {
-  const html = new HTML('<div></div>')
+  const html = new HTML('<div>&amp;</div>')
   const nodes = html.getNodes()
 
-  expect(html.toString()).toBe('<div></div>')
-  expect(nodes).toHaveLength(2)
+  expect(html.toString()).toBe('<div>&amp;</div>')
+  expect(nodes).toHaveLength(3)
   expect(nodes).toHaveProperty('1.tagName', 'div')
 })
 
@@ -41,6 +41,19 @@ test('replacing a cloned div element', () => {
 
   expect(html.toString()).toBe('<div></div>')
   expect(clone.toString()).toBe('<span></span>')
+})
+
+test('replacing div element with multiple span elements', () => {
+  const html = new HTML('<div></div>')
+
+  HTML.replaceElement(
+    html.getElement('div'),
+    HTML.createElement('span'),
+    HTML.createElement('span'),
+    HTML.createElement('span'),
+  )
+
+  expect(html.toString()).toBe('<span></span><span></span><span></span>')
 })
 
 test('finding parent element', () => {
@@ -181,4 +194,47 @@ test('getting name attribute value from outlets', () => {
   expect(HTML.getOutletName(elements[1])).toBe('foo')
   expect(HTML.getOutletName(elements[2])).toBe('')
   expect(HTML.getOutletName(elements[3])).toBe('')
+})
+
+test('getting include properties', () => {
+  const html = new HTML(
+    '<include if="foo" component="bar" foo bar="bar" baz="{{ baz }}"></include>',
+  )
+  const element = html.getElement('include')
+
+  expect(HTML.getIncludeProperties(element)).toEqual({ foo: '', bar: 'bar', baz: '{{ baz }}' })
+})
+
+test('getting injections (1)', () => {
+  const html = new HTML('<include> <div></div>  foo \n<div></div> </include>')
+  const element = html.getElement('include')
+  const injections = HTML.getInjections(element)
+
+  expect(Object.keys(injections)).toEqual(['main'])
+  expect(injections['main']).toEqual([
+    element.childNodes[1],
+    element.childNodes[2],
+    element.childNodes[3],
+  ])
+})
+
+test('getting injections (2)', () => {
+  const html = new HTML(
+    '<include><inject into="foo"> <div> </div> </inject><inject into="bar"><span></span></inject></include>',
+  )
+  const element = html.getElement('include')
+  const injections = HTML.getInjections(element)
+
+  expect(Object.keys(injections)).toEqual(['foo', 'bar'])
+  expect(injections['foo']).toHaveLength(3)
+  expect(injections['foo']).toHaveProperty('1', html.getElement('div'))
+  expect(injections['bar']).toHaveLength(1)
+  expect(injections['bar']).toHaveProperty('0', html.getElement('span'))
+})
+
+test('replacing mustaches', () => {
+  const html = new HTML('<div foo="{{ bar }}">{{baz}}</div>')
+  const replaced = html.replaceMustaches({ foo: 'foo', bar: 'bar' })
+
+  expect(replaced.toString()).toBe('<div foo="bar"></div>')
 })
