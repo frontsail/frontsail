@@ -3,10 +3,9 @@
  */
 export function escape(html: string): string {
   return html.replace(
-    /[&<>'"]/g,
+    /[<>'"]/g,
     (tag) =>
       ({
-        '&': '&amp;',
         '<': '&lt;',
         '>': '&gt;',
         "'": '&#39;',
