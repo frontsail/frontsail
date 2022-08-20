@@ -193,7 +193,7 @@ export class Project {
     Object.keys(options).forEach((key: keyof ProjectOptions) => {
       switch (key) {
         case 'environment':
-          this._environment = options[key]!
+          this.setEnvironment(options[key]!)
           break
         case 'globals':
           this.setGlobals(options[key]!)
@@ -625,6 +625,14 @@ export class Project {
     }
 
     return results
+  }
+
+  /**
+   * Set the project environment `mode`.
+   */
+  setEnvironment(mode: 'development' | 'production'): this {
+    this._environment = mode
+    return this
   }
 
   /**

@@ -184,6 +184,8 @@ export class Component extends Template {
   resolveAlpineDirectives(): HTML {
     if (!this._project) {
       throw new Error('Cannot resolve Alpine directives without a project.')
+    } else if (this._project.isDevelopment()) {
+      return this._html.clone()
     }
 
     const html = this._html.clone()

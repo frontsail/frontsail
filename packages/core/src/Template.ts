@@ -247,14 +247,19 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
    * Render the template with specified `properties`.
    *
    * @returns the rendered HTML instance and diagnostics.
+   * @throws an error if a project is not defined.
    */
   render(
     properties: { [name: string]: string },
     _iterations: string[] = [],
   ): TemplateRenderResults {
-    const variables = this._project ? { ...properties, ...this._project.getGlobals() } : properties
+    if (!this._project) {
+      throw new Error('Cannot render templates without a project.')
+    }
+
+    const variables = { ...properties, ...this._project.getGlobals() }
     const html: HTML =
-      this._project?.isProduction() && _iterations.length === 0 && this._type === 'component'
+      _iterations.length === 0 && this._type === 'component'
         ? (this as any).resolveAlpineDirectives().replaceMustaches(variables)
         : this._html.replaceMustaches(variables)
     const diagnostics: RenderDiagnostic[] = []
@@ -275,50 +280,48 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
         node.attrs = node.attrs.filter((attr) => attr.name !== 'css')
 
         if (node.tagName === 'include') {
-          if (this._project) {
-            const componentName = node.attrs.find((attr) => attr.name === 'component')!.value
-            const componentClone = this._project.getComponent(componentName).clone()
-            const includeProperties = HTML.getIncludeProperties(node)
-            const injections = HTML.getInjections(node)
+          const componentName = node.attrs.find((attr) => attr.name === 'component')!.value
+          const componentClone = this._project.getComponent(componentName).clone()
+          const includeProperties = HTML.getIncludeProperties(node)
+          const injections = HTML.getInjections(node)
 
-            // Detach child nodes (they are rendered in outlets)
-            node.childNodes.forEach((childNode) => HTML.adapter.detachNode(childNode))
+          // Detach child nodes (they are rendered in outlets)
+          node.childNodes.forEach((childNode) => HTML.adapter.detachNode(childNode))
 
-            // Don't resolve Alpine directives for injected contents
-            componentClone._html = componentClone.resolveAlpineDirectives().inject(injections)
+          // Don't resolve Alpine directives for injected contents
+          componentClone._html = componentClone.resolveAlpineDirectives().inject(injections)
 
-            const iteration =
-              componentName + JSON.stringify(includeProperties) + componentClone._html.getRawHTML()
+          const iteration =
+            componentName + JSON.stringify(includeProperties) + componentClone._html.getRawHTML()
 
-            // Detect infinite loops
-            if (_iterations.includes(iteration)) {
-              HTML.adapter.detachNode(node)
+          // Detect infinite loops
+          if (_iterations.includes(iteration)) {
+            HTML.adapter.detachNode(node)
 
-              diagnostics.push({
-                templateId: this._id,
-                message: `The included component '${componentName}' caused an infinite loop.`,
-                severity: 'error',
-                from: node.sourceCodeLocation!.startOffset,
-                to: node.sourceCodeLocation!.endOffset,
-              })
+            diagnostics.push({
+              templateId: this._id,
+              message: `The included component '${componentName}' caused an infinite loop.`,
+              severity: 'error',
+              from: node.sourceCodeLocation!.startOffset,
+              to: node.sourceCodeLocation!.endOffset,
+            })
 
-              continue
-            }
-
-            _iterations.push(iteration)
-
-            const results = componentClone.render(includeProperties, [..._iterations])
-            const rootNode = results.html.getRootNodes()[0]
-
-            HTML.replaceElement(node, rootNode)
-
-            diagnostics.push(
-              ...results.diagnostics.map((diagnostic) => ({
-                templateId: this._id,
-                ...diagnostic,
-              })),
-            )
+            continue
           }
+
+          _iterations.push(iteration)
+
+          const results = componentClone.render(includeProperties, [..._iterations])
+          const rootNode = results.html.getRootNodes()[0]
+
+          HTML.replaceElement(node, rootNode)
+
+          diagnostics.push(
+            ...results.diagnostics.map((diagnostic) => ({
+              templateId: this._id,
+              ...diagnostic,
+            })),
+          )
         } else if (node.tagName === 'inject') {
           HTML.adapter.detachNode(node)
         } else if (node.tagName === 'outlet') {
