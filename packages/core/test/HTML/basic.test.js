@@ -236,3 +236,33 @@ test('replacing mustaches', () => {
 
   expect(replaced.toString()).toBe('<div foo="bar"></div>')
 })
+
+test('minification', () => {
+  expect(new HTML('foo\nbar').toString(true)).toBe('foo bar')
+  expect(new HTML('<div> </div>').toString(true)).toBe('<div></div>')
+  expect(new HTML('<div>foo</div>').toString(true)).toBe('<div>foo</div>')
+  expect(new HTML('<div> foo </div>').toString(true)).toBe('<div>foo</div>')
+  expect(new HTML('<span>foo</span>').toString(true)).toBe('<span>foo</span>')
+  expect(new HTML('<span> foo </span> bar').toString(true)).toBe('<span>foo </span>bar')
+  expect(new HTML('<span> foo </span>bar').toString(true)).toBe('<span>foo </span>bar')
+  expect(new HTML('<span> </span> bar').toString(true)).toBe('<span></span> bar')
+  expect(new HTML('<span> foo </span>').toString(true)).toBe('<span>foo</span>')
+  expect(new HTML('<span> foo </span><span>bar</span>').toString(true)).toBe(
+    '<span>foo </span><span>bar</span>',
+  )
+  expect(new HTML('<span> foo </span>\n<div>bar</div>').toString(true)).toBe(
+    '<span>foo</span><div>bar</div>',
+  )
+  expect(new HTML('<span> foo </span> x <div>bar</div>').toString(true)).toBe(
+    '<span>foo </span>x<div>bar</div>',
+  )
+  expect(new HTML('<span> <div></div> </span>\n<span> bar </span>\n').toString(true)).toBe(
+    '<span><div></div></span> <span>bar</span>',
+  )
+  expect(new HTML('<span> foo <div></div> x </span> x <div>bar</div>').toString(true)).toBe(
+    '<span>foo<div></div>x </span>x<div>bar</div>',
+  )
+  expect(new HTML('<span> foo <div></div> x</span> x <div>bar</div>').toString(true)).toBe(
+    '<span>foo<div></div>x</span> x<div>bar</div>',
+  )
+})

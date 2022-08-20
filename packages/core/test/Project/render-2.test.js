@@ -25,5 +25,5 @@ test('rendering', () => {
   const results = project.render('/', { foo: 'foo' })
 
   expect(results.diagnostics).toHaveLength(0)
-  expect(results.html).toBe('<div> foo <div> foo-bar baz </div> </div>')
+  expect(results.html).toBe('<div>foo<div>foo-bar baz</div></div>')
 })

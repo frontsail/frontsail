@@ -7,6 +7,7 @@ import {
   Element,
   Node,
   Template,
+  TextNode,
 } from 'parse5/dist/tree-adapters/default'
 import { Diagnostics } from './Diagnostics'
 import { JS } from './JS'
@@ -472,6 +473,47 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
+   * Determine whether an `element` is an inline element.
+   */
+  static isInlineElement(element: Element): boolean {
+    return [
+      'a',
+      'abbr',
+      'acronym',
+      'b',
+      'bdo',
+      'big',
+      'br',
+      'button',
+      'cite',
+      'code',
+      'dfn',
+      'em',
+      'i',
+      'img',
+      'input',
+      'kbd',
+      'label',
+      'map',
+      'object',
+      'output',
+      'q',
+      'samp',
+      'script',
+      'select',
+      'small',
+      'span',
+      'strong',
+      'sub',
+      'sup',
+      'textarea',
+      'time',
+      'tt',
+      'var',
+    ].includes(element.tagName)
+  }
+
+  /**
    * Analyze all nodes in the AST and run the specified `tests`. Use a wildcard
    * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
    * `getDiagnostics()`.
@@ -836,12 +878,71 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     if (minify) {
       const html = this.clone()
 
+      let prevNode: {
+        node: Node
+        isElement: boolean
+        isInlineElement: boolean
+        isText: boolean
+        isEmpty: boolean
+        hasSpaceRight: boolean
+      } | null = null
+
       for (const node of html.walk()) {
-        if (HTML.adapter.isTextNode(node)) {
-          node.value = node.value.replace(/\s+/g, ' ')
-        } else if (HTML.adapter.isCommentNode(node)) {
+        if (HTML.adapter.isCommentNode(node)) {
           HTML.adapter.detachNode(node)
+          continue
         }
+
+        const isElement = HTML.adapter.isElementNode(node)
+        const isInlineElement = isElement && HTML.isInlineElement(node)
+        const isText = HTML.adapter.isTextNode(node)
+        const isEmpty = isText && !node.value.trim()
+        const hasSpaceLeft = isText && /^\s/.test(node.value)
+        const hasSpaceRight = isText && /\s$/.test(node.value)
+        const isChildOfPrevNode = HTML.adapter.getParentNode(node) === prevNode?.node
+
+        // Remove double spaces
+        if (isText) {
+          node.value = node.value.replace(/\s+/g, ' ')
+        }
+
+        // Trim previous text node
+        if (
+          prevNode &&
+          prevNode.isText &&
+          ((isElement && !isInlineElement) ||
+            (isText && isEmpty) ||
+            (isText && !hasSpaceLeft && prevNode.isEmpty))
+        ) {
+          const textNode = prevNode.node as TextNode
+          textNode.value = textNode.value.replace(/\s$/, '')
+          prevNode.hasSpaceRight = false
+        }
+
+        // Trim current text node
+        if (
+          isText &&
+          prevNode &&
+          (isChildOfPrevNode ||
+            (prevNode.isElement && !prevNode.isInlineElement) ||
+            (prevNode.isText && !prevNode.isEmpty && prevNode.hasSpaceRight))
+        ) {
+          node.value = node.value.replace(/^\s/, '')
+        }
+
+        prevNode = {
+          node,
+          isElement,
+          isInlineElement,
+          isText,
+          isEmpty,
+          hasSpaceRight,
+        }
+      }
+
+      if (prevNode && prevNode.isText) {
+        const textNode = prevNode.node as TextNode
+        textNode.value = textNode.value.replace(/\s$/, '')
       }
 
       return html.toString().trim()

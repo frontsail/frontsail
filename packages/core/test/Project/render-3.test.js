@@ -30,7 +30,7 @@ test('rendering (production)', () => {
 
   expect(results.diagnostics).toHaveLength(0)
   expect(results.html).toBe(
-    '<!DOCTYPE html><html lang="en"><head> <meta charset="UTF-8"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Test</title> </head> <body> <div> &lt;&amp;foo&gt; </div> <div x-data="_c2_D"> <span x-bind="bar" bar="&amp;bar" x-on:click="baz">&amp;bar</span> </div> </body></html>',
+    '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Test</title></head><body><div>&lt;&amp;foo&gt;</div><div x-data="_c2_D"><span x-bind="bar" bar="&amp;bar" x-on:click="baz">&amp;bar</span></div></body></html>',
   )
 })
 
@@ -39,6 +39,6 @@ test('rendering (development)', () => {
 
   expect(results.diagnostics).toHaveLength(0)
   expect(new HTML(results.html).toString(true)).toBe(
-    '<!DOCTYPE html><html lang="en"><head> <meta charset="UTF-8"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Test</title> </head> <body> <div> &lt;&amp;foo&gt; </div> <div x-data=""> <span x-bind="bar" bar="&amp;bar" @click="baz">&amp;bar</span> </div> </body></html>',
+    '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Test</title></head><body><div>&lt;&amp;foo&gt;</div><div x-data=""><span x-bind="bar" bar="&amp;bar" @click="baz">&amp;bar</span></div></body></html>',
   )
 })
