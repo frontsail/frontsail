@@ -206,16 +206,14 @@ test('getting include properties', () => {
 })
 
 test('getting injections (1)', () => {
-  const html = new HTML('<include> <div></div>  foo \n<div></div> </include>')
+  const html = new HTML('<include> <div></div>  foo \n<span></span> </include>')
   const element = html.getElement('include')
   const injections = HTML.getInjections(element)
 
   expect(Object.keys(injections)).toEqual(['main'])
-  expect(injections['main']).toEqual([
-    element.childNodes[1],
-    element.childNodes[2],
-    element.childNodes[3],
-  ])
+  expect(injections['main']).toHaveLength(5)
+  expect(injections['main']).toHaveProperty('1', html.getElement('div'))
+  expect(injections['main']).toHaveProperty('3', html.getElement('span'))
 })
 
 test('getting injections (2)', () => {

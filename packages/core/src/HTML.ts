@@ -344,10 +344,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
         }
 
         injections[outletName].push(...childNode.childNodes)
-      } else if (
-        HTML.adapter.isElementNode(childNode) ||
-        (HTML.adapter.isTextNode(childNode) && childNode.value.trim())
-      ) {
+      } else {
         if (!injections['main']) {
           injections['main'] = []
         }
@@ -841,16 +838,16 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
 
       for (const node of html.walk()) {
         if (HTML.adapter.isTextNode(node)) {
-          node.value = node.value.trim().replace(/\s+/g, ' ')
+          node.value = node.value.replace(/\s+/g, ' ')
         } else if (HTML.adapter.isCommentNode(node)) {
           HTML.adapter.detachNode(node)
         }
       }
 
-      return html.toString()
+      return html.toString().trim()
     }
 
-    return serialize(this._ast)
+    return serialize(this._ast).trim()
   }
 
   /**

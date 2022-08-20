@@ -36,6 +36,11 @@ import { isAlpineDirective, isPagePath } from './validation'
  */
 export class Page extends Template {
   /**
+   * Template type.
+   */
+  protected _type: 'component' | 'page' = 'page'
+
+  /**
    * Validate the page `path` and instantiate.
    *
    * @param path A unique page path.
@@ -49,6 +54,14 @@ export class Page extends Template {
     }
 
     super(path, html, project)
+  }
+
+  /**
+   * Create a new instance of this class instance using its id and raw HTML contents.
+   * Diagnostics are not cloned.
+   */
+  clone(): Page {
+    return new Page(this._id, this._html.getRawHTML(), this._project)
   }
 
   /**

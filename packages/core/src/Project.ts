@@ -89,8 +89,8 @@ import { isGlobalName, isPagePath } from './validation'
  *   IDs with a forward slash.
  *
  * - **Template key** - A unique string identifier that is used as the base class
- *   name for CSS rules generated from `css` attributes. Additionally, the template
- *   key is used as the default Alpine component name in `x-data` directives.
+ *   name for CSS rules generated from `css` attributes and as the default Alpine
+ *   component name in `x-data` directives.
  */
 export class Project {
   /**
@@ -178,6 +178,11 @@ export class Project {
   protected _css: string = ''
 
   /**
+   * Collection of template IDs used for genering unique template keys.
+   */
+  protected _indices: { components: string[]; pages: string[] } = { components: [], pages: [] }
+
+  /**
    * Instantiate the `Project` with predefined variables, components, pages, assets,
    * scripts, or styles.
    *
@@ -246,6 +251,10 @@ export class Project {
 
     this._components[name] = new Component(name, html, this)
 
+    if (!this._indices.components.includes(name)) {
+      this._indices.components.push(name)
+    }
+
     return this
   }
 
@@ -261,6 +270,10 @@ export class Project {
     }
 
     this._pages[path] = new Page(path, html, this)
+
+    if (!this._indices.pages.includes(path)) {
+      this._indices.pages.push(path)
+    }
 
     return this
   }
@@ -334,6 +347,15 @@ export class Project {
   }
 
   /**
+   * Get the index (incremented by 1) of a component named `name`.
+   *
+   * @throws an error if the component does not exist.
+   */
+  getComponentIndex(name: string): number {
+    return this._ensureComponent(name)._indices.components.indexOf(name) + 1
+  }
+
+  /**
    * Get the project's global variables.
    */
   getGlobals(): { [name: string]: string } {
@@ -393,6 +415,15 @@ export class Project {
    */
   getPageDiagnostics(path: string, ...types: AtLeastOne<TemplateDiagnostics>): Diagnostic[] {
     return this.getPage(path).getDiagnostics(...types)
+  }
+
+  /**
+   * Get the index (incremented by 1) of a page with the path `path`.
+   *
+   * @throws an error if the page does not exist.
+   */
+  getPageIndex(path: string): number {
+    return this._ensurePage(path)._indices.pages.indexOf(path) + 1
   }
 
   /**

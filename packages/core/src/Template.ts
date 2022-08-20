@@ -6,7 +6,7 @@ import { Project } from './Project'
 import { RenderDiagnostic } from './types/code'
 import { AtLeastOne } from './types/generic'
 import { TemplateDiagnostics, TemplateRenderResults } from './types/template'
-import { isAlpineDirective, isComponentName, isPropertyName } from './validation'
+import { isComponentName, isPropertyName } from './validation'
 
 /**
  * Handles common features of components and pages, such as abstract syntax trees,
@@ -44,6 +44,11 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
    * Component IDs always start with a safe slug and page IDs with a forward slash.
    */
   protected _id: string
+
+  /**
+   * Template type.
+   */
+  protected _type: 'component' | 'page'
 
   /**
    * An HTML class object instantiated from the template content.
@@ -93,14 +98,6 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     this._html = new HTML(html)
     this._project = project
     this._resolveDependencies()
-  }
-
-  /**
-   * Create a new instance of this class instance using its id and raw HTML contents.
-   * Diagnostics are not cloned.
-   */
-  clone(): Template {
-    return new Template(this._id, this._html.getRawHTML(), this._project)
   }
 
   /**
@@ -256,13 +253,17 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     _iterations: string[] = [],
   ): TemplateRenderResults {
     const variables = this._project ? { ...properties, ...this._project.getGlobals() } : properties
-    const html = this._html.replaceMustaches(variables)
+    const html: HTML =
+      this._project?.isProduction() && _iterations.length === 0 && this._type === 'component'
+        ? (this as any).resolveAlpineDirectives().replaceMustaches(variables)
+        : this._html.replaceMustaches(variables)
     const diagnostics: RenderDiagnostic[] = []
 
     for (const node of html.walk()) {
       if (HTML.adapter.isElementNode(node)) {
         const ifAttribute = node.attrs.find((attr) => attr.name === 'if')
 
+        // Remove when if expression evaluates to a falsy value
         if (ifAttribute && node.tagName !== 'outlet') {
           if (!new JS(ifAttribute.value).evaluate(variables)) {
             HTML.adapter.detachNode(node)
@@ -270,19 +271,8 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
           }
         }
 
-        for (const attr of node.attrs) {
-          if (
-            this._project?.isProduction() &&
-            isAlpineDirective(attr.name) &&
-            !['x-data', 'x-bind'].includes(attr.name)
-          ) {
-            attr.name = ''
-          } else if (attr.name === 'css') {
-            attr.name = ''
-          }
-        }
-
-        node.attrs = node.attrs.filter((attr) => attr.name)
+        // Remove `css` attributes
+        node.attrs = node.attrs.filter((attr) => attr.name !== 'css')
 
         if (node.tagName === 'include') {
           if (this._project) {
@@ -291,11 +281,16 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
             const includeProperties = HTML.getIncludeProperties(node)
             const injections = HTML.getInjections(node)
 
-            componentClone._html = componentClone._html.inject(injections)
+            // Detach child nodes (they are rendered in outlets)
+            node.childNodes.forEach((childNode) => HTML.adapter.detachNode(childNode))
+
+            // Don't resolve Alpine directives for injected contents
+            componentClone._html = componentClone.resolveAlpineDirectives().inject(injections)
 
             const iteration =
               componentName + JSON.stringify(includeProperties) + componentClone._html.getRawHTML()
 
+            // Detect infinite loops
             if (_iterations.includes(iteration)) {
               HTML.adapter.detachNode(node)
 
@@ -312,13 +307,13 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
 
             _iterations.push(iteration)
 
-            const componentRenderResults = componentClone.render(includeProperties, _iterations)
-            const rootNodes = componentRenderResults.html.getRootNodes()
+            const results = componentClone.render(includeProperties, [..._iterations])
+            const rootNode = results.html.getRootNodes()[0]
 
-            HTML.replaceElement(node, ...rootNodes)
+            HTML.replaceElement(node, rootNode)
 
             diagnostics.push(
-              ...componentRenderResults.diagnostics.map((diagnostic) => ({
+              ...results.diagnostics.map((diagnostic) => ({
                 templateId: this._id,
                 ...diagnostic,
               })),

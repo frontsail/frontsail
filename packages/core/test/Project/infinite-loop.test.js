@@ -48,7 +48,7 @@ it('should stop rendering after detecting inifinte loops (1)', () => {
     '0.message',
     "The included component 'loop' caused an infinite loop.",
   )
-  expect(results.html).toBe('<div><p>loop</p></div>')
+  expect(results.html).toBe('<div> <p>loop</p> </div>')
 })
 
 it('should stop rendering after detecting inifinte loops (2)', () => {
@@ -62,5 +62,5 @@ it('should stop rendering after detecting inifinte loops (2)', () => {
     '0.message',
     "The included component 'foo' caused an infinite loop.",
   )
-  expect(results.html).toBe('<div>foo<div>bar</div></div>')
+  expect(results.html).toBe('<div> foo <div> bar </div> </div>')
 })

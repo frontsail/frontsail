@@ -46,6 +46,15 @@ test('linting', () => {
   expect(project.lintPage('/bar', '*').getPageDiagnostics('/bar', '*')).toHaveLength(0)
 })
 
+test('indices', () => {
+  expect(project.getComponentIndex('foo')).toBe(1)
+  expect(project.getComponentIndex('bar')).toBe(2)
+  expect(project.getComponentIndex('baz')).toBe(3)
+  expect(project.getPageIndex('/')).toBe(1)
+  expect(project.getPageIndex('/foo')).toBe(2)
+  expect(project.getPageIndex('/bar')).toBe(3)
+})
+
 test('getting included components', () => {
   expect(project.getIncludedComponentNames('foo')).toEqual(['bar'])
   expect(project.getIncludedComponentNames('bar')).toEqual(['baz'])

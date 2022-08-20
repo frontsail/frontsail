@@ -1,10 +1,11 @@
 import { split, uniqueArray } from '@frontsail/utils'
+import { Element } from 'parse5/dist/tree-adapters/default'
 import { HTML } from './HTML'
 import { Project } from './Project'
 import { Template } from './Template'
 import { AtLeastOne } from './types/generic'
 import { TemplateDiagnostics } from './types/template'
-import { isComponentName } from './validation'
+import { isAlpineDirective, isComponentName } from './validation'
 
 /**
  * Handles component specific features, such as outlets and linting.
@@ -37,6 +38,11 @@ import { isComponentName } from './validation'
  */
 export class Component extends Template {
   /**
+   * Template type.
+   */
+  protected _type: 'component' | 'page' = 'component'
+
+  /**
    * Alphabetically sorted outlet names found in the HTML code.
    */
   protected _outletNames: string[] = []
@@ -57,6 +63,14 @@ export class Component extends Template {
     super(name, html, project)
 
     this._extractOutletNames()
+  }
+
+  /**
+   * Create a new instance of this class instance using its id and raw HTML contents.
+   * Diagnostics are not cloned.
+   */
+  clone(): Component {
+    return new Component(this._id, this._html.getRawHTML(), this._project)
   }
 
   /**
@@ -158,5 +172,66 @@ export class Component extends Template {
     }
 
     return this
+  }
+
+  /**
+   * Remove Alpine directives in elements without the `x-bind` directive and add a
+   * generic `x-bind` value to them. Add `x-data` to the root element.
+   *
+   * @returns a new HTML instance.
+   * @throws an error if a project is not defined.
+   */
+  resolveAlpineDirectives(): HTML {
+    if (!this._project) {
+      throw new Error('Cannot resolve Alpine directives without a project.')
+    }
+
+    const html = this._html.clone()
+    const componentIndex = this._project.getComponentIndex(this._id)
+
+    let xBindIndex: number = 1
+    let shouldHaveXData: boolean = false
+
+    for (const node of html.walk()) {
+      if (HTML.adapter.isElementNode(node)) {
+        const hasXBind = node.attrs.find((attr) => attr.name === 'x-bind')
+
+        let shouldHaveXBind: boolean = false
+
+        for (const attr of node.attrs) {
+          if (isAlpineDirective(attr.name)) {
+            if (hasXBind) {
+              if (attr.name.startsWith('@')) {
+                attr.name = 'x-on:' + attr.name.slice(1)
+              } else if (attr.name.startsWith(':')) {
+                attr.name = 'x-bind:' + attr.name.slice(1)
+              }
+            } else if (!['x-bind', 'x-cloak'].includes(attr.name)) {
+              if (attr.name !== 'x-data') {
+                shouldHaveXBind = true
+              }
+
+              attr.name = ''
+            }
+
+            shouldHaveXData = true
+          }
+        }
+
+        if (shouldHaveXBind) {
+          node.attrs.push({ name: 'x-bind', value: `_c${componentIndex}b${xBindIndex}_D` })
+          xBindIndex++
+        }
+
+        node.attrs = node.attrs.filter((attr) => attr.name)
+      }
+    }
+
+    if (shouldHaveXData) {
+      const rootNode = html.getRootNodes()[0] as Element
+      rootNode.attrs.unshift({ name: 'x-data', value: `_c${componentIndex}_D` })
+    }
+
+    return new HTML(html.toString())
   }
 }
