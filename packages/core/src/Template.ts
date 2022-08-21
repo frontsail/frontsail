@@ -260,7 +260,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     const variables = { ...properties, ...this._project.getGlobals() }
     const html: HTML =
       _iterations.length === 0 && this._type === 'component'
-        ? (this as any).resolveAlpineDirectives().replaceMustaches(variables)
+        ? (this as any).prepareHTML().replaceMustaches(variables)
         : this._html.replaceMustaches(variables)
     const diagnostics: RenderDiagnostic[] = []
 
@@ -289,7 +289,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
           node.childNodes.forEach((childNode) => HTML.adapter.detachNode(childNode))
 
           // Don't resolve Alpine directives for injected contents
-          componentClone._html = componentClone.resolveAlpineDirectives().inject(injections)
+          componentClone._html = componentClone.prepareHTML().inject(injections)
 
           const iteration =
             componentName + JSON.stringify(includeProperties) + componentClone._html.getRawHTML()

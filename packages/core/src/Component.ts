@@ -1,6 +1,7 @@
 import { split, uniqueArray } from '@frontsail/utils'
-import { Element } from 'parse5/dist/tree-adapters/default'
+import { Element, Template as TemplateElement } from 'parse5/dist/tree-adapters/default'
 import { HTML } from './HTML'
+import { JS } from './JS'
 import { Project } from './Project'
 import { Template } from './Template'
 import { AtLeastOne } from './types/generic'
@@ -105,14 +106,37 @@ export class Component extends Template {
     // Check template
     //
     if (this.shouldTest('templateSpecific', tests)) {
-      for (let i = 1; i < rootNodes.length; i++) {
-        this.addDiagnostics('templateSpecific', {
-          message: 'Components can have only one root node.',
-          severity: 'error',
-          from: rootNodes[i].sourceCodeLocation!.startOffset,
-          to: rootNodes[i].sourceCodeLocation!.endOffset,
-        })
-      }
+      rootNodes.forEach((rootNode, index) => {
+        if (HTML.adapter.isElementNode(rootNode)) {
+          if (rootNode.tagName === 'template') {
+            this.addDiagnostics('templateSpecific', {
+              message: 'Templates cannot be used as root nodes.',
+              severity: 'error',
+              from: rootNode.sourceCodeLocation!.startTag!.startOffset,
+              to: rootNode.sourceCodeLocation!.startTag!.endOffset,
+            })
+          }
+
+          for (const attr of rootNode.attrs) {
+            if (['x-if', 'x-for'].includes(attr.name)) {
+              this.addDiagnostics('templateSpecific', {
+                message: `The '${attr.name}' directive cannot be used in the root element.`,
+                severity: 'error',
+                ...this._html.getAttributeNameRange(rootNode, attr.name)!,
+              })
+            }
+          }
+        }
+
+        if (index > 0) {
+          this.addDiagnostics('templateSpecific', {
+            message: 'Components can have only one root node.',
+            severity: 'error',
+            from: rootNode.sourceCodeLocation!.startOffset,
+            to: rootNode.sourceCodeLocation!.endOffset,
+          })
+        }
+      })
     }
 
     if (this.shouldTest('alpineDirectives', tests) || this.shouldTest('outletElements', tests)) {
@@ -175,20 +199,153 @@ export class Component extends Template {
   }
 
   /**
-   * Remove Alpine directives in elements without the `x-bind` directive and add a
-   * generic `x-bind` value to them. Add `x-data` to the root element.
+   * Resolve Alpine templates and directives.
    *
    * @returns a new HTML instance.
    * @throws an error if a project is not defined.
    */
-  resolveAlpineDirectives(): HTML {
+  prepareHTML(): HTML {
+    const html = this._html.clone()
+
+    this._resolveAlpineTemplates(html)
+    this._resolveAlpineDirectives(html)
+
+    return new HTML(html.toString())
+  }
+
+  /**
+   * Move all Alpine directives into a reusable Alpine data component and prepend all
+   * moved data properties with the `this` keyword. Bindings are identified with a
+   * unique component index in the project.
+   *
+   * **Caveats:**
+   *
+   * - When accessing properties of parent components, always precede them with the
+   *   `this` keyword.
+   * - When accessing `window` variables with coincident names with properties, prefix
+   *   them with `window`.
+   *
+   * @returns JavaScript code.
+   * @throws an error if a project is not defined.
+   */
+  resolveAlpineData(): string {
+    if (!this._project) {
+      throw new Error('Cannot resolve Alpine data without a project.')
+    }
+
+    const componentIndex = this._project.getComponentIndex(this._id)
+    const rootNodes = this._html.getRootNodes()
+    const rootElement =
+      rootNodes.length === 1 && HTML.adapter.isElementNode(rootNodes[0]) ? rootNodes[0] : null
+
+    if (!rootElement) {
+      return ''
+    }
+
+    const xData = rootElement.attrs.find((attr) => attr.name === 'x-data')?.value ?? '{}'
+    const data = new JS(xData, true)
+
+    let xBindIndex: number = 1
+    let shouldHaveXData: boolean = false
+
+    if (data.hasProblems('syntax')) {
+      return ''
+    }
+
+    const dataProperties = data.getObjectProperties()
+    const runtime: { element: Element; properties: string[] }[] = []
+    const bindings: string[] = []
+
+    for (const node of this._html.walk()) {
+      if (HTML.adapter.isElementNode(node)) {
+        const hasXBind = node.attrs.some((attr) => attr.name === 'x-bind')
+        const xForAttribute = node.attrs.find((attr) => attr.name === 'x-for')
+        const bindingProperties: string[] = []
+
+        if (xForAttribute) {
+          const xFor = JS.parseForExpression(xForAttribute.value)
+
+          if (xFor) {
+            let runtimeItem = runtime.find((item) => item.element === node)
+
+            if (!runtimeItem) {
+              runtimeItem = { element: node, properties: [] }
+              runtime.push(runtimeItem)
+            }
+
+            if (xFor.item) {
+              runtimeItem.properties.push(xFor.item)
+            }
+
+            if (xFor.index) {
+              runtimeItem.properties.push(xFor.index)
+            }
+          }
+        }
+
+        for (const attr of node.attrs) {
+          if (isAlpineDirective(attr.name)) {
+            if (!hasXBind && !['x-data', 'x-bind', 'x-for', 'x-cloak'].includes(attr.name)) {
+              const runtimeProperties: string[] = []
+              let relative: Element | null = node
+
+              while (relative) {
+                const runtimeItem = runtime.find((item) => item.element === relative)
+                const parent = HTML.adapter.getParentNode(relative)
+
+                if (runtimeItem) {
+                  runtimeProperties.push(...runtimeItem.properties)
+                }
+
+                relative = parent && HTML.adapter.isElementNode(parent) ? parent : null
+              }
+
+              const expression = new JS(attr.value, true).addThis([
+                ...dataProperties,
+                ...runtimeProperties,
+              ])
+
+              bindingProperties.push(
+                `      '${attr.name}'() {\n        return ${expression}\n      }`,
+              )
+            }
+
+            shouldHaveXData = true
+          }
+        }
+
+        if (bindingProperties.length > 0) {
+          bindings.push(
+            `    _c${componentIndex}b${xBindIndex}_D: {\n${bindingProperties.join(',\n')}\n    }`,
+          )
+
+          xBindIndex++
+        }
+      }
+    }
+
+    if (shouldHaveXData) {
+      const trimmed = xData.trim().replace(/\s*,?\s*}\s*$/, '')
+      const newXData = (trimmed === '{' ? '{\n' : `${trimmed},\n`) + bindings.join(',\n')
+      return `  Alpine.data('_c${componentIndex}_D', () => (${newXData}\n  }))`
+    }
+
+    return ''
+  }
+
+  /**
+   * Remove Alpine directives in elements without the `x-bind` directive and add a
+   * generic `x-bind` value to them. Add `x-data` to the root element.
+   *
+   * @throws an error if a project is not defined.
+   */
+  protected _resolveAlpineDirectives(html: HTML): HTML {
     if (!this._project) {
       throw new Error('Cannot resolve Alpine directives without a project.')
     } else if (this._project.isDevelopment()) {
-      return this._html.clone()
+      return html
     }
 
-    const html = this._html.clone()
     const componentIndex = this._project.getComponentIndex(this._id)
 
     let xBindIndex: number = 1
@@ -196,7 +353,7 @@ export class Component extends Template {
 
     for (const node of html.walk()) {
       if (HTML.adapter.isElementNode(node)) {
-        const hasXBind = node.attrs.find((attr) => attr.name === 'x-bind')
+        const hasXBind = node.attrs.some((attr) => attr.name === 'x-bind')
 
         let shouldHaveXBind: boolean = false
 
@@ -208,7 +365,7 @@ export class Component extends Template {
               } else if (attr.name.startsWith(':')) {
                 attr.name = 'x-bind:' + attr.name.slice(1)
               }
-            } else if (!['x-bind', 'x-cloak'].includes(attr.name)) {
+            } else if (!['x-bind', 'x-for', 'x-cloak'].includes(attr.name)) {
               if (attr.name !== 'x-data') {
                 shouldHaveXBind = true
               }
@@ -234,6 +391,56 @@ export class Component extends Template {
       rootNode.attrs.unshift({ name: 'x-data', value: `_c${componentIndex}_D` })
     }
 
-    return new HTML(html.toString())
+    return html
+  }
+
+  /**
+   * Wrap non-template elements with `x-if` and `x-for` directives into auto-generated
+   * `<template>` elements.
+   *
+   * @throws an error if a project is not defined.
+   */
+  protected _resolveAlpineTemplates(html: HTML): HTML {
+    if (!this._project) {
+      throw new Error('Cannot resolve Alpine directives without a project.')
+    }
+
+    const xIfElements: Element[] = []
+    const xForElements: Element[] = []
+
+    for (const node of html.walk()) {
+      if (HTML.adapter.isElementNode(node) && node.tagName !== 'template') {
+        if (node.attrs.some((attr) => attr.name === 'x-if')) {
+          xIfElements.push(node)
+        }
+
+        if (node.attrs.some((attr) => attr.name === 'x-for')) {
+          xForElements.push(node)
+        }
+      }
+    }
+
+    for (const directive of ['x-if', 'x-for']) {
+      const elements = directive === 'x-if' ? xIfElements : xForElements
+
+      for (const element of elements) {
+        const index = element.attrs.findIndex((attr) => attr.name === directive)
+        const parent = HTML.adapter.getParentNode(element)!
+        const template = HTML.createElement(
+          'template',
+          Object.fromEntries([[directive, element.attrs[index].value]]),
+        ) as TemplateElement
+        const templateContent = HTML.adapter.createDocumentFragment()
+
+        HTML.adapter.insertBefore(parent, template, element)
+        HTML.adapter.detachNode(element)
+        HTML.adapter.setTemplateContent(template, templateContent)
+        HTML.adapter.appendChild(templateContent, element)
+
+        element.attrs.splice(index, 1)
+      }
+    }
+
+    return html
   }
 }

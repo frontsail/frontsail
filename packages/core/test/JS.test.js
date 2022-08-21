@@ -55,3 +55,12 @@ test('object check', () => {
   expect(new JS('foo').isObject()).toBe(false)
   expect(new JS('foo bar').isObject()).toBe(false)
 })
+
+test('getting object properties', () => {
+  expect(new JS("{ foo: 'bar' }", true).getObjectProperties()).toEqual(['foo'])
+  expect(new JS("{ foo: 'bar', bar() {} }", true).getObjectProperties()).toEqual(['bar', 'foo'])
+  expect(new JS('{ bar() {}, baz: () => {} }', true).getObjectProperties()).toEqual(['bar', 'baz'])
+  expect(new JS("{ foo: { bar: 'baz' } }", true).getObjectProperties()).toEqual(['foo'])
+  expect(new JS('{}', true).getObjectProperties()).toEqual([])
+  expect(new JS("'foo'", true).getObjectProperties()).toEqual([])
+})

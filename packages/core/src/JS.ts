@@ -74,6 +74,30 @@ export class JS extends Diagnostics<JSDiagnostics> {
   }
 
   /**
+   * Add the `this` keyword to identifiers included in `targets` and return the
+   * transformed JavaScript code.
+   */
+  addThis(targets: string[]): string {
+    let js = this.getRawJS()
+    let diff: number = 0
+
+    if (this._ast) {
+      this.walkSimple({
+        Identifier: (node: Node & { name: string }) => {
+          if (targets.includes(node.name)) {
+            const from = node.start - this._declarator.length + diff
+            const to = node.end - this._declarator.length + diff
+            js = js.slice(0, from) + `this.${node.name}` + js.slice(to)
+            diff += 5 // 'this.'.length
+          }
+        },
+      })
+    }
+
+    return js
+  }
+
+  /**
    * Create a new instance of this class instance using its raw JS contents.
    * Diagnostics are not cloned.
    */
@@ -121,17 +145,17 @@ export class JS extends Diagnostics<JSDiagnostics> {
    * Find and return a list of identifiers in the AST.
    */
   getIdentifiers(): string[] {
-    const variables: string[] = []
+    const identifiers: string[] = []
 
     if (this._ast) {
       this.walkSimple({
-        Identifier(node: Node & { name: string }) {
-          variables.push(node.name)
+        Identifier: (node: Node & { name: string }) => {
+          identifiers.push(node.name)
         },
       })
     }
 
-    return variables
+    return identifiers
   }
 
   /**
@@ -143,6 +167,25 @@ export class JS extends Diagnostics<JSDiagnostics> {
     const nodes: Node[] = []
     this.walk((node) => nodes.push(node))
     return nodes
+  }
+
+  /**
+   * Get the object property names if the JS is an anonymous object.
+   */
+  getObjectProperties(): string[] {
+    if (this.isObject()) {
+      const object = findNodeAt(this._ast!, this._declarator.length, this._js.length)!.node as any
+      return object.properties.map((property) => property.key.name).sort()
+    }
+
+    return []
+  }
+
+  /**
+   * Return the raw JS content without the pseudo declarator.
+   */
+  getRawJS(): string {
+    return this._js.replace(this._declarator, '')
   }
 
   /**
@@ -175,6 +218,48 @@ export class JS extends Diagnostics<JSDiagnostics> {
     }
 
     return false
+  }
+
+  /**
+   * Parse an `x-for` expression.
+   *
+   * @author VueJS 2.* core
+   */
+  static parseForExpression(
+    expression: string,
+  ): { item: string; index: string; items: string; collection: string } | null {
+    const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
+    const stripParensRE = /^\s*\(|\)\s*$/g
+    const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+    const inMatch = expression.match(forAliasRE)
+
+    if (!inMatch) {
+      return null
+    }
+
+    const result: { item: string; index: string; items: string; collection: string } = {
+      item: '',
+      index: '',
+      items: '',
+      collection: '',
+    }
+    const item = inMatch[1].replace(stripParensRE, '').trim()
+    const iteratorMatch = item.match(forIteratorRE)
+
+    result.items = inMatch[2].trim()
+
+    if (iteratorMatch) {
+      result.item = item.replace(forIteratorRE, '').trim()
+      result.index = iteratorMatch[1].trim()
+
+      if (iteratorMatch[2]) {
+        result.collection = iteratorMatch[2].trim()
+      }
+    } else {
+      result.item = item
+    }
+
+    return result
   }
 
   /**

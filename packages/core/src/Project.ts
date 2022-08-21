@@ -164,7 +164,7 @@ export class Project {
   protected _assets: string[] = []
 
   /**
-   * JavaScript code appended after the auto-generated Alpine data registrations in
+   * JavaScript code prepended before the auto-generated Alpine data registrations in
    * the project scripts.
    */
   protected _js: string = ''
@@ -211,7 +211,7 @@ export class Project {
           options[key]!.forEach((asset) => this.addAsset(asset))
           break
         case 'js':
-          // @todo
+          this.setJS(options[key]!)
           break
         case 'css':
           // @todo
@@ -276,6 +276,29 @@ export class Project {
     }
 
     return this
+  }
+
+  /**
+   * Build the project scripts from the custom JS code and the auto-generated Alpine
+   * data registrations.
+   */
+  buildJS(): string {
+    const alpine: string[] = []
+
+    this.listComponents().forEach((name) => {
+      const alpineData = this.getComponent(name).resolveAlpineData()
+
+      if (alpineData) {
+        alpine.push(alpineData)
+      }
+    })
+
+    if (alpine.length) {
+      alpine.unshift('', "document.addEventListener('alpine:init', () => {")
+      alpine.push('})')
+    }
+
+    return (this._js + alpine.join('\n')).trim()
   }
 
   /**
@@ -629,9 +652,16 @@ export class Project {
 
   /**
    * Set the project environment `mode`.
+   *
+   * @throws an error if the `mode` is invalid.
    */
   setEnvironment(mode: 'development' | 'production'): this {
-    this._environment = mode
+    if (mode === 'development' || mode === 'production') {
+      this._environment = mode
+    } else {
+      throw new Error(`Invalid environment mode '${mode}'.`)
+    }
+
     return this
   }
 
@@ -653,6 +683,14 @@ export class Project {
       this._globals[name] = globals[name]
     }
 
+    return this
+  }
+
+  /**
+   * Set the custom JavaScript code.
+   */
+  setJS(code: string): this {
+    this._js = code
     return this
   }
 
