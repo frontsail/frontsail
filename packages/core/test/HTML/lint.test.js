@@ -215,13 +215,10 @@ test('linting mustache locations (4)', () => {
     .lint('mustacheLocations')
     .getDiagnostics('mustacheLocations')
 
-  expect(diagnostics).toHaveLength(2)
+  expect(diagnostics).toHaveLength(1)
   expect(diagnostics).toHaveProperty('0.from', 14)
   expect(diagnostics).toHaveProperty('0.to', 23)
   expect(diagnostics).toHaveProperty('0.message', "Mustaches cannot be used in 'name' attributes.")
-  expect(diagnostics).toHaveProperty('1.from', 36)
-  expect(diagnostics).toHaveProperty('1.to', 45)
-  expect(diagnostics).toHaveProperty('1.message', "Mustaches cannot be used in 'allow' attributes.")
 })
 
 test('linting mustache values', () => {
@@ -283,9 +280,9 @@ test('linting outlet elements (3)', () => {
     '0.message',
     "Outlets cannot be nested within 'include' elements.",
   )
-  expect(diagnostics).toHaveProperty('1.from', 28)
-  expect(diagnostics).toHaveProperty('1.to', 31)
-  expect(diagnostics).toHaveProperty('1.message', 'Invalid component name.')
+  expect(diagnostics).toHaveProperty('1.from', 17)
+  expect(diagnostics).toHaveProperty('1.to', 22)
+  expect(diagnostics).toHaveProperty('1.message', 'Unsupported attribute.')
   expect(diagnostics).toHaveProperty('2.from', 33)
   expect(diagnostics).toHaveProperty('2.to', 36)
   expect(diagnostics).toHaveProperty('2.message', 'Unsupported attribute.')

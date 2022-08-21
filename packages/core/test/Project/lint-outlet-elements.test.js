@@ -37,16 +37,10 @@ test('linting component (1)', () => {
     .lintComponent('foo', 'outletElements')
     .getComponentDiagnostics('foo', 'outletElements')
 
-  expect(diagnostics).toHaveLength(3)
-  expect(diagnostics).toHaveProperty('0.from', 23)
-  expect(diagnostics).toHaveProperty('0.to', 23)
-  expect(diagnostics).toHaveProperty('0.message', 'Invalid component name.')
-  expect(diagnostics).toHaveProperty('1.from', 24)
-  expect(diagnostics).toHaveProperty('1.to', 27)
-  expect(diagnostics).toHaveProperty('1.message', 'Invalid component name.')
-  expect(diagnostics).toHaveProperty('2.from', 32)
-  expect(diagnostics).toHaveProperty('2.to', 35)
-  expect(diagnostics).toHaveProperty('2.message', 'Component does not exist.')
+  expect(diagnostics).toHaveLength(1)
+  expect(diagnostics).toHaveProperty('0.from', 16)
+  expect(diagnostics).toHaveProperty('0.to', 21)
+  expect(diagnostics).toHaveProperty('0.message', 'Unsupported attribute.')
 })
 
 test('linting component (2)', () => {

@@ -1,4 +1,4 @@
-import { clearArray, escape, split, uniqueArray } from '@frontsail/utils'
+import { clearArray, escape, uniqueArray } from '@frontsail/utils'
 import { defaultTreeAdapter, parse, parseFragment, serialize } from 'parse5'
 import {
   ChildNode,
@@ -750,7 +750,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                   attr.name === 'if' ||
                   (node.tagName === 'include' && attr.name === 'component') ||
                   (node.tagName === 'inject' && attr.name === 'into') ||
-                  (node.tagName === 'outlet' && ['allow', 'name'].includes(attr.name))
+                  (node.tagName === 'outlet' && attr.name === 'name')
                 ) {
                   this.addDiagnostics('mustacheLocations', {
                     message: `Mustaches cannot be used in '${attr.name}' attributes.`,
@@ -806,22 +806,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             }
 
             for (const attr of node.attrs) {
-              if (attr.name === 'allow') {
-                const componentNames = split(attr.value)
-
-                for (const componentName of componentNames) {
-                  if (!isComponentName(componentName.value.trim())) {
-                    const attributeValueRange = this.getAttributeValueRange(node, attr.name)!
-
-                    this.addDiagnostics('outletElements', {
-                      message: 'Invalid component name.',
-                      severity: 'warning',
-                      from: attributeValueRange.from + componentName.from,
-                      to: attributeValueRange.from + componentName.to,
-                    })
-                  }
-                }
-              } else if (attr.name !== 'name') {
+              if (attr.name !== 'name') {
                 this.addDiagnostics('outletElements', {
                   message: 'Unsupported attribute.',
                   severity: 'warning',

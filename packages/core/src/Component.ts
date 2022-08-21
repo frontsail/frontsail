@@ -1,4 +1,4 @@
-import { split, uniqueArray } from '@frontsail/utils'
+import { uniqueArray } from '@frontsail/utils'
 import { Element, Template as TemplateElement } from 'parse5/dist/tree-adapters/default'
 import { HTML } from './HTML'
 import { JS } from './JS'
@@ -167,28 +167,6 @@ export class Component extends Template {
                 from: node.sourceCodeLocation!.startOffset,
                 to: node.sourceCodeLocation!.endOffset,
               })
-            }
-
-            for (const attr of node.attrs) {
-              if (attr.name === 'allow') {
-                const componentNames = split(attr.value)
-
-                for (const componentName of componentNames) {
-                  if (
-                    isComponentName(componentName.value.trim()) &&
-                    !this._project?.hasComponent(componentName.value.trim())
-                  ) {
-                    const attributeValueRange = this._html.getAttributeValueRange(node, attr.name)!
-
-                    this.addDiagnostics('outletElements', {
-                      message: 'Component does not exist.',
-                      severity: 'warning',
-                      from: attributeValueRange.from + componentName.from,
-                      to: attributeValueRange.from + componentName.to,
-                    })
-                  }
-                }
-              }
             }
           }
         }
