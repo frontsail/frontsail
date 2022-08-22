@@ -1,0 +1,27 @@
+{
+  "name": "@frontsail/postcss",
+  "version": "0.1.0",
+  "description": "PostCSS fork without Node.js dependencies.",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontsail/postcss.git"
+  },
+  "keywords": [
+    "frontsail"
+  ],
+  "author": "Muris Ceman <muris@frontsail.com>",
+  "license": "MIT",
+  "contributors": [
+    "Andrey Sitnik <andrey@sitnik.ru>"
+  ],
+  "bugs": {
+    "url": "https://github.com/frontsail/postcss/issues"
+  },
+  "homepage": "https://github.com/frontsail/postcss/tree/main/packages/core#readme",
+  "dependencies": {
+    "nanoid": "^4.0.0"
+  }
+}
