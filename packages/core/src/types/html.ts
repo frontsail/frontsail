@@ -21,6 +21,7 @@ export interface HTMLDiagnostics {
   ifAttributes: Diagnostic[]
   includeElements: Diagnostic[]
   injectElements: Diagnostic[]
+  inlineCSS: Diagnostic[]
   mustacheLocations: Diagnostic[]
   mustacheValues: Diagnostic[]
   outletElements: Diagnostic[]

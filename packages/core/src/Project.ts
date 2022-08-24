@@ -1,12 +1,15 @@
 import { clearObject, compareArrays, diffArrays, uniqueArray } from '@frontsail/utils'
+import { minify } from 'terser'
 import { Component } from './Component'
+import { CSS } from './CSS'
 import { Page } from './Page'
+import { ProjectDiagnostics } from './ProjectDiagnostics'
 import { Template } from './Template'
 import { Diagnostic } from './types/code'
 import { AtLeastOne } from './types/generic'
 import { ProjectOptions, RenderResults } from './types/project'
 import { TemplateDiagnostics } from './types/template'
-import { isGlobalName, isPagePath } from './validation'
+import { isGlobalName, isPagePath, isSCSSVariableName } from './validation'
 
 /**
  * Manages project variables, components, pages, assets, scripts, and styles.
@@ -24,8 +27,7 @@ import { isGlobalName, isPagePath } from './validation'
  * - **Base class** - Class name of an inline CSS rule that is automatically generated
  *   from template keys.
  *
- * - **Directive** - Refers to an Alpine [directive](https://alpinejs.dev/start-here)
- *   or the custom CSS at-rule `@inlineCSS` (depending on the context).
+ * - **Directive** - Refers to an Alpine [directive](https://alpinejs.dev/start-here).
  *
  * - **Element** - An HTML element (e.g. `<div></div>`).
  *
@@ -41,8 +43,8 @@ import { isGlobalName, isPagePath } from './validation'
  *   existing outlet name. If omitted, the 'main' outlet is targeted by default.
  *
  * - **Inline CSS** - Refers to a CSS rule written in a custom `css` attribute,
- *   without a selector, which can have nested SCSS-like ampersand-rules and at-rules.
- *   It should not be confused with inline styles.
+ *   without a selector, which can have SCSS-like syntax. It should not be confused
+ *   with inline styles.
  *
  * - **Interpolation** - Refers to embedding expressions using the "Mustache" syntax
  *   (double curly braces). Only globals (e.g. `{{ HOME_URL }}`) and properties
@@ -88,16 +90,15 @@ import { isGlobalName, isPagePath } from './validation'
  *   forward slashes (`/`). Component IDs always start with a safe slug and page
  *   IDs with a forward slash.
  *
- * - **Template key** - A unique string identifier that is used as the base class
- *   name for CSS rules generated from `css` attributes and as the default Alpine
+ * - **Template key** - A unique string identifier that is used in the base class
+ *   name for CSS rules generated from `css` attributes and in the default Alpine
  *   component name in `x-data` directives.
  */
-export class Project {
+export class Project extends ProjectDiagnostics {
   /**
    * **Development** mode specifics:
    *
-   * - Template keys are generated from the template ID (e.g. 'ui/text-input'
-   *   resolves to 'ui__text_input', and '/foo/bar-baz' to '__foo__bar_baz').
+   * - Template keys are generated from template IDs (e.g. 'button', '/foo/bar, etc.).
    *
    * - Alpine data and directives remain in the HTML as attributes.
    *
@@ -107,14 +108,13 @@ export class Project {
    *
    * **Production** mode specifics:
    *
-   * - Template keys are generated like `/^_[cp][0-9]+_D$/` where `c` stands for
+   * - Template keys are generated like `/^[cp][0-9]+$/` where `c` stands for
    *   component and `p` for page. The number after that is a unique index for the
-   *   template. The underscores (`_`) and `D` are parts of the FrontSail logo.
-   *   Key examples: '_c1_D', '_p1_D', etc.
+   *   template (e.g. 'c1', 'c2', 'p1', etc.).
    *
    * - Alpine data and directives are extracted from all elements and inserted into
-   *   the project's scripts file. Only the `x-data` (with the template key) and
-   *   `x-bind` attributes remains in the HTML.
+   *   the project's scripts file. Only the `x-data` (with the template key), `x-bind`,
+   *   `x-for`, and `x-cloak` attributes remain in the HTML.
    *
    * - Build outputs are minified.
    */
@@ -164,18 +164,20 @@ export class Project {
   protected _assets: string[] = []
 
   /**
-   * JavaScript code prepended before the auto-generated Alpine data registrations in
-   * the project scripts.
-   */
-  protected _js: string = ''
-
-  /**
-   * Project styles with SCSS-like syntax that can be used to a limited extend. The
-   * `@inlineCSS` directive can be used only once in the code. This directive is
-   * replaced with the extracted `css` attribute values from all registered templates
-   * during the build process.
+   * Custom CSS code prepended before other inline CSS styles in the project styles.
    */
   protected _css: string = ''
+
+  /**
+   * Cache for the latest custom CSS build.
+   */
+  protected _cssCache: { key: string; css: string } = { key: '', css: '' }
+
+  /**
+   * Custom JavaScript code prepended before the auto-generated Alpine data in the
+   * project scripts.
+   */
+  protected _js: string = ''
 
   /**
    * Collection of template IDs used for genering unique template keys.
@@ -190,6 +192,8 @@ export class Project {
    * @throws an error if `options` are malformed.
    */
   constructor(options: ProjectOptions = {}) {
+    super()
+
     Object.keys(options).forEach((key: keyof ProjectOptions) => {
       switch (key) {
         case 'environment':
@@ -199,7 +203,7 @@ export class Project {
           this.setGlobals(options[key]!)
           break
         case 'scssVariables':
-          // @todo
+          this.setSCSSVariables(options[key]!)
           break
         case 'components':
           options[key]!.forEach((component) => this.addComponent(component.name, component.html))
@@ -211,10 +215,10 @@ export class Project {
           options[key]!.forEach((asset) => this.addAsset(asset))
           break
         case 'js':
-          this.setJS(options[key]!)
+          this.setCustomJS(options[key]!)
           break
         case 'css':
-          // @todo
+          this.setCustomCSS(options[key]!)
           break
         default:
           throw new Error(`Unknown option '${key}'.`)
@@ -282,7 +286,7 @@ export class Project {
    * Build the project scripts from the custom JS code and the auto-generated Alpine
    * data registrations.
    */
-  buildJS(): string {
+  async buildScripts(): Promise<string> {
     const alpine: string[] = []
 
     this.listComponents().forEach((name) => {
@@ -298,7 +302,50 @@ export class Project {
       alpine.push('})')
     }
 
-    return (this._js + alpine.join('\n')).trim()
+    let js = (this._js + alpine.join('\n')).trim()
+
+    if (this.isProduction()) {
+      try {
+        js = (await minify(js)).code ?? js
+      } catch (_) {}
+    }
+
+    return js
+  }
+
+  /**
+   * Build the project styles from the custom CSS code and the auto-generated inline
+   * CSS styles.
+   */
+  buildStyles(): string {
+    const scssVariableNames = this.listSCSSVariables()
+
+    if (this._cssCache.key !== scssVariableNames + this._css) {
+      this._cssCache.key = scssVariableNames + this._css
+      this._cssCache.css = new CSS(this._css).build(scssVariableNames)
+    }
+
+    const output: string[] = [this._cssCache.css]
+
+    this.listComponents().forEach((name) => {
+      const key = this.isProduction() ? `c${this.getComponentIndex(name)}` : `${name}__`
+      output.push(this.getComponent(name).buildInlineCSS(key, scssVariableNames))
+    })
+
+    this.listPages().forEach((path) => {
+      const key = this.isProduction() ? `c${this.getPageIndex(path)}` : `${path}__`
+      output.push(this.getComponent(path).buildInlineCSS(key, scssVariableNames))
+    })
+
+    let css = output.join('\n').replace(/\$[a-z][a-zA-Z0-9]*/g, (match) => {
+      return this._scssVariables[match] ?? match
+    })
+
+    if (this.isProduction()) {
+      css = new CSS(css).build(scssVariableNames, true)
+    }
+
+    return css.trim()
   }
 
   /**
@@ -472,30 +519,31 @@ export class Project {
   }
 
   /**
-   * Check if an asset with the path `path` exists in the project.
-   *
-   * @returns true the asset exists in the project.
+   * Check if there is an asset with the path `path` in the project.
    */
   hasAsset(path: string): boolean {
     return this._assets.includes(path)
   }
 
   /**
-   * Check if a component named `name` exists in the project.
-   *
-   * @returns true the component exists in the project.
+   * Check if there is a component named `name` in the project.
    */
   hasComponent(name: string): boolean {
     return this._components.hasOwnProperty(name)
   }
 
   /**
-   * Check if a page with the path `path` exists in the project.
-   *
-   * @returns true the page exists in the project.
+   * Check if there is a page with the path `path` in the project.
    */
   hasPage(path: string): boolean {
     return this._pages.hasOwnProperty(path)
+  }
+
+  /**
+   * Check if there is a SCSS variable named `name` in the project.
+   */
+  hasSCSSVariable(name: string): boolean {
+    return this._scssVariables.hasOwnProperty(name)
   }
 
   /**
@@ -531,24 +579,31 @@ export class Project {
   }
 
   /**
-   * Get a list of all registered asset paths in the project.
+   * Get a sorder list of all registered asset paths in the project.
    */
   listAssets(): string[] {
     return [...this._assets].sort()
   }
 
   /**
-   * Get a list of all registered component names in the project.
+   * Get a sorder list of all registered component names in the project.
    */
   listComponents(): string[] {
     return Object.keys(this._components).sort()
   }
 
   /**
-   * Get a list of all registered page paths in the project.
+   * Get a sorder list of all registered page paths in the project.
    */
   listPages(): string[] {
     return Object.keys(this._pages).sort()
+  }
+
+  /**
+   * Get a list of all SCSS variable names in their original order.
+   */
+  listSCSSVariables(): string[] {
+    return Object.keys(this._scssVariables)
   }
 
   /**
@@ -651,6 +706,22 @@ export class Project {
   }
 
   /**
+   * Set the custom CSS code.
+   */
+  setCustomCSS(code: string): this {
+    this._css = code
+    return this
+  }
+
+  /**
+   * Set the custom JavaScript code.
+   */
+  setCustomJS(code: string): this {
+    this._js = code
+    return this
+  }
+
+  /**
    * Set the project environment `mode`.
    *
    * @throws an error if the `mode` is invalid.
@@ -687,10 +758,20 @@ export class Project {
   }
 
   /**
-   * Set the custom JavaScript code.
+   * Set the SCSS variables.
+   *
+   * @throws an error if a variable name is not valid.
    */
-  setJS(code: string): this {
-    this._js = code
+  setSCSSVariables(variables: { [name: string]: string }): this {
+    Object.keys(variables).forEach((name) => {
+      if (!isSCSSVariableName(name)) {
+        throw new Error(`Invalid SCSS variable ${name}.`)
+      }
+    })
+
+    clearObject(this._scssVariables)
+    Object.keys(variables).forEach((name) => (this._scssVariables[name] = variables[name]))
+
     return this
   }
 

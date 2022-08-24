@@ -159,6 +159,7 @@ test('filtering tests', () => {
     'ifAttributes',
     'includeElements',
     'injectElements',
+    'inlineCSS',
     'mustacheLocations',
     'mustacheValues',
     'outletElements',

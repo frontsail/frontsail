@@ -1,4 +1,5 @@
 import { clearArray, uniqueArray } from '@frontsail/utils'
+import { CSS } from './CSS'
 import { Diagnostics } from './Diagnostics'
 import { HTML } from './HTML'
 import { JS } from './JS'
@@ -16,9 +17,15 @@ import { isComponentName, isPropertyName } from './validation'
  *
  * Glossary:
  *
+ * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
+ *
  * - **AST** - Refers to an HTML abstract sytax tree.
  *
+ * - **Attribute** - An HTML attribute (e.g. `<div attribute-name="value"></div>`).
+ *
  * - **Dependency** - A component included in the template.
+ *
+ * - **Directive** - Refers to an Alpine [directive](https://alpinejs.dev/start-here).
  *
  * - **Include** - Refers to using the special `<include>` tag to render components.
  *
@@ -26,6 +33,10 @@ import { isComponentName, isPropertyName } from './validation'
  *   into a component outlet. These elements must be directly nested within `<include>`
  *   elements. Inject tags can have an `into` attribute whose value must match an
  *   existing outlet name. If omitted, the 'main' outlet is targeted by default.
+ *
+ * - **Inline CSS** - Refers to a CSS rule written in a custom `css` attribute,
+ *   without a selector, which can have SCSS-like syntax. It should not be confused
+ *   with inline styles.
  *
  * - **Outlet** - Refers to a special component-only `<outlet>` element that is replaced
  *   during the render phase by child nodes of `<inject>` elements used in parent
@@ -68,6 +79,11 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   protected _dependencies: string[] = []
 
   /**
+   * Cache for the latest inline CSS build.
+   */
+  protected _cssCache: { key: string; css: string } = { key: '', css: '' }
+
+  /**
    * Collection of diagnostics organized by types.
    */
   protected _diagnostics: TemplateDiagnostics = {
@@ -77,6 +93,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     ifAttributes: [],
     includeElements: [],
     injectElements: [],
+    inlineCSS: [],
     mustacheLocations: [],
     mustacheValues: [],
     outletElements: [],
@@ -98,6 +115,42 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     this._html = new HTML(html)
     this._project = project
     this._resolveDependencies()
+  }
+
+  /**
+   * Create and return CSS styles from inline CSS attributes in the template.
+   *
+   * @param key The template key for generating class names.
+   * @param sortMediaQueries List of SCSS variables for sorting media queries.
+   */
+  buildInlineCSS(key: string, sortMediaQueries: string[] = []): string {
+    if (this._cssCache.key !== key + sortMediaQueries + this._html.getRawHTML()) {
+      const output: string[] = []
+
+      let index: number = 1
+
+      this._html.getAttributeValues('css').forEach((item) => {
+        const selector = `._${key}e${index}_D`
+        const css = new CSS(`${selector.replace(/\//g, '\\/')} ${item.text}`)
+
+        if (!css.hasProblems('syntax')) {
+          const cssOutput = css
+            .build(sortMediaQueries)
+            .replace(/%([a-z][a-zA-Z0-9]*)/g, `._${key}e${index}_$1_D`)
+
+          if (cssOutput) {
+            output.push(cssOutput)
+          }
+        }
+
+        index++
+      })
+
+      this._cssCache.key = key + sortMediaQueries + this._html.getRawHTML()
+      this._cssCache.css = output.join('\n')
+    }
+
+    return this._cssCache.css
   }
 
   /**
@@ -135,7 +188,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
       this.clearDiagnostics(...tests)
       this.testAndMergeDiagnostics(this._html, ...tests)
 
-      if (this.shouldTest('dependencies', tests)) {
+      if (this.shouldTest('dependencies', tests) || this.shouldTest('inlineCSS', tests)) {
         for (const node of this._html.walk()) {
           if (HTML.adapter.isElementNode(node)) {
             //
@@ -235,6 +288,27 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
                 }
               }
             }
+            //
+            // Check inline CSS
+            //
+            if (this.shouldTest('inlineCSS', tests) && this._project) {
+              const cssAttribute = node.attrs.find((attr) => attr.name === 'css')
+
+              if (cssAttribute) {
+                CSS.getSCSSVariables(cssAttribute.value).forEach((scssVariable) => {
+                  if (!this._project!.hasSCSSVariable(scssVariable.variable)) {
+                    const cssAttributeRange = this._html.getAttributeValueRange(node, 'css')!
+
+                    this.addDiagnostics('inlineCSS', {
+                      message: 'SCSS variable does not exist.',
+                      severity: 'warning',
+                      from: cssAttributeRange.from + scssVariable.from,
+                      to: cssAttributeRange.from + scssVariable.to,
+                    })
+                  }
+                })
+              }
+            }
           }
         }
       }
@@ -263,6 +337,13 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
         ? (this as any).prepareHTML().replaceMustaches(variables)
         : this._html.replaceMustaches(variables)
     const diagnostics: RenderDiagnostic[] = []
+    const templateIndex =
+      this._type === 'component'
+        ? this._project.getComponentIndex(this._id)
+        : this._project.getPageIndex(this._id)
+    const key = this._project.isProduction() ? `c${templateIndex}` : `${this._id}__`
+
+    let inlineCSSIndex: number = 1
 
     for (const node of html.walk()) {
       if (HTML.adapter.isElementNode(node)) {
@@ -276,8 +357,23 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
           }
         }
 
-        // Remove `css` attributes
-        node.attrs = node.attrs.filter((attr) => attr.name !== 'css')
+        // Replace `css` attributes with CSS classes
+        const cssAttributeIndex = node.attrs.findIndex((attr) => attr.name === 'css')
+
+        if (cssAttributeIndex > -1) {
+          const className = `_${key}e${inlineCSSIndex}_D`
+          const classAttribute = node.attrs.find((attr) => attr.name === 'class')
+
+          node.attrs.splice(cssAttributeIndex, 1)
+
+          if (classAttribute) {
+            classAttribute.value = `${className} ${classAttribute.value}`
+          } else {
+            node.attrs.push({ name: 'class', value: className })
+          }
+
+          inlineCSSIndex++
+        }
 
         if (node.tagName === 'include') {
           const componentName = node.attrs.find((attr) => attr.name === 'component')!.value

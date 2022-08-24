@@ -9,6 +9,7 @@ import {
   Template,
   TextNode,
 } from 'parse5/dist/tree-adapters/default'
+import { CSS } from './CSS'
 import { Diagnostics } from './Diagnostics'
 import { JS } from './JS'
 import { Range } from './types/code'
@@ -45,7 +46,11 @@ enum NS {
  *
  * Glossary:
  *
+ * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
+ *
  * - **AST** - Refers to the HTML abstract sytax tree built with parse5.
+ *
+ * - **Directive** - Refers to an Alpine [directive](https://alpinejs.dev/start-here).
  *
  * - **Global** - Refers to a globally accessible string variable that can be
  *   interpolated across templates. Global names are always written in upper
@@ -57,6 +62,10 @@ enum NS {
  *   into a component outlet. These elements must be directly nested within `<include>`
  *   elements. Inject tags can have an `into` attribute whose value must match an
  *   existing outlet name. If omitted, the 'main' outlet is targeted by default.
+ *
+ * - **Inline CSS** - Refers to a CSS rule written in a custom `css` attribute,
+ *   without a selector, which can have SCSS-like syntax. It should not be confused
+ *   with inline styles.
  *
  * - **Interpolation** - Refers to embedding expressions using the "Mustache" syntax
  *   (double curly braces). Only globals (e.g. `{{ HOME_URL }}`) and properties
@@ -116,6 +125,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     ifAttributes: [],
     includeElements: [],
     injectElements: [],
+    inlineCSS: [],
     mustacheLocations: [],
     mustacheValues: [],
     outletElements: [],
@@ -383,6 +393,8 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
 
   /**
    * Get a list of all `{{ mustache_tags }}` in the HTML code.
+   *
+   * @alias HTML.getMustaches
    */
   getMustaches(): MustacheTag[] {
     return HTML.getMustaches(this._html)
@@ -557,9 +569,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                       '*',
                     ),
                   )
-                }
-
-                if (attr.name === 'x-data' && !js.isObject()) {
+                } else if (attr.name === 'x-data' && !js.isObject()) {
                   this.addDiagnostics('alpineDirectives', {
                     message: 'Alpine data must be an object.',
                     severity: 'error',
@@ -730,6 +740,29 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             }
           }
           //
+          // Check inline CSS
+          //
+          if (this.shouldTest('inlineCSS', tests)) {
+            const cssAttribute = node.attrs.find((attr) => attr.name === 'css')
+
+            if (cssAttribute) {
+              if (!/^{.*}$/.test(cssAttribute.value.trim())) {
+                this.addDiagnostics('inlineCSS', {
+                  message: 'Inline CSS must be enclosed in curly brackets.',
+                  severity: 'error',
+                  ...this.getAttributeValueRange(node, 'css')!,
+                })
+              } else {
+                const css = new CSS(`& ${cssAttribute.value}`).lint()
+                const cssDiagnostics = css.getDiagnosticsWithOffset(
+                  this.getAttributeValueRange(node, 'css')!.from,
+                  '*',
+                )
+                this.addDiagnostics('inlineCSS', ...cssDiagnostics)
+              }
+            }
+          }
+          //
           // Check mustache locations
           //
           if (this.shouldTest('mustacheLocations', tests)) {
@@ -747,7 +780,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                     to,
                   })
                 } else if (
-                  attr.name === 'if' ||
+                  ['if', 'css'].includes(attr.name) ||
                   (node.tagName === 'include' && attr.name === 'component') ||
                   (node.tagName === 'inject' && attr.name === 'into') ||
                   (node.tagName === 'outlet' && attr.name === 'name')

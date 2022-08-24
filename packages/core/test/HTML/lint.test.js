@@ -221,6 +221,17 @@ test('linting mustache locations (4)', () => {
   expect(diagnostics).toHaveProperty('0.message', "Mustaches cannot be used in 'name' attributes.")
 })
 
+test('linting mustache locations (5)', () => {
+  const diagnostics = new HTML('<div css="{ display: {{ display }} }"></div>')
+    .lint('mustacheLocations')
+    .getDiagnostics('mustacheLocations')
+
+  expect(diagnostics).toHaveLength(1)
+  expect(diagnostics).toHaveProperty('0.from', 21)
+  expect(diagnostics).toHaveProperty('0.to', 34)
+  expect(diagnostics).toHaveProperty('0.message', "Mustaches cannot be used in 'css' attributes.")
+})
+
 test('linting mustache values', () => {
   const diagnostics = new HTML('<div foo="{{ bar }}" :bar="{{ BAZ }}">{{ fooBar }}</div>')
     .lint('mustacheValues')
@@ -303,4 +314,15 @@ test('linting outlet elements (4)', () => {
   expect(diagnostics).toHaveProperty('2.from', 16)
   expect(diagnostics).toHaveProperty('2.to', 19)
   expect(diagnostics).toHaveProperty('2.message', 'Unsupported attribute.')
+})
+
+test('linting inline css', () => {
+  const diagnostics = new HTML('<div css="display: block"></div>')
+    .lint('inlineCSS')
+    .getDiagnostics('inlineCSS')
+
+  expect(diagnostics).toHaveLength(1)
+  expect(diagnostics).toHaveProperty('0.from', 10)
+  expect(diagnostics).toHaveProperty('0.to', 24)
+  expect(diagnostics).toHaveProperty('0.message', 'Inline CSS must be enclosed in curly brackets.')
 })

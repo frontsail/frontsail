@@ -1,4 +1,4 @@
-import { clearArray, compareArrays, diffArrays, intersectArrays, uniqueArray } from '..'
+import { clearArray, compareArrays, diffArrays, intersectArrays, last, uniqueArray } from '..'
 
 test('clearArray', () => {
   const bar = ['foo']
@@ -23,6 +23,12 @@ test('intersectArrays', () => {
   expect(intersectArrays(['foo', 'foo', 'bar'], ['foo', 'foo'])).toEqual(['foo'])
   expect(intersectArrays(['foo'], ['bar'])).toEqual([])
   expect(intersectArrays([{}], [{}])).toEqual([])
+})
+
+test('last', () => {
+  expect(last(['foo', 'bar', 'baz'])).toEqual('baz')
+  expect(last(['foo', 'foo'])).toEqual('foo')
+  expect(last([])).toEqual(undefined)
 })
 
 test('uniqueArray', () => {

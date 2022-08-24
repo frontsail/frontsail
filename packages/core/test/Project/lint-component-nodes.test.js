@@ -44,13 +44,16 @@ test('linting component nodes (2)', () => {
 test('linting component nodes (3)', () => {
   const diagnostics = project.lintComponent('baz', '*').getComponentDiagnostics('baz', '*')
 
-  expect(diagnostics).toHaveLength(1)
+  expect(diagnostics).toHaveLength(2)
   expect(diagnostics).toHaveProperty('0.from', 20)
   expect(diagnostics).toHaveProperty('0.to', 26)
   expect(diagnostics).toHaveProperty(
     '0.message',
     "The 'x-data' directive can only be used in the root element.",
   )
+  expect(diagnostics).toHaveProperty('1.from', 59)
+  expect(diagnostics).toHaveProperty('1.to', 66)
+  expect(diagnostics).toHaveProperty('1.message', 'Reserved name.')
 })
 
 test('linting component nodes (4)', () => {
@@ -58,7 +61,7 @@ test('linting component nodes (4)', () => {
 
   expect(diagnostics).toHaveLength(3)
   expect(diagnostics).toHaveProperty('0.from', 0)
-  expect(diagnostics).toHaveProperty('0.to', 21)
+  expect(diagnostics).toHaveProperty('0.to', 34)
   expect(diagnostics).toHaveProperty('0.message', 'Templates cannot be used as root nodes.')
   expect(diagnostics).toHaveProperty('1.from', 10)
   expect(diagnostics).toHaveProperty('1.to', 14)

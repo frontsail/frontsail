@@ -1,9 +1,10 @@
 import { Project } from '..'
 
-test('resolving alpine data (1)', () => {
-  const js = new Project({
+test('resolving alpine data (1)', async () => {
+  const js = await new Project({
+    environment: 'development',
     components: [{ name: 'foo', html: '<button @click="foo"></button>' }],
-  }).buildJS()
+  }).buildScripts()
 
   expect(js).toBe(
     [
@@ -20,8 +21,9 @@ test('resolving alpine data (1)', () => {
   )
 })
 
-test('resolving alpine data (2)', () => {
-  const js = new Project({
+test('resolving alpine data (2)', async () => {
+  const js = await new Project({
+    environment: 'development',
     components: [
       {
         name: 'foo',
@@ -41,7 +43,7 @@ test('resolving alpine data (2)', () => {
 </div>`,
       },
     ],
-  }).buildJS()
+  }).buildScripts()
 
   expect(js).toBe(
     [

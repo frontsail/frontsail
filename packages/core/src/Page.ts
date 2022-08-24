@@ -14,6 +14,8 @@ import { isAlpineDirective, isPagePath } from './validation'
  *
  * Glossary:
  *
+ * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
+ *
  * - **AST** - Refers to an HTML abstract sytax tree.
  *
  * - **Attribute** - An HTML attribute (e.g. `<div attribute-name="value"></div>`).

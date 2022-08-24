@@ -28,7 +28,8 @@
     "@frontsail/utils": "^0.1.0",
     "acorn": "^8.8.0",
     "acorn-walk": "^8.2.0",
-    "parse5": "^7.0.0"
+    "parse5": "^7.0.0",
+    "terser": "^5.15.0"
   },
   "devDependencies": {
     "concurrently": "^7.3.0",

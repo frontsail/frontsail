@@ -160,3 +160,26 @@ export function isPropertyName(name: string): boolean {
     ].includes(name) && /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(name)
   )
 }
+
+/**
+ * Check if a SCSS variable `name` matches the required pattern.
+ *
+ * @example
+ * isSCSSVariableName('$fooBar') // true
+ * isSCSSVariableName('$foo-bar') // false
+ */
+export function isSCSSVariableName(name: string): boolean {
+  return (
+    ![
+      '$charset',
+      '$import',
+      '$keyframes',
+      '$layer',
+      '$media',
+      '$namespace',
+      '$page',
+      '$property',
+      '$supports',
+    ].includes(name) && /^\$[a-z][a-zA-Z0-9]*$/.test(name)
+  )
+}

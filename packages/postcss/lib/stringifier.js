@@ -1,6 +1,6 @@
 const DEFAULT_RAW = {
   colon: ': ',
-  indent: '    ',
+  indent: '  ',
   beforeDecl: '\n',
   beforeRule: '\n',
   beforeOpen: ' ',

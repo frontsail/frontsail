@@ -17,6 +17,8 @@ import { isAlpineDirective, isComponentName } from './validation'
  *
  * Glossary:
  *
+ * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
+ *
  * - **AST** - Refers to an HTML abstract sytax tree.
  *
  * - **Attribute** - An HTML attribute (e.g. `<div attribute-name="value"></div>`).
@@ -148,10 +150,16 @@ export class Component extends Template {
           if (this.shouldTest('alpineDirectives', tests)) {
             for (const attr of node.attrs) {
               if (attr.name === 'x-data' && !rootNodes.includes(node)) {
-                this.addDiagnostics('outletElements', {
+                this.addDiagnostics('alpineDirectives', {
                   message: "The 'x-data' directive can only be used in the root element.",
                   severity: 'error',
                   ...this._html.getAttributeNameRange(node, attr.name)!,
+                })
+              } else if (attr.name === 'x-bind' && /^_c[0-9]+b[0-9]+_D$/.test(attr.value)) {
+                this.addDiagnostics('alpineDirectives', {
+                  message: 'Reserved name.',
+                  severity: 'error',
+                  ...this._html.getAttributeValueRange(node, attr.name)!,
                 })
               }
             }

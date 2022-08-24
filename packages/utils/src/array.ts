@@ -46,6 +46,16 @@ export function intersectArrays<T>(array1: T[], array2: T[]): T[] {
 }
 
 /**
+ * Get the last element of a non-empty array.
+ *
+ * @example
+ * last(['foo', 'bar', baz']) // 'baz'
+ */
+export function last<T>(array: T[]): T {
+  return array[array.length - 1]
+}
+
+/**
  * Remove duplicate values from an `array`.
  *
  * @example

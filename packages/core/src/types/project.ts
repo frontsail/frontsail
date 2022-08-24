@@ -1,13 +1,26 @@
 import { Component } from '../Component'
 import { Page } from '../Page'
 import { Diagnostic } from './code'
+import { CSSDiagnostics } from './css'
+import { JSDiagnostics } from './js'
+
+/**
+ * Describes a collection of diagnostics for custom CSS code organized by types
+ * (object keys).
+ */
+export interface CustomCSSDiagnostics extends CSSDiagnostics {}
+
+/**
+ * Describes a collection of diagnostics for custom JS code organized by types
+ * (object keys).
+ */
+export interface CustomJSDiagnostics extends JSDiagnostics {}
 
 export interface ProjectOptions {
   /**
    * **Development** mode specifics:
    *
-   * - Template keys are generated from the template ID (e.g. 'ui/text-input'
-   *   resolves to 'ui__text_input', and '/foo/bar-baz' to '__foo__bar_baz').
+   * - Template keys are generated from template IDs (e.g. 'button', '/foo/bar, etc.).
    *
    * - Alpine data and directives remain in the HTML as attributes.
    *
@@ -17,14 +30,13 @@ export interface ProjectOptions {
    *
    * **Production** mode specifics:
    *
-   * - Template keys are generated like `/^_[cp][0-9]+_D$/` where `c` stands for
+   * - Template keys are generated like `/^[cp][0-9]+$/` where `c` stands for
    *   component and `p` for page. The number after that is a unique index for the
-   *   template. The underscores (`_`) and `D` are parts of the FrontSail logo.
-   *   Key examples: '_c1_D', '_p1_D', etc.
+   *   template (e.g. 'c1', 'c2', 'p1', etc.).
    *
    * - Alpine data and directives are extracted from all elements and inserted into
-   *   the project's scripts file. Only the `x-data` (with the template key) and
-   *   `x-bind` attributes remains in the HTML.
+   *   the project's scripts file. Only the `x-data` (with the template key), `x-bind`,
+   *   `x-for`, and `x-cloak` attributes remain in the HTML.
    *
    * - Build outputs are minified.
    */
@@ -70,18 +82,15 @@ export interface ProjectOptions {
   assets?: string[]
 
   /**
-   * JavaScript code appended after the auto-generated Alpine data registrations in
-   * the project scripts.
-   */
-  js?: string
-
-  /**
-   * Project styles with SCSS-like syntax that can be used to a limited extend. The
-   * `@inlineCSS` directive can be used only once in the code. This directive is
-   * replaced with the extracted `css` attribute values from all registered templates
-   * during the build process.
+   * Custom CSS code prepended before other inline CSS styles in the project styles.
    */
   css?: string
+
+  /**
+   * Custom JavaScript code prepended before the auto-generated Alpine data in the
+   * project scripts.
+   */
+  js?: string
 }
 
 /**

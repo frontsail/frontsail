@@ -8,6 +8,7 @@ import {
   isPagePath,
   isPropertyName,
   isSafeSlug,
+  isSCSSVariableName,
 } from '..'
 
 test('alpine directive validation', () => {
@@ -141,4 +142,16 @@ test('property name validation', () => {
   expect(isPropertyName('true')).toBe(false)
   expect(isPropertyName('false')).toBe(false)
   expect(isPropertyName('const')).toBe(false)
+})
+
+test('scss variable name validation', () => {
+  expect(isSCSSVariableName('$foo')).toBe(true)
+  expect(isSCSSVariableName('$fooBar')).toBe(true)
+  expect(isSCSSVariableName('$fooBarBaz')).toBe(true)
+  expect(isSCSSVariableName('$foo-bar')).toBe(false)
+  expect(isSCSSVariableName('$foo_bar')).toBe(false)
+  expect(isSCSSVariableName('$Foo')).toBe(false)
+  expect(isSCSSVariableName('$media')).toBe(false)
+  expect(isSCSSVariableName('$keyframes')).toBe(false)
+  expect(isSCSSVariableName('foo')).toBe(false)
 })

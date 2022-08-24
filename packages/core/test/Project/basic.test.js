@@ -1,6 +1,7 @@
 import { Project } from '../..'
 
 const project = new Project({
+  environment: 'development',
   components: [
     { name: 'foo', html: '<div><include component="bar"></include></div>' },
     { name: 'bar', html: '<div><include component="baz"></include></div>' },
@@ -95,8 +96,8 @@ test('setting globals', () => {
   expect(project.getGlobals()).toEqual({ FOO: 'bar' })
 })
 
-test('building js', () => {
-  expect(project.buildJS()).toBe(
+test('building scripts (1)', async () => {
+  expect(await project.buildScripts()).toBe(
     [
       "const foo = 'bar'",
       "document.addEventListener('alpine:init', () => {",
@@ -112,6 +113,37 @@ test('building js', () => {
       '      },',
       "      ':data-foo'() {",
       '        return foo',
+      '      }',
+      '    }',
+      '  }))',
+      '})',
+    ].join('\n'),
+  )
+})
+
+test('building scripts (2)', async () => {
+  const project = new Project({
+    components: [
+      {
+        name: 'foo',
+        html: `<button x-data="{ init() { const foo = 'bar' } }" @click="bar()"></button>`,
+      },
+    ],
+    js: "function bar() { const baz = 'baz'; console.log(`foo-bar-${baz}`) }",
+  })
+
+  expect(await project.buildScripts()).toBe(
+    'function bar(){console.log("foo-bar-baz")}document.addEventListener("alpine:init",(()=>{Alpine.data("_c1_D",(()=>({init(){},_c1b1_D:{"@click":()=>bar()}})))}));',
+  )
+
+  expect(await project.setEnvironment('development').buildScripts()).toBe(
+    [
+      "function bar() { const baz = 'baz'; console.log(`foo-bar-${baz}`) }",
+      "document.addEventListener('alpine:init', () => {",
+      "  Alpine.data('_c1_D', () => ({ init() { const foo = 'bar' },",
+      '    _c1b1_D: {',
+      "      '@click'() {",
+      '        return bar()',
       '      }',
       '    }',
       '  }))',
