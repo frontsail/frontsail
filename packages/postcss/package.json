@@ -7,7 +7,7 @@
   "types": "lib/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/frontsail/postcss.git"
+    "url": "git+https://github.com/frontsail/frontsail.git"
   },
   "keywords": [
     "frontsail"
@@ -18,9 +18,9 @@
     "Andrey Sitnik <andrey@sitnik.ru>"
   ],
   "bugs": {
-    "url": "https://github.com/frontsail/postcss/issues"
+    "url": "https://github.com/frontsail/frontsail/issues"
   },
-  "homepage": "https://github.com/frontsail/postcss/tree/main/packages/core#readme",
+  "homepage": "https://github.com/frontsail/frontsail/tree/main/packages/postcss#readme",
   "dependencies": {
     "nanoid": "^4.0.0"
   }
