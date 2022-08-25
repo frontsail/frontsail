@@ -6,5 +6,6 @@ esbuild.build({
   bundle: true,
   platform: 'neutral',
   mainFields: ['module', 'main'],
+  minify: !process.argv.includes('--watch'),
   watch: process.argv.includes('--watch'),
 })
