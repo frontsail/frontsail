@@ -56,6 +56,20 @@ export function last<T>(array: T[]): T {
 }
 
 /**
+ * Get the element at index `n` of an `array`. If `n` is negative, the nth element
+ * from the end is returned.
+ *
+ * @example
+ * nth(['foo', bar'], 2) // 'foo'
+ */
+export function nth<T>(array: T[], n: number): T {
+  n = n % array.length
+  n += n < 0 ? array.length : 0
+
+  return array[n]
+}
+
+/**
  * Remove duplicate values from an `array`.
  *
  * @example
