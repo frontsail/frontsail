@@ -1,0 +1,56 @@
+{
+  "name": "@frontsail/cli",
+  "version": "0.1.0",
+  "description": "Command line interface for managing FrontSail projects.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "@frontsail/cli": "dist/index.cjs"
+  },
+  "types": "types/index.d.ts",
+  "scripts": {
+    "build": "rimraf dist types && node esbuild.js && tsc",
+    "dev": "rimraf dist types && concurrently --raw \"node esbuild.js --watch\" \"tsc --watch --preserveWatchOutput\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontsail/frontsail.git"
+  },
+  "keywords": [
+    "frontsail"
+  ],
+  "author": "Muris Ceman <muris@frontsail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/frontsail/frontsail/issues"
+  },
+  "homepage": "https://github.com/frontsail/frontsail/tree/main/packages/cli#readme",
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.13",
+    "@types/inquirer": "^9.0.1",
+    "@types/semver": "^7.3.12",
+    "@types/serve-handler": "^6.1.1",
+    "@types/server-destroy": "^1.0.1",
+    "concurrently": "^7.3.0",
+    "esbuild": "^0.15.1",
+    "rimraf": "^3.0.2",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "@frontsail/core": "^0.1.0",
+    "@frontsail/utils": "^0.1.0",
+    "chokidar": "^3.5.3",
+    "fs-extra": "^10.1.0",
+    "inquirer": "^9.1.0",
+    "ora": "^6.1.2",
+    "picocolors": "^1.0.0",
+    "portfinder": "^1.0.32",
+    "semver": "^7.3.7",
+    "serve-handler": "^6.1.3",
+    "server-destroy": "^1.0.1",
+    "table": "^6.8.0"
+  }
+}

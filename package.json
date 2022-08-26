@@ -6,10 +6,11 @@
   ],
   "scripts": {
     "build": "lerna run build",
-    "test": "lerna run test",
     "dev:utils": "npm run dev -w @frontsail/utils",
     "dev:core": "npm run dev -w @frontsail/core",
-    "format": "prettier --write ."
+    "dev:cli": "npm run dev -w @frontsail/cli",
+    "format": "prettier --write .",
+    "test": "lerna run test"
   },
   "author": "Muris Ceman <muris@frontsail.com>",
   "license": "MIT",
