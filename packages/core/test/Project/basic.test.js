@@ -91,9 +91,9 @@ test('getting outlet names', () => {
 })
 
 test('setting globals', () => {
-  expect(project.setGlobals({ FOO: 'bar' })).toBe(project)
+  expect(project.setGlobals({ $foo: 'bar' })).toBe(project)
   expect(() => project.setGlobals({ bar: 'baz' })).toThrow()
-  expect(project.getGlobals()).toEqual({ FOO: 'bar' })
+  expect(project.getGlobals()).toEqual({ $foo: 'bar' })
 })
 
 test('building scripts (1)', async () => {

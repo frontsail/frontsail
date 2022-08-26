@@ -1,6 +1,6 @@
 import { Component } from '../Component'
 import { Page } from '../Page'
-import { Diagnostic } from './code'
+import { CodePart, Diagnostic } from './code'
 import { CSSDiagnostics } from './css'
 import { JSDiagnostics } from './js'
 
@@ -15,6 +15,16 @@ export interface CustomCSSDiagnostics extends CSSDiagnostics {}
  * (object keys).
  */
 export interface CustomJSDiagnostics extends JSDiagnostics {}
+
+/**
+ * Describes a global variable with its range in the code.
+ */
+export interface GlobalVariable extends CodePart {
+  /**
+   * The global variable name.
+   */
+  variable: string
+}
 
 export interface ProjectOptions {
   /**
@@ -43,18 +53,11 @@ export interface ProjectOptions {
   environment?: 'development' | 'production'
 
   /**
-   * Collection of registered global variables that can be used across all templates.
-   * The object keys must match the pattern `/^[A-Z]+(?:_[A-Z0-9]+)*$/` (e.g. 'TITLE',
-   * 'HOME_URL', etc.).
+   * Collection of registered global variables that can be used across all templates
+   * and CSS. The object keys must match the pattern `/^\$[a-z][a-zA-Z0-9]*$/` (e.g.
+   * '$baseTitle', '$primaryColor', '$containerWidth', etc.).
    */
   globals?: { [name: string]: string }
-
-  /**
-   * Collection of registered SCSS variables that can be used custom and inline CSS
-   * code. The object keys must match the pattern `/^\$[a-z][a-zA-Z0-9]*$/` (e.g.
-   * '$primary', '$containerWidth', etc.).
-   */
-  scssVariables?: { [name: string]: string }
 
   /**
    * Collection of registered `Component` instances in the project. The object keys

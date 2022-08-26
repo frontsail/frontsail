@@ -20,8 +20,8 @@ const project = new Project({
     },
   ],
   globals: {
-    FOO: '<&foo>',
-    BAR: '&bar',
+    $foo: '<&foo>',
+    $bar: '&bar',
   },
 })
 

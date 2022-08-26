@@ -17,13 +17,3 @@ export interface Modifier extends CodePart {
    */
   name: string
 }
-
-/**
- * Describes a SCSS variable with its range in the code.
- */
-export interface SCSSVariable extends CodePart {
-  /**
-   * The SCSS variable name.
-   */
-  variable: string
-}

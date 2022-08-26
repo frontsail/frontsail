@@ -8,7 +8,6 @@ import {
   isPagePath,
   isPropertyName,
   isSafeSlug,
-  isSCSSVariableName,
 } from '..'
 
 test('alpine directive validation', () => {
@@ -75,6 +74,7 @@ test('safe slug validation', () => {
   expect(isSafeSlug('foo')).toBe(true)
   expect(isSafeSlug('foo-bar')).toBe(true)
   expect(isSafeSlug('foo-bar-baz')).toBe(true)
+  expect(isSafeSlug('foo1-bar1')).toBe(true)
   expect(isSafeSlug('Foo')).toBe(false)
   expect(isSafeSlug('foo--bar')).toBe(false)
   expect(isSafeSlug('fooBar')).toBe(false)
@@ -85,15 +85,15 @@ test('safe slug validation', () => {
 })
 
 test('global name validation', () => {
-  expect(isGlobalName('FOO')).toBe(true)
-  expect(isGlobalName('FOO_BAR')).toBe(true)
-  expect(isGlobalName('FOO_BAR_BAZ')).toBe(true)
-  expect(isGlobalName('Foo')).toBe(false)
-  expect(isGlobalName('FOO-BAR')).toBe(false)
-  expect(isGlobalName('_FOO')).toBe(false)
-  expect(isGlobalName('FOO_')).toBe(false)
-  expect(isGlobalName('1FOO')).toBe(false)
-  expect(isGlobalName('$FOO')).toBe(false)
+  expect(isGlobalName('$foo')).toBe(true)
+  expect(isGlobalName('$fooBar')).toBe(true)
+  expect(isGlobalName('$fooBarBaz')).toBe(true)
+  expect(isGlobalName('$foo-bar')).toBe(false)
+  expect(isGlobalName('$foo_bar')).toBe(false)
+  expect(isGlobalName('$Foo')).toBe(false)
+  expect(isGlobalName('$media')).toBe(false)
+  expect(isGlobalName('$keyframes')).toBe(false)
+  expect(isGlobalName('foo')).toBe(false)
 })
 
 test('component name validation', () => {
@@ -142,16 +142,4 @@ test('property name validation', () => {
   expect(isPropertyName('true')).toBe(false)
   expect(isPropertyName('false')).toBe(false)
   expect(isPropertyName('const')).toBe(false)
-})
-
-test('scss variable name validation', () => {
-  expect(isSCSSVariableName('$foo')).toBe(true)
-  expect(isSCSSVariableName('$fooBar')).toBe(true)
-  expect(isSCSSVariableName('$fooBarBaz')).toBe(true)
-  expect(isSCSSVariableName('$foo-bar')).toBe(false)
-  expect(isSCSSVariableName('$foo_bar')).toBe(false)
-  expect(isSCSSVariableName('$Foo')).toBe(false)
-  expect(isSCSSVariableName('$media')).toBe(false)
-  expect(isSCSSVariableName('$keyframes')).toBe(false)
-  expect(isSCSSVariableName('foo')).toBe(false)
 })

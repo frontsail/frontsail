@@ -53,8 +53,9 @@ enum NS {
  * - **Directive** - Refers to an Alpine [directive](https://alpinejs.dev/start-here).
  *
  * - **Global** - Refers to a globally accessible string variable that can be
- *   interpolated across templates. Global names are always written in upper
- *   snake case (e.g. 'DESCRIPTION', 'COPYRIGHT_YEAR', etc.).
+ *   interpolated across templates and used in CSS in declaration values and media
+ *   queries. Global names starts with a dollar sign (`$`) followed by a safe camel
+ *   string (e.g. '$copyright', '$primaryColor', etc.).
  *
  * - **Include** - Refers to using the special `<include>` tag to render components.
  *
@@ -90,6 +91,9 @@ enum NS {
  * - **Property** - Refers to a scoped string variable that can only be accessed and
  *   interpolated within a specific template. Property names are always written in
  *   lower snake case (e.g. 'size', 'shadow_opacity', etc.).
+ *
+ * - **Safe camel** - A camel case string that matches the pattern `/^[a-z][a-zA-Z0-9]*$/`.
+ *   Note that this particular slug must start with a letter.
  *
  * - **Template** - Refers to a component or page.
  */

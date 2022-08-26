@@ -45,7 +45,7 @@ import { isComponentName, isPropertyName } from './validation'
  *   can contain child nodes that are rendered if the parent template does not specify
  *   an associated `<inject>` tag.
  *
- * - **Safe slug** - A string that matches the pattern `/^[a-z]+(?:-[a-z0-9]+)*$/`.
+ * - **Safe slug** - A string that matches the pattern `/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/`.
  *   Note that this particular slug must start with a letter.
  */
 export class Template extends Diagnostics<TemplateDiagnostics> {
@@ -121,7 +121,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
    * Create and return CSS styles from inline CSS attributes in the template.
    *
    * @param key The template key for generating class names.
-   * @param sortMediaQueries List of SCSS variables for sorting media queries.
+   * @param sortMediaQueries List of global variables for sorting media queries.
    */
   buildInlineCSS(key: string, sortMediaQueries: string[] = []): string {
     if (this._cssCache.key !== key + sortMediaQueries + this._html.getRawHTML()) {
@@ -295,15 +295,15 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
               const cssAttribute = node.attrs.find((attr) => attr.name === 'css')
 
               if (cssAttribute) {
-                CSS.getSCSSVariables(cssAttribute.value).forEach((scssVariable) => {
-                  if (!this._project!.hasSCSSVariable(scssVariable.variable)) {
+                CSS.getGlobals(cssAttribute.value).forEach((global) => {
+                  if (!this._project!.hasGlobal(global.variable)) {
                     const cssAttributeRange = this._html.getAttributeValueRange(node, 'css')!
 
                     this.addDiagnostics('inlineCSS', {
-                      message: 'SCSS variable does not exist.',
+                      message: 'Global variable does not exist.',
                       severity: 'warning',
-                      from: cssAttributeRange.from + scssVariable.from,
-                      to: cssAttributeRange.from + scssVariable.to,
+                      from: cssAttributeRange.from + global.from,
+                      to: cssAttributeRange.from + global.to,
                     })
                   }
                 })

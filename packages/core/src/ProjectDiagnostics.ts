@@ -134,15 +134,15 @@ export abstract class ProjectDiagnostics {
     if (!this.customCSSHasProblems('syntax')) {
       this.addCustomCSSDiagnostics('logical', ...css.lint().getDiagnostics('logical'))
 
-      // Check SCSS variables
+      // Check global variables
       //
-      css.getSCSSVariables().forEach((scssVariable) => {
-        if (!(this as any).hasSCSSVariable(scssVariable.variable)) {
+      css.getGlobals().forEach((global) => {
+        if (!(this as any).hasGlobal(global.variable)) {
           this.addCustomCSSDiagnostics('logical', {
-            message: 'SCSS variable does not exist.',
+            message: 'Global variable does not exist.',
             severity: 'warning',
-            from: scssVariable.from,
-            to: scssVariable.to,
+            from: global.from,
+            to: global.to,
           })
         }
       })

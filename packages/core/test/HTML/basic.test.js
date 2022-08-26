@@ -67,16 +67,16 @@ test('finding parent element', () => {
 })
 
 test('extracting mustache tags', () => {
-  const html = new HTML('<div foo="{{ foo }}">{{ BAR }}</div>')
+  const html = new HTML('<div foo="{{ foo }}">{{ $bar }}</div>')
   const mustaches = html.getMustaches()
 
   expect(mustaches).toHaveLength(2)
   expect(mustaches).toHaveProperty('0.variable', 'foo')
   expect(mustaches).toHaveProperty('0.from', 10)
   expect(mustaches).toHaveProperty('0.to', 19)
-  expect(mustaches).toHaveProperty('1.variable', 'BAR')
+  expect(mustaches).toHaveProperty('1.variable', '$bar')
   expect(mustaches).toHaveProperty('1.from', 21)
-  expect(mustaches).toHaveProperty('1.to', 30)
+  expect(mustaches).toHaveProperty('1.to', 31)
 })
 
 test('extracting attribute values', () => {

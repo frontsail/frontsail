@@ -9,7 +9,7 @@ import { Diagnostic } from './types/code'
 import { AtLeastOne } from './types/generic'
 import { ProjectOptions, RenderResults } from './types/project'
 import { TemplateDiagnostics } from './types/template'
-import { isGlobalName, isPagePath, isSCSSVariableName } from './validation'
+import { isGlobalName, isPagePath } from './validation'
 
 /**
  * Manages project variables, components, pages, assets, scripts, and styles.
@@ -32,8 +32,9 @@ import { isGlobalName, isPagePath, isSCSSVariableName } from './validation'
  * - **Element** - An HTML element (e.g. `<div></div>`).
  *
  * - **Global** - Refers to a globally accessible string variable that can be
- *   interpolated across templates. Global names are always written in upper
- *   snake case and must begin with a letter (e.g. 'YEAR', 'COPYRIGHT_TEXT', etc.).
+ *   interpolated across templates and used in CSS in declaration values and media
+ *   queries. Global names starts with a dollar sign (`$`) followed by a safe camel
+ *   string (e.g. '$copyright', '$primaryColor', etc.).
  *
  * - **Include** - Refers to using the special `<include>` tag to render components.
  *
@@ -72,15 +73,12 @@ import { isGlobalName, isPagePath, isSCSSVariableName } from './validation'
  *   interpolated within a specific template. Property names are always written in
  *   lower snake case (e.g. 'size', 'shadow_opacity', etc.).
  *
- * - **SCSS variable** - Refers to custom string variable that starts with a dollar
- *   sign (`$`) and can be used in custom and inline CSS code. The variable identifier
- *   is always written in camel case (e.g. `$primaryColor`). It should not be confused
- *   with standard CSS variables, like `var(--primary-color)`. FrontSail uses the SCSS
- *   syntax in a special and restrictive manner. Full SCSS support is not provided.
- *
  * - **Selector** - Refers to a CSS selector.
  *
- * - **Safe slug** - A string that matches the pattern `/^[a-z]+(?:-[a-z0-9]+)*$/`.
+ * - **Safe camel** - A camel case string that matches the pattern `/^[a-z][a-zA-Z0-9]*$/`.
+ *   Note that this particular slug must start with a letter.
+ *
+ * - **Safe slug** - A string that matches the pattern `/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/`.
  *   Note that this particular slug must start with a letter.
  *
  * - **Template** - Refers to a component or page.
@@ -121,18 +119,11 @@ export class Project extends ProjectDiagnostics {
   protected _environment: 'development' | 'production' = 'production'
 
   /**
-   * Collection of registered global variables that can be used across all templates.
-   * The object keys must match the pattern `/^[A-Z]+(?:_[A-Z0-9]+)*$/` (e.g. 'TITLE',
-   * 'HOME_URL', etc.).
+   * Collection of registered global variables that can be used across all templates
+   * and CSS. The object keys must match the pattern `/^\$[a-z][a-zA-Z0-9]*$/` (e.g.
+   * '$baseTitle', '$primaryColor', '$containerWidth', etc.).
    */
   protected _globals: { [name: string]: string } = {}
-
-  /**
-   * Collection of registered SCSS variables that can be used custom and inline CSS
-   * code. The object keys must match the pattern `/^\$[a-z][a-zA-Z0-9]*$/` (e.g.
-   * '$primary', '$containerWidth', etc.).
-   */
-  protected _scssVariables: { [name: string]: string } = {}
 
   /**
    * Collection of registered `Component` instances in the project. The object keys
@@ -201,9 +192,6 @@ export class Project extends ProjectDiagnostics {
           break
         case 'globals':
           this.setGlobals(options[key]!)
-          break
-        case 'scssVariables':
-          this.setSCSSVariables(options[key]!)
           break
         case 'components':
           options[key]!.forEach((component) => this.addComponent(component.name, component.html))
@@ -318,31 +306,31 @@ export class Project extends ProjectDiagnostics {
    * CSS styles.
    */
   buildStyles(): string {
-    const scssVariableNames = this.listSCSSVariables()
+    const globals = this.listGlobals()
 
-    if (this._cssCache.key !== scssVariableNames + this._css) {
-      this._cssCache.key = scssVariableNames + this._css
-      this._cssCache.css = new CSS(this._css).build(scssVariableNames)
+    if (this._cssCache.key !== globals + this._css) {
+      this._cssCache.key = globals + this._css
+      this._cssCache.css = new CSS(this._css).build(globals)
     }
 
     const output: string[] = [this._cssCache.css]
 
     this.listComponents().forEach((name) => {
       const key = this.isProduction() ? `c${this.getComponentIndex(name)}` : `${name}__`
-      output.push(this.getComponent(name).buildInlineCSS(key, scssVariableNames))
+      output.push(this.getComponent(name).buildInlineCSS(key, globals))
     })
 
     this.listPages().forEach((path) => {
       const key = this.isProduction() ? `c${this.getPageIndex(path)}` : `${path}__`
-      output.push(this.getComponent(path).buildInlineCSS(key, scssVariableNames))
+      output.push(this.getComponent(path).buildInlineCSS(key, globals))
     })
 
     let css = output.join('\n').replace(/\$[a-z][a-zA-Z0-9]*/g, (match) => {
-      return this._scssVariables[match] ?? match
+      return this._globals[match] ?? match
     })
 
     if (this.isProduction()) {
-      css = new CSS(css).build(scssVariableNames, true)
+      css = new CSS(css).build(globals, true)
     }
 
     return css.trim()
@@ -533,17 +521,17 @@ export class Project extends ProjectDiagnostics {
   }
 
   /**
+   * Check if there is a global variable named `name` in the project.
+   */
+  hasGlobal(name: string): boolean {
+    return this._globals.hasOwnProperty(name)
+  }
+
+  /**
    * Check if there is a page with the path `path` in the project.
    */
   hasPage(path: string): boolean {
     return this._pages.hasOwnProperty(path)
-  }
-
-  /**
-   * Check if there is a SCSS variable named `name` in the project.
-   */
-  hasSCSSVariable(name: string): boolean {
-    return this._scssVariables.hasOwnProperty(name)
   }
 
   /**
@@ -593,17 +581,17 @@ export class Project extends ProjectDiagnostics {
   }
 
   /**
+   * Get a list of all global variable names in their original order.
+   */
+  listGlobals(): string[] {
+    return Object.keys(this._globals)
+  }
+
+  /**
    * Get a sorder list of all registered page paths in the project.
    */
   listPages(): string[] {
     return Object.keys(this._pages).sort()
-  }
-
-  /**
-   * Get a list of all SCSS variable names in their original order.
-   */
-  listSCSSVariables(): string[] {
-    return Object.keys(this._scssVariables)
   }
 
   /**
@@ -753,24 +741,6 @@ export class Project extends ProjectDiagnostics {
     for (const name in globals) {
       this._globals[name] = globals[name]
     }
-
-    return this
-  }
-
-  /**
-   * Set the SCSS variables.
-   *
-   * @throws an error if a variable name is not valid.
-   */
-  setSCSSVariables(variables: { [name: string]: string }): this {
-    Object.keys(variables).forEach((name) => {
-      if (!isSCSSVariableName(name)) {
-        throw new Error(`Invalid SCSS variable ${name}.`)
-      }
-    })
-
-    clearObject(this._scssVariables)
-    Object.keys(variables).forEach((name) => (this._scssVariables[name] = variables[name]))
 
     return this
   }

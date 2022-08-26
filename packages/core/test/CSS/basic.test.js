@@ -7,8 +7,8 @@ test('initialization', () => {
   expect(new CSS('&').hasProblems('*')).toBe(true)
 })
 
-test('extract scss variables (1)', () => {
-  const variables = new CSS('.foo { display: $display }').getSCSSVariables()
+test('extract global variables (1)', () => {
+  const variables = new CSS('.foo { display: $display }').getGlobals()
 
   expect(variables).toHaveLength(1)
   expect(variables).toHaveProperty('0.text', '$display')
@@ -17,8 +17,8 @@ test('extract scss variables (1)', () => {
   expect(variables).toHaveProperty('0.to', 24)
 })
 
-test('extract scss variables (2)', () => {
-  const variables = new CSS('@foo { display: $display; not: $media }').getSCSSVariables()
+test('extract global variables (2)', () => {
+  const variables = new CSS('@foo { display: $display; not: $media }').getGlobals()
 
   expect(variables).toHaveLength(2)
   expect(variables).toHaveProperty('0.text', '@foo')

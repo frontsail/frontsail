@@ -46,18 +46,30 @@ export function isEnclosed(text: string, characters: string[]): boolean {
  * isSafeSlug('0-foo-bar') // false
  */
 export function isSafeSlug(text: string): boolean {
-  return /^[a-z]+(?:-[a-z0-9]+)*$/.test(text)
+  return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(text)
 }
 
 /**
  * Check if a global `name` matches the required pattern.
  *
  * @example
- * isGlobalName('FOO_BAR') // true
- * isGlobalName('foo_bar') // false
+ * isGlobalName('$fooBar') // true
+ * isGlobalName('$foo-bar') // false
  */
 export function isGlobalName(name: string): boolean {
-  return /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$/.test(name)
+  return (
+    ![
+      '$charset',
+      '$import',
+      '$keyframes',
+      '$layer',
+      '$media',
+      '$namespace',
+      '$page',
+      '$property',
+      '$supports',
+    ].includes(name) && /^\$[a-z][a-zA-Z0-9]*$/.test(name)
+  )
 }
 
 /**
@@ -158,28 +170,5 @@ export function isPropertyName(name: string): boolean {
       'with',
       'yield',
     ].includes(name) && /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(name)
-  )
-}
-
-/**
- * Check if a SCSS variable `name` matches the required pattern.
- *
- * @example
- * isSCSSVariableName('$fooBar') // true
- * isSCSSVariableName('$foo-bar') // false
- */
-export function isSCSSVariableName(name: string): boolean {
-  return (
-    ![
-      '$charset',
-      '$import',
-      '$keyframes',
-      '$layer',
-      '$media',
-      '$namespace',
-      '$page',
-      '$property',
-      '$supports',
-    ].includes(name) && /^\$[a-z][a-zA-Z0-9]*$/.test(name)
   )
 }

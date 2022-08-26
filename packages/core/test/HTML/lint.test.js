@@ -172,13 +172,13 @@ test('linting inject elements (4)', () => {
 })
 
 test('linting mustache locations (1)', () => {
-  const diagnostics = new HTML('<div foo="{{ bar }}" :bar="{{ BAZ }}">{{ fooBar }}</div>')
+  const diagnostics = new HTML('<div foo="{{ bar }}" :bar="{{ $baz }}">{{ fooBar }}</div>')
     .lint('mustacheLocations')
     .getDiagnostics('mustacheLocations')
 
   expect(diagnostics).toHaveLength(1)
   expect(diagnostics).toHaveProperty('0.from', 27)
-  expect(diagnostics).toHaveProperty('0.to', 36)
+  expect(diagnostics).toHaveProperty('0.to', 37)
   expect(diagnostics).toHaveProperty('0.message', 'Mustaches cannot be used in Alpine directives.')
 })
 
@@ -233,13 +233,13 @@ test('linting mustache locations (5)', () => {
 })
 
 test('linting mustache values', () => {
-  const diagnostics = new HTML('<div foo="{{ bar }}" :bar="{{ BAZ }}">{{ fooBar }}</div>')
+  const diagnostics = new HTML('<div foo="{{ bar }}" :bar="{{ $baz }}">{{ fooBar }}</div>')
     .lint('mustacheValues')
     .getDiagnostics('mustacheValues')
 
   expect(diagnostics).toHaveLength(1)
-  expect(diagnostics).toHaveProperty('0.from', 41)
-  expect(diagnostics).toHaveProperty('0.to', 47)
+  expect(diagnostics).toHaveProperty('0.from', 42)
+  expect(diagnostics).toHaveProperty('0.to', 48)
   expect(diagnostics).toHaveProperty('0.message', 'Invalid variable name.')
 })
 

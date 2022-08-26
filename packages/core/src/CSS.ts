@@ -1,8 +1,9 @@
 import { AtRule, Declaration, parse, Root, Rule } from '@frontsail/postcss'
 import { last, lineColumnToRange } from '@frontsail/utils'
 import { Diagnostics } from './Diagnostics'
-import { CSSDiagnostics, Modifier, SCSSVariable } from './types/css'
-import { isSCSSVariableName } from './validation'
+import { CSSDiagnostics, Modifier } from './types/css'
+import { GlobalVariable } from './types/project'
+import { isGlobalName } from './validation'
 
 /**
  * Parses and transforms inline CSS code into an abstract syntax tree using
@@ -22,17 +23,19 @@ import { isSCSSVariableName } from './validation'
  *
  * - **Attribute** - An HTML attribute (e.g. `<div css="{ display: block }"></div>`).
  *
+ * - **Global** - Refers to a globally accessible string variable that can be
+ *   interpolated across templates and used in CSS in declaration values and media
+ *   queries. Global names starts with a dollar sign (`$`) followed by a safe camel
+ *   string (e.g. '$copyright', '$primaryColor', etc.).
+ *
  * - **Inline CSS** - Refers to a CSS rule written in a custom `css` attribute,
  *   without a selector, which can have SCSS-like syntax. It should not be confused
  *   with inline styles.
  *
  * - **postcss** - A tool for transforming and modifying CSS rules.
  *
- * - **SCSS variable** - Refers to custom string variable that starts with a dollar
- *   sign (`$`) and can be used in custom and inline CSS code. The variable identifier
- *   is always written in camel case (e.g. `$primaryColor`). It should not be confused
- *   with standard CSS variables, like `var(--primary-color)`. FrontSail uses the SCSS
- *   syntax in a special and restrictive manner. Full SCSS support is not provided.
+ * - **Safe camel** - A camel case string that matches the pattern `/^[a-z][a-zA-Z0-9]*$/`.
+ *   Note that this particular slug must start with a letter.
  */
 export class CSS extends Diagnostics<CSSDiagnostics> {
   /**
@@ -84,7 +87,7 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
   /**
    * Resolve SCSS-like syntax from the AST and return the built CSS code.
    *
-   * @param sortMediaQueries List of SCSS variables for sorting media queries.
+   * @param sortMediaQueries List of global variables for sorting media queries.
    * @param minify Whether to minify the build output.
    */
   build(sortMediaQueries: string[] = [], minify: boolean = false): string {
@@ -136,7 +139,7 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
         output.push(...this._builder(childRule, [..._parentRules, clone], _parentAtRules))
       })
     } else {
-      const clone = isSCSSVariableName(`$${anyRule.name}`)
+      const clone = isGlobalName(`$${anyRule.name}`)
         ? anyRule.clone({
             name: 'media',
             params: `$${anyRule.name}`,
@@ -258,33 +261,17 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
   }
 
   /**
-   * Get a list of all class name modifiers in the CSS code.
-   *
-   * @alias CSS.getModifiers
+   * Get a list of all global variables in the CSS code.
    */
-  getModifiers(): Modifier[] {
-    return CSS.getModifiers(this._css)
-  }
-
-  /**
-   * Extract and return child rules from a `node`.
-   */
-  static getRules(node: Root | Rule | AtRule): Rule[] {
-    return node.nodes.filter((childNode) => childNode.type === 'rule') as Rule[]
-  }
-
-  /**
-   * Get a list of all SCSS variables in the CSS code.
-   */
-  static getSCSSVariables(css: string): SCSSVariable[] {
+  static getGlobals(css: string): GlobalVariable[] {
     const regex = /(?:\$|@)([a-z][a-zA-Z0-9]*)/g
-    const variables: SCSSVariable[] = []
+    const variables: GlobalVariable[] = []
     let match: RegExpExecArray | null
 
     do {
       match = regex.exec(css)
 
-      if (match && isSCSSVariableName(`$${match[1]}`)) {
+      if (match && isGlobalName(`$${match[1]}`)) {
         variables.push({
           text: match[0],
           variable: `$${match[1]}`,
@@ -298,12 +285,28 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
   }
 
   /**
-   * Get a list of all SCSS variables in the CSS code.
+   * Get a list of all global variables in the CSS code.
    *
-   * @alias CSS.getSCSSVariables
+   * @alias CSS.getGlobals
    */
-  getSCSSVariables(): SCSSVariable[] {
-    return CSS.getSCSSVariables(this._css)
+  getGlobals(): GlobalVariable[] {
+    return CSS.getGlobals(this._css)
+  }
+
+  /**
+   * Get a list of all class name modifiers in the CSS code.
+   *
+   * @alias CSS.getModifiers
+   */
+  getModifiers(): Modifier[] {
+    return CSS.getModifiers(this._css)
+  }
+
+  /**
+   * Extract and return child rules from a `node`.
+   */
+  static getRules(node: Root | Rule | AtRule): Rule[] {
+    return node.nodes.filter((childNode) => childNode.type === 'rule') as Rule[]
   }
 
   /**
@@ -408,7 +411,7 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
    * Normal media queries are only merged during the process.
    *
    * @param ast The abstract syntax tree to sort.
-   * @param order List of ordered SCSS variables.
+   * @param order List of ordered global variable names.
    */
   static sortAndMergeMediaQueries(ast: Root, order: string[]): Root {
     const newAtRules: AtRule[] = []
