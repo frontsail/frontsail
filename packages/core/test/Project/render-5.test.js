@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { HTML, Project } from '../..'
+import { Project } from '../..'
 
 const dir = 'test/Project/render-5'
 const project = new Project({
@@ -24,15 +24,5 @@ test('rendering (production)', () => {
   )
   expect(project.render('/', { items: 'ship(s)' }).html).toBe(
     '<div x-data="_c1_D"><div><span x-bind="_c1b1_D"></span> <span>ship(s)</span></div><div><button @click="count++">Increment counter</button></div><p>Click the button</p></div>',
-  )
-})
-
-test('rendering (development)', () => {
-  expect(
-    new HTML(project.setEnvironment('development').render('/', { items: 'ship(s)' }).html).toString(
-      true,
-    ),
-  ).toBe(
-    '<div x-data="{ count: 0 }"><div><span x-text="count"></span> <span>ship(s)</span></div><div><button @click="count++">Increment counter</button></div><p>Click the button</p></div>',
   )
 })

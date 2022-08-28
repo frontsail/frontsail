@@ -1,4 +1,4 @@
-import { uniqueArray } from '@frontsail/utils'
+import { hash, uniqueArray } from '@frontsail/utils'
 import { Element, Template as TemplateElement } from 'parse5/dist/tree-adapters/default'
 import { HTML } from './HTML'
 import { JS } from './JS'
@@ -18,6 +18,9 @@ import { isAlpineDirective, isComponentName } from './validation'
  * Glossary:
  *
  * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
+ *   Values from Alpine directives are extracted from all elements and appended into
+ *   the project's script file. Only the `x-data` (with the template key), `x-bind`,
+ *   `x-for`, and `x-cloak` attributes remain in the HTML.
  *
  * - **AST** - Refers to an HTML abstract sytax tree.
  *
@@ -49,6 +52,11 @@ export class Component extends Template {
    * Alphabetically sorted outlet names found in the HTML code.
    */
   protected _outletNames: string[] = []
+
+  /**
+   * Cache for the latest resolved Alpine data.
+   */
+  protected _jsCache: { checksum: number; js: string } = { checksum: 0, js: '' }
 
   /**
    * Validate the component `name` and instantiate.
@@ -219,104 +227,110 @@ export class Component extends Template {
       throw new Error('Cannot resolve Alpine data without a project.')
     }
 
-    const componentIndex = this._project.getComponentIndex(this._id)
-    const rootNodes = this._html.getRootNodes()
-    const rootElement =
-      rootNodes.length === 1 && HTML.adapter.isElementNode(rootNodes[0]) ? rootNodes[0] : null
+    const checksum = hash(this._html.getRawHTML())
 
-    if (!rootElement) {
-      return ''
-    }
+    if (this._jsCache.checksum !== checksum) {
+      const componentIndex = this._project.getComponentIndex(this._id)
+      const rootNodes = this._html.getRootNodes()
+      const rootElement =
+        rootNodes.length === 1 && HTML.adapter.isElementNode(rootNodes[0]) ? rootNodes[0] : null
 
-    const xData = rootElement.attrs.find((attr) => attr.name === 'x-data')?.value ?? '{}'
-    const data = new JS(xData, true)
+      if (!rootElement) {
+        return ''
+      }
 
-    let xBindIndex: number = 1
-    let shouldHaveXData: boolean = false
+      const xData = rootElement.attrs.find((attr) => attr.name === 'x-data')?.value ?? '{}'
+      const data = new JS(xData, true)
 
-    if (data.hasProblems('syntax')) {
-      return ''
-    }
+      let xBindIndex: number = 1
+      let shouldHaveXData: boolean = false
 
-    const dataProperties = data.getObjectProperties()
-    const runtime: { element: Element; properties: string[] }[] = []
-    const bindings: string[] = []
+      if (data.hasProblems('syntax')) {
+        return ''
+      }
 
-    for (const node of this._html.walk()) {
-      if (HTML.adapter.isElementNode(node)) {
-        const hasXBind = node.attrs.some((attr) => attr.name === 'x-bind')
-        const xForAttribute = node.attrs.find((attr) => attr.name === 'x-for')
-        const bindingProperties: string[] = []
+      const dataProperties = data.getObjectProperties()
+      const runtime: { element: Element; properties: string[] }[] = []
+      const bindings: string[] = []
 
-        if (xForAttribute) {
-          const xFor = JS.parseForExpression(xForAttribute.value)
+      for (const node of this._html.walk()) {
+        if (HTML.adapter.isElementNode(node)) {
+          const hasXBind = node.attrs.some((attr) => attr.name === 'x-bind')
+          const xForAttribute = node.attrs.find((attr) => attr.name === 'x-for')
+          const bindingProperties: string[] = []
 
-          if (xFor) {
-            let runtimeItem = runtime.find((item) => item.element === node)
+          if (xForAttribute) {
+            const xFor = JS.parseForExpression(xForAttribute.value)
 
-            if (!runtimeItem) {
-              runtimeItem = { element: node, properties: [] }
-              runtime.push(runtimeItem)
-            }
+            if (xFor) {
+              let runtimeItem = runtime.find((item) => item.element === node)
 
-            if (xFor.item) {
-              runtimeItem.properties.push(xFor.item)
-            }
-
-            if (xFor.index) {
-              runtimeItem.properties.push(xFor.index)
-            }
-          }
-        }
-
-        for (const attr of node.attrs) {
-          if (isAlpineDirective(attr.name)) {
-            if (!hasXBind && !['x-data', 'x-bind', 'x-for', 'x-cloak'].includes(attr.name)) {
-              const runtimeProperties: string[] = []
-              let relative: Element | null = node
-
-              while (relative) {
-                const runtimeItem = runtime.find((item) => item.element === relative)
-                const parent = HTML.adapter.getParentNode(relative)
-
-                if (runtimeItem) {
-                  runtimeProperties.push(...runtimeItem.properties)
-                }
-
-                relative = parent && HTML.adapter.isElementNode(parent) ? parent : null
+              if (!runtimeItem) {
+                runtimeItem = { element: node, properties: [] }
+                runtime.push(runtimeItem)
               }
 
-              const expression = new JS(attr.value, true).addThis([
-                ...dataProperties,
-                ...runtimeProperties,
-              ])
+              if (xFor.item) {
+                runtimeItem.properties.push(xFor.item)
+              }
 
-              bindingProperties.push(
-                `      '${attr.name}'() {\n        return ${expression}\n      }`,
-              )
+              if (xFor.index) {
+                runtimeItem.properties.push(xFor.index)
+              }
             }
+          }
 
-            shouldHaveXData = true
+          for (const attr of node.attrs) {
+            if (isAlpineDirective(attr.name)) {
+              if (!hasXBind && !['x-data', 'x-bind', 'x-for', 'x-cloak'].includes(attr.name)) {
+                const runtimeProperties: string[] = []
+                let relative: Element | null = node
+
+                while (relative) {
+                  const runtimeItem = runtime.find((item) => item.element === relative)
+                  const parent = HTML.adapter.getParentNode(relative)
+
+                  if (runtimeItem) {
+                    runtimeProperties.push(...runtimeItem.properties)
+                  }
+
+                  relative = parent && HTML.adapter.isElementNode(parent) ? parent : null
+                }
+
+                const expression = new JS(attr.value, true).addThis([
+                  ...dataProperties,
+                  ...runtimeProperties,
+                ])
+
+                bindingProperties.push(
+                  `      '${attr.name}'() {\n        return ${expression}\n      }`,
+                )
+              }
+
+              shouldHaveXData = true
+            }
+          }
+
+          if (bindingProperties.length > 0) {
+            bindings.push(
+              `    _c${componentIndex}b${xBindIndex}_D: {\n${bindingProperties.join(',\n')}\n    }`,
+            )
+
+            xBindIndex++
           }
         }
+      }
 
-        if (bindingProperties.length > 0) {
-          bindings.push(
-            `    _c${componentIndex}b${xBindIndex}_D: {\n${bindingProperties.join(',\n')}\n    }`,
-          )
+      if (shouldHaveXData) {
+        const trimmed = xData.trim().replace(/\s*,?\s*}\s*$/, '')
+        const newXData = (trimmed === '{' ? '{\n' : `${trimmed},\n`) + bindings.join(',\n')
 
-          xBindIndex++
-        }
+        this._jsCache.checksum = checksum
+        this._jsCache.js = `  Alpine.data('_c${componentIndex}_D', () => (${newXData}\n  }))`
       }
     }
 
-    if (shouldHaveXData) {
-      const trimmed = xData.trim().replace(/\s*,?\s*}\s*$/, '')
-      const newXData = (trimmed === '{' ? '{\n' : `${trimmed},\n`) + bindings.join(',\n')
-      return `  Alpine.data('_c${componentIndex}_D', () => (${newXData}\n  }))`
-    }
-
-    return ''
+    return this._jsCache.js
   }
 
   /**
@@ -328,8 +342,6 @@ export class Component extends Template {
   protected _resolveAlpineDirectives(html: HTML): HTML {
     if (!this._project) {
       throw new Error('Cannot resolve Alpine directives without a project.')
-    } else if (this._project.isDevelopment()) {
-      return html
     }
 
     const componentIndex = this._project.getComponentIndex(this._id)

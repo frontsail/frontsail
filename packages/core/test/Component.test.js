@@ -1,7 +1,7 @@
 import { Project } from '..'
 
-test('resolving alpine data (1)', async () => {
-  const js = await new Project({
+test('resolving alpine data (1)', () => {
+  const js = new Project({
     environment: 'development',
     components: [{ name: 'foo', html: '<button @click="foo"></button>' }],
   }).buildScripts()
@@ -21,8 +21,8 @@ test('resolving alpine data (1)', async () => {
   )
 })
 
-test('resolving alpine data (2)', async () => {
-  const js = await new Project({
+test('resolving alpine data (2)', () => {
+  const js = new Project({
     environment: 'development',
     components: [
       {

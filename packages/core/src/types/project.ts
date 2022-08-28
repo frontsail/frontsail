@@ -48,7 +48,7 @@ export interface ProjectOptions {
    *   the project's scripts file. Only the `x-data` (with the template key), `x-bind`,
    *   `x-for`, and `x-cloak` attributes remain in the HTML.
    *
-   * - Build outputs are minified.
+   * - HTML and CSS outputs are minified.
    */
   environment?: 'development' | 'production'
 

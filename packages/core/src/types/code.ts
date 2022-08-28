@@ -39,6 +39,9 @@ export interface Range {
   to: number
 }
 
+/**
+ * Describes a diagnostic related to a template.
+ */
 export interface RenderDiagnostic extends Diagnostic {
   /**
    * A component name or page path related to the diagnostic.

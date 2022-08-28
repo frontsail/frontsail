@@ -1,5 +1,5 @@
 import { AtRule, Declaration, parse, Root, Rule } from '@frontsail/postcss'
-import { last, lineColumnToRange } from '@frontsail/utils'
+import { last, lineColumnToOffset } from '@frontsail/utils'
 import { Diagnostics } from './Diagnostics'
 import { CSSDiagnostics, Modifier } from './types/css'
 import { GlobalVariable } from './types/project'
@@ -69,7 +69,7 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
     try {
       this._ast = parse(this._css)
     } catch (e) {
-      const { from, to } = lineColumnToRange(
+      const { from, to } = lineColumnToOffset(
         this._css,
         [e.line, e.column],
         [e.endLine, e.endColumn],

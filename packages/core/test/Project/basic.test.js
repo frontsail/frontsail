@@ -96,8 +96,8 @@ test('setting globals', () => {
   expect(project.getGlobals()).toEqual({ $foo: 'bar' })
 })
 
-test('building scripts (1)', async () => {
-  expect(await project.buildScripts()).toBe(
+test('building scripts (1)', () => {
+  expect(project.buildScripts()).toBe(
     [
       "const foo = 'bar'",
       "document.addEventListener('alpine:init', () => {",
@@ -121,7 +121,7 @@ test('building scripts (1)', async () => {
   )
 })
 
-test('building scripts (2)', async () => {
+test('building scripts (2)', () => {
   const project = new Project({
     components: [
       {
@@ -132,11 +132,7 @@ test('building scripts (2)', async () => {
     js: "function bar() { const baz = 'baz'; console.log(`foo-bar-${baz}`) }",
   })
 
-  expect(await project.buildScripts()).toBe(
-    'function bar(){console.log("foo-bar-baz")}document.addEventListener("alpine:init",(()=>{Alpine.data("_c1_D",(()=>({init(){},_c1b1_D:{"@click":()=>bar()}})))}));',
-  )
-
-  expect(await project.setEnvironment('development').buildScripts()).toBe(
+  expect(project.buildScripts()).toBe(
     [
       "function bar() { const baz = 'baz'; console.log(`foo-bar-${baz}`) }",
       "document.addEventListener('alpine:init', () => {",

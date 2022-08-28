@@ -1,4 +1,4 @@
-import { clearArray, uniqueArray } from '@frontsail/utils'
+import { clearArray, hash, uniqueArray } from '@frontsail/utils'
 import { CSS } from './CSS'
 import { Diagnostics } from './Diagnostics'
 import { HTML } from './HTML'
@@ -18,6 +18,9 @@ import { isComponentName, isPropertyName } from './validation'
  * Glossary:
  *
  * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
+ *   Values from Alpine directives are extracted from all elements and appended into
+ *   the project's script file. Only the `x-data` (with the template key), `x-bind`,
+ *   `x-for`, and `x-cloak` attributes remain in the HTML.
  *
  * - **AST** - Refers to an HTML abstract sytax tree.
  *
@@ -81,7 +84,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   /**
    * Cache for the latest inline CSS build.
    */
-  protected _cssCache: { key: string; css: string } = { key: '', css: '' }
+  protected _cssCache: { checksum: number; css: string } = { checksum: 0, css: '' }
 
   /**
    * Collection of diagnostics organized by types.
@@ -124,7 +127,9 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
    * @param sortMediaQueries List of global variables for sorting media queries.
    */
   buildInlineCSS(key: string, sortMediaQueries: string[] = []): string {
-    if (this._cssCache.key !== key + sortMediaQueries + this._html.getRawHTML()) {
+    const checksum = hash(key + sortMediaQueries + this._html.getRawHTML())
+
+    if (this._cssCache.checksum !== checksum) {
       const output: string[] = []
 
       let index: number = 1
@@ -146,7 +151,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
         index++
       })
 
-      this._cssCache.key = key + sortMediaQueries + this._html.getRawHTML()
+      this._cssCache.checksum = checksum
       this._cssCache.css = output.join('\n')
     }
 
@@ -410,7 +415,11 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
           const results = componentClone.render(includeProperties, [..._iterations])
           const rootNode = results.html.getRootNodes()[0]
 
-          HTML.replaceElement(node, rootNode)
+          if (rootNode) {
+            HTML.replaceElement(node, rootNode)
+          } else {
+            HTML.adapter.detachNode(node)
+          }
 
           diagnostics.push(
             ...results.diagnostics.map((diagnostic) => ({

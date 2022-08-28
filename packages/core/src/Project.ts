@@ -1,5 +1,4 @@
 import { clearObject, compareArrays, diffArrays, uniqueArray } from '@frontsail/utils'
-import { minify } from 'terser'
 import { Component } from './Component'
 import { CSS } from './CSS'
 import { Page } from './Page'
@@ -19,6 +18,9 @@ import { isGlobalName, isPagePath } from './validation'
  * Glossary:
  *
  * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
+ *   Values from Alpine directives are extracted from all elements and appended into
+ *   the project's script file. Only the `x-data` (with the template key), `x-bind`,
+ *   `x-for`, and `x-cloak` attributes remain in the HTML.
  *
  * - **Asset** - A file located in the `assets` directory.
  *
@@ -98,8 +100,6 @@ export class Project extends ProjectDiagnostics {
    *
    * - Template keys are generated from template IDs (e.g. 'button', '/foo/bar, etc.).
    *
-   * - Alpine data and directives remain in the HTML as attributes.
-   *
    * - Build outputs are pretty.
    *
    * ---
@@ -110,11 +110,7 @@ export class Project extends ProjectDiagnostics {
    *   component and `p` for page. The number after that is a unique index for the
    *   template (e.g. 'c1', 'c2', 'p1', etc.).
    *
-   * - Alpine data and directives are extracted from all elements and inserted into
-   *   the project's scripts file. Only the `x-data` (with the template key), `x-bind`,
-   *   `x-for`, and `x-cloak` attributes remain in the HTML.
-   *
-   * - Build outputs are minified.
+   * - HTML and CSS outputs are minified.
    */
   protected _environment: 'development' | 'production' = 'production'
 
@@ -271,34 +267,33 @@ export class Project extends ProjectDiagnostics {
   }
 
   /**
-   * Build the project scripts from the custom JS code and the auto-generated Alpine
-   * data registrations.
+   * Create Alpine data registrations for each component where available.
    */
-  async buildScripts(): Promise<string> {
-    const alpine: string[] = []
+  protected _buildAlpineData(): string {
+    const js: string[] = []
 
     this.listComponents().forEach((name) => {
-      const alpineData = this.getComponent(name).resolveAlpineData()
+      const data = this.getComponent(name).resolveAlpineData()
 
-      if (alpineData) {
-        alpine.push(alpineData)
+      if (data) {
+        js.push(data)
       }
     })
 
-    if (alpine.length) {
-      alpine.unshift('', "document.addEventListener('alpine:init', () => {")
-      alpine.push('})')
+    if (js.length) {
+      js.unshift('', "document.addEventListener('alpine:init', () => {")
+      js.push('})')
     }
 
-    let js = (this._js + alpine.join('\n')).trim()
+    return js.join('\n')
+  }
 
-    if (this.isProduction()) {
-      try {
-        js = (await minify(js)).code ?? js
-      } catch (_) {}
-    }
-
-    return js
+  /**
+   * Build the project scripts from the custom JS code and the auto-generated Alpine
+   * data registrations.
+   */
+  buildScripts(): string {
+    return (this._js + this._buildAlpineData()).trim()
   }
 
   /**
@@ -322,7 +317,7 @@ export class Project extends ProjectDiagnostics {
 
     this.listPages().forEach((path) => {
       const key = this.isProduction() ? `c${this.getPageIndex(path)}` : `${path}__`
-      output.push(this.getComponent(path).buildInlineCSS(key, globals))
+      output.push(this.getPage(path).buildInlineCSS(key, globals))
     })
 
     let css = output.join('\n').replace(/\$[a-z][a-zA-Z0-9]*/g, (match) => {
@@ -445,6 +440,37 @@ export class Project extends ProjectDiagnostics {
     }
 
     return uniqueArray(components).sort()
+  }
+
+  /**
+   * Get parent components and pages that include a component named `componentName`.
+   *
+   * @param componentName Included component name.
+   * @param recursive Whether to search deep for the component.
+   */
+  getIncluders(
+    componentName: string,
+    recursive: boolean = false,
+  ): { components: string[]; pages: string[] } {
+    const components: string[] = []
+    const pages: string[] = []
+
+    for (const name in this._components) {
+      if (
+        name !== componentName &&
+        this.getIncludedComponentNames(name, recursive).includes(componentName)
+      ) {
+        components.push(name)
+      }
+    }
+
+    for (const path in this._pages) {
+      if (this.getIncludedComponentNames(path, recursive).includes(componentName)) {
+        pages.push(path)
+      }
+    }
+
+    return { components, pages }
   }
 
   /**
@@ -691,6 +717,17 @@ export class Project extends ProjectDiagnostics {
     }
 
     return results
+  }
+
+  /**
+   * Render a template identified by `templateId` with specified `properties` without
+   * linting.
+   *
+   * @returns the rendered HTML and diagnostics.
+   * @throws an error if the template with the specified `templateId` does not exist.
+   */
+  renderForce(templateId: string, properties: { [name: string]: string } = {}): string {
+    return this._getTemplate(templateId).render(properties).html.toString(this.isProduction())
   }
 
   /**
