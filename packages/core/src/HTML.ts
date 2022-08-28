@@ -95,9 +95,6 @@ enum NS {
  *   interpolated within a specific template. Property names are always written in
  *   lower snake case (e.g. 'size', 'shadow_opacity', etc.).
  *
- * - **Safe camel** - A camel case string that matches the pattern `/^[a-z][a-zA-Z0-9]*$/`.
- *   Note that this particular slug must start with a letter.
- *
  * - **Template** - Refers to a component or page.
  */
 export class HTML extends Diagnostics<HTMLDiagnostics> {
@@ -753,7 +750,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             const cssAttribute = node.attrs.find((attr) => attr.name === 'css')
 
             if (cssAttribute) {
-              if (!/^{.*}$/.test(cssAttribute.value.trim())) {
+              if (!/^{.*}$/s.test(cssAttribute.value.trim())) {
                 this.addDiagnostics('inlineCSS', {
                   message: 'Inline CSS must be enclosed in curly brackets.',
                   severity: 'error',

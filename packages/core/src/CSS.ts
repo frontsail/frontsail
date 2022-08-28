@@ -33,9 +33,6 @@ import { isGlobalName } from './validation'
  *   with inline styles.
  *
  * - **postcss** - A tool for transforming and modifying CSS rules.
- *
- * - **Safe camel** - A camel case string that matches the pattern `/^[a-z][a-zA-Z0-9]*$/`.
- *   Note that this particular slug must start with a letter.
  */
 export class CSS extends Diagnostics<CSSDiagnostics> {
   /**
@@ -264,7 +261,7 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
    * Get a list of all global variables in the CSS code.
    */
   static getGlobals(css: string): GlobalVariable[] {
-    const regex = /(?:\$|@)([a-z][a-zA-Z0-9]*)/g
+    const regex = /(?:\$|@)([a-z0-9][a-zA-Z0-9]*)/g
     const variables: GlobalVariable[] = []
     let match: RegExpExecArray | null
 

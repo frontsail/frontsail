@@ -77,9 +77,6 @@ import { isGlobalName, isPagePath } from './validation'
  *
  * - **Selector** - Refers to a CSS selector.
  *
- * - **Safe camel** - A camel case string that matches the pattern `/^[a-z][a-zA-Z0-9]*$/`.
- *   Note that this particular slug must start with a letter.
- *
  * - **Safe slug** - A string that matches the pattern `/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/`.
  *   Note that this particular slug must start with a letter.
  *
@@ -320,7 +317,7 @@ export class Project extends ProjectDiagnostics {
       output.push(this.getPage(path).buildInlineCSS(key, globals))
     })
 
-    let css = output.join('\n').replace(/\$[a-z][a-zA-Z0-9]*/g, (match) => {
+    let css = output.join('\n').replace(/\$[a-z0-9][a-zA-Z0-9]*/g, (match) => {
       return this._globals[match] ?? match
     })
 
