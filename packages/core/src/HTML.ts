@@ -150,16 +150,16 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     this._html = html
 
     try {
-      this._ast = html.trim().startsWith('<!DOCTYPE html>')
-        ? parse(html, { sourceCodeLocationInfo: true })
-        : parseFragment(html, { sourceCodeLocationInfo: true })
+      this._ast = this._html.includes('<html')
+        ? parse(this._html, { sourceCodeLocationInfo: true })
+        : parseFragment(this._html, { sourceCodeLocationInfo: true })
       this._extractPropertyNames()
     } catch (e) {
       this.addDiagnostics('syntax', {
         message: e.message,
         severity: 'error',
         from: 0,
-        to: html.length,
+        to: this._html.length,
       })
     }
   }

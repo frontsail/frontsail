@@ -267,3 +267,12 @@ test('minification', () => {
     '<span>foo<div></div>x</span> x<div>bar</div>',
   )
 })
+
+test('extracting root nodes', () => {
+  expect(new HTML('<html></html>').getRootNodes()).toHaveLength(1)
+  expect(new HTML('<html></html>').getRootNodes()).toHaveProperty('0.tagName', 'html')
+  expect(new HTML('<!DOCTYPE html><html></html>').getRootNodes()).toHaveProperty(
+    '0.tagName',
+    'html',
+  )
+})
