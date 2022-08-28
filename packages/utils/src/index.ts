@@ -7,6 +7,8 @@ export {
   nth,
   uniqueArray,
 } from './array'
-export { lineColumnToRange } from './code'
+export { lineColumnToOffset, offsetToLineColumn } from './code'
+export { bind } from './decorators'
+export { debounce } from './function'
 export { clearObject, fillObject } from './object'
-export { escape, split } from './string'
+export { escape, hash, split } from './string'
