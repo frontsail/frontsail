@@ -350,6 +350,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
 
     let inlineCSSIndex: number = 1
 
+    // Resolve attributes
     for (const node of html.walk()) {
       if (HTML.adapter.isElementNode(node)) {
         const ifAttribute = node.attrs.find((attr) => attr.name === 'if')
@@ -379,7 +380,12 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
 
           inlineCSSIndex++
         }
+      }
+    }
 
+    // Resolve included components
+    for (const node of html.walk()) {
+      if (HTML.adapter.isElementNode(node)) {
         if (node.tagName === 'include') {
           const componentName = node.attrs.find((attr) => attr.name === 'component')?.value
 

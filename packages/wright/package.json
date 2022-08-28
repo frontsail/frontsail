@@ -1,12 +1,9 @@
 {
-  "name": "@frontsail/cli",
+  "name": "@frontsail/wright",
   "version": "0.1.0",
-  "description": "Command line interface for managing FrontSail projects.",
+  "description": "The FrontSail project builder.",
   "type": "module",
   "main": "dist/index.cjs",
-  "bin": {
-    "@frontsail/cli": "dist/index.cjs"
-  },
   "types": "types/index.d.ts",
   "scripts": {
     "build": "rimraf dist types && node esbuild.js && tsc",
@@ -24,31 +21,24 @@
   "bugs": {
     "url": "https://github.com/frontsail/frontsail/issues"
   },
-  "homepage": "https://github.com/frontsail/frontsail/tree/main/packages/cli#readme",
+  "homepage": "https://github.com/frontsail/frontsail/tree/main/packages/wright#readme",
   "engines": {
     "node": ">=16.13.0"
   },
   "dependencies": {
+    "@frontsail/core": "^0.1.0",
     "@frontsail/utils": "^0.1.0",
-    "@frontsail/wright": "^0.1.0",
+    "chokidar": "^3.5.3",
+    "esbuild": "^0.15.5",
     "fs-extra": "^10.1.0",
-    "inquirer": "^9.1.0",
-    "ora": "^6.1.2",
-    "picocolors": "^1.0.0",
-    "portfinder": "^1.0.32",
-    "semver": "^7.3.7",
-    "server-destroy": "^1.0.1",
-    "table": "^6.8.0"
+    "glob": "^8.0.3",
+    "nanoid": "^4.0.0",
+    "pretty-bytes": "^6.0.0"
   },
   "devDependencies": {
-    "@types/browser-sync": "^2.26.3",
     "@types/fs-extra": "^9.0.13",
-    "@types/inquirer": "^9.0.1",
-    "@types/semver": "^7.3.12",
-    "@types/server-destroy": "^1.0.1",
-    "browser-sync": "^2.27.10",
+    "@types/glob": "^7.2.0",
     "concurrently": "^7.3.0",
-    "esbuild": "^0.15.5",
     "rimraf": "^3.0.2",
     "typescript": "^4.7.4"
   }
