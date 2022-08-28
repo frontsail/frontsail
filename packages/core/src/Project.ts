@@ -593,6 +593,30 @@ export class Project extends ProjectDiagnostics {
   }
 
   /**
+   * Analyze a component named `name` by running specified `tests`. Use a wildcard
+   * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
+   * `getComponentDiagnostics()`.
+   *
+   * @throws an error if the component does not exist.
+   */
+  lintComponent(name: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
+    this.getComponent(name).lint(...tests)
+    return this
+  }
+
+  /**
+   * Analyze a page with the path `path` by running specified `tests`. Use a wildcard
+   * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
+   * `getPageDiagnostics()`.
+   *
+   * @throws an error if the component does not exist.
+   */
+  lintPage(path: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
+    this.getPage(path).lint(...tests)
+    return this
+  }
+
+  /**
    * Get a sorder list of all registered asset paths in the project.
    */
   listAssets(): string[] {
@@ -621,30 +645,6 @@ export class Project extends ProjectDiagnostics {
   }
 
   /**
-   * Analyze a component named `name` by running specified `tests`. Use a wildcard
-   * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
-   * `getComponentDiagnostics()`.
-   *
-   * @throws an error if the component does not exist.
-   */
-  lintComponent(name: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
-    this.getComponent(name).lint(...tests)
-    return this
-  }
-
-  /**
-   * Analyze a page with the path `path` by running specified `tests`. Use a wildcard
-   * (`*`) to run all types of tests. Diagnostics can be retrieved with the method
-   * `getPageDiagnostics()`.
-   *
-   * @throws an error if the component does not exist.
-   */
-  lintPage(path: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
-    this.getPage(path).lint(...tests)
-    return this
-  }
-
-  /**
    * Check if there are any diagnostics of specific `types` in a page with the path
    * `path`. Use a wildcard (`*`) to check all types.
    *
@@ -660,7 +660,7 @@ export class Project extends ProjectDiagnostics {
    * @throws an error if the asset does not exist.
    */
   removeAsset(path: string): this {
-    delete this._ensureAsset(path)._assets[path]
+    this._ensureAsset(path)._assets.splice(this._assets.indexOf(path), 1)
     return this
   }
 
