@@ -381,52 +381,57 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
         }
 
         if (node.tagName === 'include') {
-          const componentName = node.attrs.find((attr) => attr.name === 'component')!.value
-          const componentClone = this._project.getComponent(componentName).clone()
-          const includeProperties = HTML.getIncludeProperties(node)
-          const injections = HTML.getInjections(node)
+          const componentName = node.attrs.find((attr) => attr.name === 'component')?.value
 
-          // Detach child nodes (they are rendered in outlets)
-          node.childNodes.forEach((childNode) => HTML.adapter.detachNode(childNode))
+          if (componentName && this._project.hasComponent(componentName)) {
+            const componentClone = this._project.getComponent(componentName).clone()
+            const includeProperties = HTML.getIncludeProperties(node)
+            const injections = HTML.getInjections(node)
 
-          // Don't resolve Alpine directives for injected contents
-          componentClone._html = componentClone.prepareHTML().inject(injections)
+            // Detach child nodes (they are rendered in outlets)
+            node.childNodes.forEach((childNode) => HTML.adapter.detachNode(childNode))
 
-          const iteration =
-            componentName + JSON.stringify(includeProperties) + componentClone._html.getRawHTML()
+            // Don't resolve Alpine directives for injected contents
+            componentClone._html = componentClone.prepareHTML().inject(injections)
 
-          // Detect infinite loops
-          if (_iterations.includes(iteration)) {
-            HTML.adapter.detachNode(node)
+            const iteration =
+              componentName + JSON.stringify(includeProperties) + componentClone._html.getRawHTML()
 
-            diagnostics.push({
-              templateId: this._id,
-              message: `The included component '${componentName}' caused an infinite loop.`,
-              severity: 'error',
-              from: node.sourceCodeLocation!.startOffset,
-              to: node.sourceCodeLocation!.endOffset,
-            })
+            // Detect infinite loops
+            if (_iterations.includes(iteration)) {
+              HTML.adapter.detachNode(node)
 
-            continue
-          }
+              diagnostics.push({
+                templateId: this._id,
+                message: `The included component '${componentName}' caused an infinite loop.`,
+                severity: 'error',
+                from: node.sourceCodeLocation!.startOffset,
+                to: node.sourceCodeLocation!.endOffset,
+              })
 
-          _iterations.push(iteration)
+              continue
+            }
 
-          const results = componentClone.render(includeProperties, [..._iterations])
-          const rootNode = results.html.getRootNodes()[0]
+            _iterations.push(iteration)
 
-          if (rootNode) {
-            HTML.replaceElement(node, rootNode)
+            const results = componentClone.render(includeProperties, [..._iterations])
+            const rootNode = results.html.getRootNodes()[0]
+
+            if (rootNode) {
+              HTML.replaceElement(node, rootNode)
+            } else {
+              HTML.adapter.detachNode(node)
+            }
+
+            diagnostics.push(
+              ...results.diagnostics.map((diagnostic) => ({
+                templateId: this._id,
+                ...diagnostic,
+              })),
+            )
           } else {
             HTML.adapter.detachNode(node)
           }
-
-          diagnostics.push(
-            ...results.diagnostics.map((diagnostic) => ({
-              templateId: this._id,
-              ...diagnostic,
-            })),
-          )
         } else if (node.tagName === 'inject') {
           HTML.adapter.detachNode(node)
         } else if (node.tagName === 'outlet') {
