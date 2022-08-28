@@ -88,6 +88,7 @@ test('global name validation', () => {
   expect(isGlobalName('$foo')).toBe(true)
   expect(isGlobalName('$fooBar')).toBe(true)
   expect(isGlobalName('$fooBarBaz')).toBe(true)
+  expect(isGlobalName('$2foo')).toBe(true)
   expect(isGlobalName('$foo-bar')).toBe(false)
   expect(isGlobalName('$foo_bar')).toBe(false)
   expect(isGlobalName('$Foo')).toBe(false)

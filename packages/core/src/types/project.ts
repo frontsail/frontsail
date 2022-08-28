@@ -54,8 +54,8 @@ export interface ProjectOptions {
 
   /**
    * Collection of registered global variables that can be used across all templates
-   * and CSS. The object keys must match the pattern `/^\$[a-z][a-zA-Z0-9]*$/` (e.g.
-   * '$baseTitle', '$primaryColor', '$containerWidth', etc.).
+   * and CSS. The object keys must match the pattern `/^\$[a-z0-9][a-zA-Z0-9]*$/`.
+   * Examples: '$baseTitle', '$primaryColor', '$containerWidth', $2xl, etc.
    */
   globals?: { [name: string]: string }
 

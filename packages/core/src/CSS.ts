@@ -25,8 +25,8 @@ import { isGlobalName } from './validation'
  *
  * - **Global** - Refers to a globally accessible string variable that can be
  *   interpolated across templates and used in CSS in declaration values and media
- *   queries. Global names starts with a dollar sign (`$`) followed by a safe camel
- *   string (e.g. '$copyright', '$primaryColor', etc.).
+ *   queries. Global names starts with a dollar sign (`$`) followed by a camel string
+ *   (e.g. '$copyright', '$primaryColor', '$2xs', etc.).
  *
  * - **Inline CSS** - Refers to a CSS rule written in a custom `css` attribute,
  *   without a selector, which can have SCSS-like syntax. It should not be confused

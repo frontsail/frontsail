@@ -68,7 +68,7 @@ export function isGlobalName(name: string): boolean {
       '$page',
       '$property',
       '$supports',
-    ].includes(name) && /^\$[a-z][a-zA-Z0-9]*$/.test(name)
+    ].includes(name) && /^\$[a-z0-9][a-zA-Z0-9]*$/.test(name)
   )
 }
 

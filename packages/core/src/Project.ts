@@ -35,8 +35,8 @@ import { isGlobalName, isPagePath } from './validation'
  *
  * - **Global** - Refers to a globally accessible string variable that can be
  *   interpolated across templates and used in CSS in declaration values and media
- *   queries. Global names starts with a dollar sign (`$`) followed by a safe camel
- *   string (e.g. '$copyright', '$primaryColor', etc.).
+ *   queries. Global names starts with a dollar sign (`$`) followed by a camel string
+ *   (e.g. '$copyright', '$primaryColor', '$2xs', etc.).
  *
  * - **Include** - Refers to using the special `<include>` tag to render components.
  *
@@ -116,8 +116,8 @@ export class Project extends ProjectDiagnostics {
 
   /**
    * Collection of registered global variables that can be used across all templates
-   * and CSS. The object keys must match the pattern `/^\$[a-z][a-zA-Z0-9]*$/` (e.g.
-   * '$baseTitle', '$primaryColor', '$containerWidth', etc.).
+   * and CSS. The object keys must match the pattern `/^\$[a-z0-9][a-zA-Z0-9]*$/`.
+   * Examples: '$baseTitle', '$primaryColor', '$containerWidth', $2xl, etc.
    */
   protected _globals: { [name: string]: string } = {}
 

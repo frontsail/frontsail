@@ -57,8 +57,8 @@ enum NS {
  *
  * - **Global** - Refers to a globally accessible string variable that can be
  *   interpolated across templates and used in CSS in declaration values and media
- *   queries. Global names starts with a dollar sign (`$`) followed by a safe camel
- *   string (e.g. '$copyright', '$primaryColor', etc.).
+ *   queries. Global names starts with a dollar sign (`$`) followed by a camel string
+ *   (e.g. '$copyright', '$primaryColor', '$2xs', etc.).
  *
  * - **Include** - Refers to using the special `<include>` tag to render components.
  *
