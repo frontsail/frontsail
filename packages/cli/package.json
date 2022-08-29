@@ -34,6 +34,7 @@
   "dependencies": {
     "@frontsail/utils": "^0.1.0",
     "@frontsail/wright": "^0.1.0",
+    "browser-sync": "^2.27.10",
     "fs-extra": "^10.1.0",
     "inquirer": "^9.1.0",
     "ora": "^6.1.2",
@@ -49,7 +50,6 @@
     "@types/inquirer": "^9.0.1",
     "@types/semver": "^7.3.12",
     "@types/server-destroy": "^1.0.1",
-    "browser-sync": "^2.27.10",
     "concurrently": "^7.3.0",
     "esbuild": "^0.15.5",
     "rimraf": "^3.0.2",
