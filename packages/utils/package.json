@@ -23,6 +23,9 @@
     "url": "https://github.com/frontsail/frontsail/issues"
   },
   "homepage": "https://github.com/frontsail/frontsail/tree/main/packages/utils#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "concurrently": "^7.3.0",
     "cross-env": "^7.0.3",
@@ -30,5 +33,6 @@
     "jest": "^28.1.3",
     "rimraf": "^3.0.2",
     "typescript": "^4.7.4"
-  }
+  },
+  "gitHead": "e7d908916f2ad70c7135f9874bfeb407921552f0"
 }

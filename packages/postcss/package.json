@@ -21,7 +21,11 @@
     "url": "https://github.com/frontsail/frontsail/issues"
   },
   "homepage": "https://github.com/frontsail/frontsail/tree/main/packages/postcss#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "nanoid": "^4.0.0"
-  }
+  },
+  "gitHead": "e7d908916f2ad70c7135f9874bfeb407921552f0"
 }
