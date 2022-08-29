@@ -12,7 +12,8 @@
     "dev:cli": "npm run dev -w @frontsail/cli",
     "format": "prettier --write .",
     "test": "lerna run test",
-    "publish": "lerna publish"
+    "version": "lerna version",
+    "publish": "lerna publish from-package"
   },
   "author": "Muris Ceman <muris@frontsail.com>",
   "license": "MIT",
