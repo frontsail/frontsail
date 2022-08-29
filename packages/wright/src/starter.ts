@@ -57,7 +57,6 @@ export const starter = {
     'Thumbs.db',
     '',
   ],
-
   packageJSON: {
     name: 'my-frontsail-project',
     version: '0.1.0',
@@ -68,7 +67,7 @@ export const starter = {
       frontsail: '@frontsail/cli',
     },
     devDependencies: {
-      '@frontsail/cli': '^0.1.0',
+      '@frontsail/cli': '^0.1.1',
       'alpinejs': '^3.10.3',
     },
   },
