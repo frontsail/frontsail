@@ -897,6 +897,8 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
       return ''
     }
 
+    let code: string
+
     if (minify) {
       const html = this.clone()
 
@@ -967,10 +969,14 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
         textNode.value = textNode.value.replace(/\s$/, '')
       }
 
-      return html.toString().trim()
+      code = html.toString()
+    } else {
+      code = serialize(this._ast).trim()
     }
 
-    return serialize(this._ast).trim()
+    return code.trim().replace(/(css|x-|:|@)="(.+?)"/gs, (_, name, value) => {
+      return `${name}="${value.replace(/&amp;/g, '&')}"`
+    })
   }
 
   /**
