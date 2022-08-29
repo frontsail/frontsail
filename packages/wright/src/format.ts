@@ -18,6 +18,69 @@ const options: Options = {
 }
 
 /**
+ * Standard attribute order for all elements.
+ */
+const defaultAttributeOrder: (string | RegExp)[] = [
+  'if',
+  'x-data',
+  'x-if',
+  'x-for',
+  'x-show',
+  'x-ref',
+  'x-bind',
+  'x-model',
+  'x-text',
+  'x-html',
+  'css',
+  'class',
+  'x-bind:class',
+  ':class',
+  'style',
+  'x-bind:style',
+  ':style',
+  /^(?:x-bind|:)/,
+  /^(?:x-on|@)/,
+  /^x-/,
+]
+
+/**
+ * Attribute order for `<meta>` elements.
+ */
+const metaAttributeOrder: (string | RegExp)[] = [...defaultAttributeOrder, 'name', '*', 'content']
+
+/**
+ * Attribute order for `<include>` elements.
+ */
+const includeAttributeOrder: (string | RegExp)[] = ['component', ...defaultAttributeOrder, '*']
+
+/**
+ * Attribute order for `<inject>` elements.
+ */
+const injectAttributeOrder: (string | RegExp)[] = ['into', ...defaultAttributeOrder, '*']
+
+/**
+ * Attribute order for `<outlet>` elements.
+ */
+const outletAttributeOrder: (string | RegExp)[] = ['name', ...defaultAttributeOrder, '*']
+
+/**
+ * Attribute order for `<a>`, `<area>`, `<base>`, and `<link>` elements.
+ */
+const hrefAttributeOrder: (string | RegExp)[] = [
+  ...defaultAttributeOrder,
+  'href',
+  'target',
+  'rel',
+  '*',
+]
+
+/**
+ * Attribute order for `<audio>`, `<embed>`, `<iframe>`, `<img>`, `<input>`, `<script>`,
+ * `<source>`, `<track>`, and `<video>` elements.
+ */
+const srcAttributeOrder: (string | RegExp)[] = [...defaultAttributeOrder, 'src', 'alt', '*']
+
+/**
  * Format `code` with `prettier` by automatically resolving its parser from the
  * specified `filePath`.
  *
@@ -53,20 +116,41 @@ function formatCSS(code: string): string {
  * @throws an error if the format fails.
  */
 function formatHTML(html: HTML): string {
-  // Sort and format attributes
   for (const node of html.walk()) {
     if (HTML.adapter.isElementNode(node)) {
       for (const attr of node.attrs) {
+        // Sort css and Alpine attributes
         if (attr.name === 'css') {
           attr.value = formatCSS(attr.value).trim()
         } else if (isAlpineDirective(attr.name)) {
           attr.value = prettierFormat(attr.value, { ...options, parser: 'babel' }).trim()
         }
       }
+
+      // Sort attributes
+      if (node.tagName === 'meta') {
+        sortAttributes(node.attrs, metaAttributeOrder)
+      } else if (node.tagName === 'include') {
+        sortAttributes(node.attrs, includeAttributeOrder)
+      } else if (node.tagName === 'inject') {
+        sortAttributes(node.attrs, injectAttributeOrder)
+      } else if (node.tagName === 'outlet') {
+        sortAttributes(node.attrs, outletAttributeOrder)
+      } else if (['a', 'area', 'base', 'link'].includes(node.tagName)) {
+        sortAttributes(node.attrs, hrefAttributeOrder)
+      } else if (
+        ['audio', 'embed', 'iframe', 'img', 'input', 'script', 'source', 'track', 'video'].includes(
+          node.tagName,
+        )
+      ) {
+        sortAttributes(node.attrs, srcAttributeOrder)
+      } else {
+        sortAttributes(node.attrs, [...defaultAttributeOrder, '*'])
+      }
     }
   }
 
-  // Fix indents, format mustaches, and return
+  // Fix indents, format mustaches, remove empty attribute values, and return
   return prettierFormat(html.toString(), { ...options, parser: 'html' })
     .replace(
       /(( *)[^\n]*?([@:a-z0-9\.-]+)="{\n)(.+?)\n(\s*}")/gs,
@@ -80,6 +164,7 @@ function formatHTML(html: HTML): string {
     )
     .replace(/^ +$/gm, '')
     .replace(/{{\s*([$a-z0-9_]+)\s*}}/gi, '{{ $1 }}')
+    .replace(/(<[^>]+?)=""([^>]*?>)/g, '$1$2')
 }
 
 /**
@@ -95,4 +180,35 @@ function resolveParser(filePath: string): Options['parser'] {
     : filePath.endsWith('.json')
     ? 'json'
     : undefined
+}
+
+function sortAttributes(
+  attribues: { name: string; value: string }[],
+  order: (string | RegExp)[],
+): void {
+  const defaultIndex = order.indexOf('*')
+
+  attribues.sort((a, b) => {
+    let aIndex = order.findIndex((x) => {
+      return (typeof x === 'string' && x === a.name) || (typeof x !== 'string' && x.test(a.name))
+    })
+
+    let bIndex = order.findIndex((x) => {
+      return (typeof x === 'string' && x === b.name) || (typeof x !== 'string' && x.test(b.name))
+    })
+
+    if (aIndex === -1) {
+      aIndex = defaultIndex
+    }
+
+    if (bIndex === -1) {
+      bIndex = defaultIndex
+    }
+
+    if (aIndex === bIndex) {
+      return a.name.localeCompare(b.name)
+    }
+
+    return aIndex - bIndex
+  })
 }

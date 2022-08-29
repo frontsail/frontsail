@@ -426,10 +426,14 @@ export class Wright {
    * Create starter project files in the current working directory.
    */
   initStarterProject(): void {
+    this._ensureProjectFiles()
+
     fs.outputJsonSync('.vscode/settings.json', starter.vscodeSettingsJSON, { spaces: 2 })
-    fs.outputJsonSync('src/main.js', starter.srcMainJS.join('\n'))
+    fs.outputJsonSync('src/globals.json', starter.srcGlobalsJSON, { spaces: 2 })
+    fs.outputFileSync('src/main.js', starter.srcMainJS.join('\n'))
+    fs.outputFileSync('src/components/base.html', starter.srcComponentsBaseHTML.join('\n'))
+    fs.outputFileSync('src/pages/index.html', starter.srcPagesIndexHTML.join('\n'))
     fs.outputJsonSync('frontsail.config.json', starter.frontsailConfigJSON, { spaces: 2 })
-    fs.outputJsonSync('globals.json', starter.globalsJSON, { spaces: 2 })
     fs.outputJsonSync('package.json', starter.packageJSON, { spaces: 2 })
     fs.outputFileSync('.gitignore', starter.gitignore.join('\n'))
   }
