@@ -8,13 +8,15 @@ import {
   offsetToLineColumn,
 } from '@frontsail/utils'
 import chokidar from 'chokidar'
+import CleanCSS from 'clean-css'
 import esbuild from 'esbuild'
 import EventEmitter from 'events'
 import fs from 'fs-extra'
 import glob from 'glob'
 import { customAlphabet } from 'nanoid'
 import prettyBytes from 'pretty-bytes'
-import { starter } from './starter'
+import { format } from './format'
+import { cssReset, starter } from './starter'
 import { FileDiagnostic } from './types/code'
 
 /**
@@ -34,9 +36,13 @@ import { FileDiagnostic } from './types/code'
  *
  * ---
  *
- * Specifics:
+ * Additions to `Project`:
+ *
+ * - Additionally minifies styles in production mode.
  *
  * - Allows ES modules to be used in the project scripts.
+ *
+ * - Formats templates, scripts, and styles.
  *
  * - Mangles and minifies scripts in production mode.
  */
@@ -67,14 +73,19 @@ export class Wright {
   protected _buildHash: string = customAlphabet('1234567890abcdef', 10)()
 
   /**
-   * `Chokidar` watcher for all files in the `src` directory.
+   * `Chokidar` watcher for file changes in the working directory.
    */
-  protected _srcWatcher: chokidar.FSWatcher | null = null
+  protected _watcher: chokidar.FSWatcher | null = null
 
   /**
    * Current build results from `esbuild`.
    */
   protected _esbuild: esbuild.BuildResult | null = null
+
+  /**
+   * Whether to inject a CSS reset in the built styles.
+   */
+  protected _cssReset: boolean = true
 
   /**
    * Event emitter instance.
@@ -126,7 +137,7 @@ export class Wright {
     this._populate()
 
     this._project.listComponents().forEach((componentName) => this._lintComponent(componentName))
-    this._project.listPages().forEach((path) => this._lintPage(path))
+    this._project.listPages().forEach((pagePath) => this._lintPage(pagePath))
 
     await this._rebuild()
 
@@ -240,8 +251,17 @@ export class Wright {
         })),
     )
 
-    // @todo additional minification in production mode
-    fs.outputFileSync(`${this._dist}/${this._getStylesOutname()}`, this._project.buildStyles())
+    let css = (this._cssReset ? cssReset.join('\n') : '') + this._project.buildStyles()
+
+    if (this._project.isProduction()) {
+      const cleanCSS = new CleanCSS().minify(css)
+
+      if (cleanCSS.errors.length === 0 && cleanCSS.warnings.length === 0) {
+        css = cleanCSS.styles
+      }
+    }
+
+    fs.outputFileSync(`${this._dist}/${this._getStylesOutname()}`, css)
 
     this._emit('stats')
   }
@@ -320,6 +340,25 @@ export class Wright {
   }
 
   /**
+   * Format file contents with `prettier`.
+   */
+  protected _format(relativePath: string): this {
+    try {
+      const code = fs.readFileSync(relativePath, 'utf-8')
+      const formattedCode = format(code, relativePath)
+
+      while (code !== formattedCode) {
+        try {
+          fs.outputFileSync(relativePath, formattedCode)
+          break
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    return this
+  }
+
+  /**
    * Get the stored diagnostics.
    */
   getDiagnostics(filter?: { relativePath?: RegExp }): FileDiagnostic[] {
@@ -387,10 +426,12 @@ export class Wright {
    * Create starter project files in the current working directory.
    */
   initStarterProject(): void {
+    fs.outputJsonSync('.vscode/settings.json', starter.vscodeSettingsJSON, { spaces: 2 })
+    fs.outputJsonSync('src/main.js', starter.srcMainJS.join('\n'))
     fs.outputJsonSync('frontsail.config.json', starter.frontsailConfigJSON, { spaces: 2 })
     fs.outputJsonSync('globals.json', starter.globalsJSON, { spaces: 2 })
     fs.outputJsonSync('package.json', starter.packageJSON, { spaces: 2 })
-    fs.outputFileSync('.gitignore', starter.gitignore)
+    fs.outputFileSync('.gitignore', starter.gitignore.join('\n'))
   }
 
   /**
@@ -467,14 +508,20 @@ export class Wright {
     // Config
     //
     if (normalizedPath === 'frontsail.config.json') {
-      setTimeout(() => this._updateConfig(true))
+      if (eventName === 'add' || eventName === 'change') {
+        this._format(normalizedPath)
+      }
+
+      this._updateConfig(true)
     }
     //
     // Globals
     //
     else if (normalizedPath === 'src/globals.json') {
-      if (eventName === 'unlink') {
-        fs.outputJSONSync('src/globals.json', {})
+      if (eventName === 'add' || eventName === 'change') {
+        this._format(normalizedPath)
+      } else if (eventName === 'unlink') {
+        fs.outputJSONSync(normalizedPath, {})
       }
 
       this._setGlobals(true)
@@ -483,8 +530,10 @@ export class Wright {
     // Scripts
     //
     else if (normalizedPath === 'src/main.js') {
-      if (eventName === 'unlink') {
-        fs.ensureFileSync('src/main.js')
+      if (eventName === 'add' || eventName === 'change') {
+        this._format(normalizedPath)
+      } else if (eventName === 'unlink') {
+        fs.ensureFileSync(normalizedPath)
       }
 
       await this._buildScripts()
@@ -495,8 +544,10 @@ export class Wright {
     // Styles
     //
     else if (normalizedPath === 'src/main.css') {
-      if (eventName === 'unlink') {
-        fs.ensureFileSync('src/main.css')
+      if (eventName === 'add' || eventName === 'change') {
+        this._format(normalizedPath)
+      } else if (eventName === 'unlink') {
+        fs.ensureFileSync(normalizedPath)
       }
 
       this._buildStyles()
@@ -528,9 +579,11 @@ export class Wright {
             const componentName = match[2].replace(/\.html$/, '')
 
             if (eventName === 'add') {
+              this._format(normalizedPath)
               this._project.addComponent(componentName, fs.readFileSync(relativePath, 'utf-8'))
               this._lintComponent(componentName)
             } else if (eventName === 'change') {
+              this._format(normalizedPath)
               this._project.updateComponent(componentName, fs.readFileSync(relativePath, 'utf-8'))
               this._lintComponent(componentName)
             } else if (eventName === 'unlink') {
@@ -552,9 +605,11 @@ export class Wright {
             const pagePath = '/' + match[2].replace(/\.html$/, '')
 
             if (eventName === 'add') {
+              this._format(normalizedPath)
               this._project.addPage(pagePath, fs.readFileSync(relativePath, 'utf-8'))
               this._lintPage(pagePath)._buildPage(pagePath)
             } else if (eventName === 'change') {
+              this._format(normalizedPath)
               this._project.updatePage(pagePath, fs.readFileSync(relativePath, 'utf-8'))
               this._lintPage(pagePath)._buildPage(pagePath)
             } else if (eventName === 'unlink') {
@@ -668,8 +723,11 @@ export class Wright {
    * Also watch for configuration changes.
    */
   protected async _startWatching(): Promise<void> {
-    this._srcWatcher = chokidar
-      .watch(['src/**/*', 'frontsail.config.json'], { ignoreInitial: true })
+    this._watcher = chokidar
+      .watch(['src/**/*', 'frontsail.config.json'], {
+        awaitWriteFinish: { stabilityThreshold: 50 },
+        ignoreInitial: true,
+      })
       .on('all', this._onFileChange)
   }
 
@@ -688,10 +746,10 @@ export class Wright {
    */
   protected async _stopWatching(): Promise<void> {
     // Stop `Chokidar` watcher
-    if (this._srcWatcher) {
-      this._srcWatcher.off('all', this._onFileChange)
-      await this._srcWatcher.close()
-      this._srcWatcher = null
+    if (this._watcher) {
+      this._watcher.off('all', this._onFileChange)
+      await this._watcher.close()
+      this._watcher = null
     }
 
     // Dispose `esbuild`
@@ -707,8 +765,12 @@ export class Wright {
   protected _updateConfig(rebuildOnChange: boolean = false): void {
     const json = fs.readJsonSync('frontsail.config.json', { throws: false })
 
+    // @todo JSON AST
     if (json && typeof json === 'object') {
       for (const option in json) {
+        //
+        // Subdirectory
+        //
         if (option === 'subdirectory' && typeof json[option] === 'string') {
           const subdirectory = json[option].replace(/^\//, '').replace(/\/$/, '')
 
@@ -718,6 +780,18 @@ export class Wright {
 
             if (rebuildOnChange) {
               this._rebuild()
+            }
+          }
+        }
+        //
+        // CSS reset
+        //
+        else if (option === 'cssReset' && typeof json[option] === 'boolean') {
+          if (this._cssReset !== json[option]) {
+            this._cssReset = json[option]
+
+            if (rebuildOnChange) {
+              this._buildStyles()
             }
           }
         }

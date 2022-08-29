@@ -349,6 +349,6 @@ export class DevelopPrompt {
    * Replace the arrow keys hint with a branding text.
    */
   protected _updateContainerHint(): void {
-    this._containerHint = `§d(_D CLI v${getCLIVersion()})`
+    this._containerHint = `§b(_D CLI v${getCLIVersion()}) `
   }
 }
