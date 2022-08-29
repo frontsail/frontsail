@@ -1,3 +1,4 @@
+import { codeFrameColumns } from '@babel/code-frame'
 import { Project } from '@frontsail/core'
 import {
   bind,
@@ -113,8 +114,12 @@ export class Wright {
         prepared.end = end
       }
 
-      if (!prepared.preview) {
-        // @todo create preview
+      if (!prepared.preview && prepared.relativePath && fs.existsSync(prepared.relativePath)) {
+        const code = fs.readFileSync(prepared.relativePath, 'utf-8')
+        prepared.preview = codeFrameColumns(code, {
+          start: { line: prepared.start[0], column: prepared.start[1] },
+          end: { line: prepared.end[0], column: prepared.end[1] },
+        })
       }
 
       this._diagnostics.push(prepared)
@@ -135,9 +140,7 @@ export class Wright {
     this._clearAllDiagnostics()
     this._setGlobals()
     this._populate()
-
-    this._project.listComponents().forEach((componentName) => this._lintComponent(componentName))
-    this._project.listPages().forEach((pagePath) => this._lintPage(pagePath))
+    this._lintTemplates()
 
     await this._rebuild()
 
@@ -473,6 +476,16 @@ export class Wright {
   }
 
   /**
+   * Lint all components and pages.
+   */
+  protected _lintTemplates(): this {
+    this._project.listComponents().forEach((componentName) => this._lintComponent(componentName))
+    this._project.listPages().forEach((pagePath) => this._lintPage(pagePath))
+
+    return this
+  }
+
+  /**
    * Get a sorder list of all registered asset paths in the project.
    */
   listAssets(): string[] {
@@ -716,6 +729,7 @@ export class Wright {
     }
 
     if (rebuild) {
+      this._lintTemplates()
       this._rebuild()
     }
   }

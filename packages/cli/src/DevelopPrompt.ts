@@ -219,11 +219,13 @@ export class DevelopPrompt {
           contents.push(`§rb(Error) ${diagnostic.message}`)
         }
 
+        contents.push('', `§b(${diagnostic.relativePath}${codePosition})`)
+
+        if (diagnostic.preview) {
+          contents.push(...diagnostic.preview.split('\n').slice(0, 5))
+        }
+
         contents.push(
-          '',
-          `File: ${diagnostic.relativePath}${codePosition}`,
-          diagnostic.from.toString(),
-          diagnostic.to.toString(),
           '',
           createGap(
             `§d(Showing ${index} of ${diagnostics.length})`,

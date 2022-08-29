@@ -81,8 +81,8 @@ export class InitialPrompt {
       if (hasNpmDependencies()) {
         question.choices = [
           { name: 'Start developing', value: 'develop' },
-          { name: 'Build pages (@todo)', value: 'build' },
-          { name: 'Format files (@todo)', value: 'format' },
+          // { name: 'Build pages (@todo)', value: 'build' },
+          // { name: 'Format files (@todo)', value: 'format' },
           { name: 'Exit', value: 'exit' },
         ]
       } else {
