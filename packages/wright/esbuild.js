@@ -7,7 +7,7 @@ esbuild.build({
   bundle: true,
   platform: 'node',
   mainFields: ['module', 'main'],
-  external: ['esbuild', 'prettier'],
+  external: ['esbuild', 'fsevents', 'prettier'],
   minify: !process.argv.includes('--watch'),
   watch: process.argv.includes('--watch'),
 })
