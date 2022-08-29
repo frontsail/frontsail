@@ -11,7 +11,8 @@
     "dev:wright": "npm run dev -w @frontsail/wright",
     "dev:cli": "npm run dev -w @frontsail/cli",
     "format": "prettier --write .",
-    "test": "lerna run test"
+    "test": "lerna run test",
+    "publish": "lerna publish"
   },
   "author": "Muris Ceman <muris@frontsail.com>",
   "license": "MIT",
