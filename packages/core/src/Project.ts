@@ -785,7 +785,11 @@ export class Project extends ProjectDiagnostics {
    * @throws an error if a previous component with the `name` does not exist.
    */
   updateComponent(name: string, html: string): this {
-    return this.removeComponent(name).addComponent(name, html)
+    if (this.getComponent(name).getRawHTML() !== html) {
+      this.removeComponent(name).addComponent(name, html)
+    }
+
+    return this
   }
 
   /**
@@ -794,6 +798,10 @@ export class Project extends ProjectDiagnostics {
    * @throws an error if a previous page with the `path` does not exist.
    */
   updatePage(path: string, html: string): this {
-    return this.removePage(path).addPage(path, html)
+    if (this.getPage(path).getRawHTML() !== html) {
+      this.removePage(path).addPage(path, html)
+    }
+
+    return this
   }
 }

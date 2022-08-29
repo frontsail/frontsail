@@ -175,6 +175,13 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   }
 
   /**
+   * Return the raw HTML content.
+   */
+  getRawHTML(): string {
+    return this._html.getRawHTML()
+  }
+
+  /**
    * Check if the template includes a specific component. This method does not
    * recursively check dependencies of the included components. For depth checks,
    * use the method `includesComponent` in the `Project` class.
