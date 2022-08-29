@@ -47,7 +47,7 @@ test('linting if attributes (1)', () => {
   expect(diagnostics).toHaveProperty('0.to', 15)
   expect(diagnostics).toHaveProperty(
     '0.message',
-    'Call expressions and declarations are not allowed.',
+    'Call expressions and declarations are not allowed in if statements.',
   )
 })
 
@@ -118,7 +118,10 @@ test('linting inject elements (1)', () => {
   )
   expect(diagnostics).toHaveProperty('1.from', 29)
   expect(diagnostics).toHaveProperty('1.to', 32)
-  expect(diagnostics).toHaveProperty('1.message', 'Unsupported attribute.')
+  expect(diagnostics).toHaveProperty(
+    '1.message',
+    "Inject tags can only have 'into' and 'if' attributes.",
+  )
 })
 
 test('linting inject elements (2)', () => {
@@ -168,7 +171,10 @@ test('linting inject elements (4)', () => {
   expect(diagnostics).toHaveLength(1)
   expect(diagnostics).toHaveProperty('0.from', 20)
   expect(diagnostics).toHaveProperty('0.to', 23)
-  expect(diagnostics).toHaveProperty('0.message', 'Unsupported attribute.')
+  expect(diagnostics).toHaveProperty(
+    '0.message',
+    "Inject tags can only have 'into' and 'if' attributes.",
+  )
 })
 
 test('linting mustache locations (1)', () => {
@@ -293,10 +299,10 @@ test('linting outlet elements (3)', () => {
   )
   expect(diagnostics).toHaveProperty('1.from', 17)
   expect(diagnostics).toHaveProperty('1.to', 22)
-  expect(diagnostics).toHaveProperty('1.message', 'Unsupported attribute.')
+  expect(diagnostics).toHaveProperty('1.message', "Outlets can only have a 'name' attribute.")
   expect(diagnostics).toHaveProperty('2.from', 33)
   expect(diagnostics).toHaveProperty('2.to', 36)
-  expect(diagnostics).toHaveProperty('2.message', 'Unsupported attribute.')
+  expect(diagnostics).toHaveProperty('2.message', "Outlets can only have a 'name' attribute.")
 })
 
 test('linting outlet elements (4)', () => {
@@ -307,13 +313,13 @@ test('linting outlet elements (4)', () => {
   expect(diagnostics).toHaveLength(3)
   expect(diagnostics).toHaveProperty('0.from', 8)
   expect(diagnostics).toHaveProperty('0.to', 10)
-  expect(diagnostics).toHaveProperty('0.message', 'Unsupported attribute.')
+  expect(diagnostics).toHaveProperty('0.message', "Outlets can only have a 'name' attribute.")
   expect(diagnostics).toHaveProperty('1.from', 11)
   expect(diagnostics).toHaveProperty('1.to', 15)
-  expect(diagnostics).toHaveProperty('1.message', 'Unsupported attribute.')
+  expect(diagnostics).toHaveProperty('1.message', "Outlets can only have a 'name' attribute.")
   expect(diagnostics).toHaveProperty('2.from', 16)
   expect(diagnostics).toHaveProperty('2.to', 19)
-  expect(diagnostics).toHaveProperty('2.message', 'Unsupported attribute.')
+  expect(diagnostics).toHaveProperty('2.message', "Outlets can only have a 'name' attribute.")
 })
 
 test('linting inline css', () => {
@@ -324,5 +330,8 @@ test('linting inline css', () => {
   expect(diagnostics).toHaveLength(1)
   expect(diagnostics).toHaveProperty('0.from', 10)
   expect(diagnostics).toHaveProperty('0.to', 24)
-  expect(diagnostics).toHaveProperty('0.message', 'Inline CSS must be enclosed in curly brackets.')
+  expect(diagnostics).toHaveProperty(
+    '0.message',
+    'Inline CSS attribute values must be enclosed in curly brackets.',
+  )
 })

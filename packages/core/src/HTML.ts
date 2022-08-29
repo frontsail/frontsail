@@ -199,7 +199,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
         const js = new JS(item.text)
 
         if (js.isIfAttributeValue()) {
-          propertyNames.push(...js.getIdentifiers())
+          propertyNames.push(...js.getIdentifiers().filter(isPropertyName))
         }
       }
     })
@@ -611,7 +611,12 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                   const js = new JS(attr.value)
 
                   if (js.isIfAttributeValue()) {
-                    js.evaluate(Object.fromEntries(this._propertyNames.map((p) => [p, ''])))
+                    js.evaluate({
+                      ...Object.fromEntries(this._propertyNames.map((p) => [p, ''])),
+                      ...Object.fromEntries(
+                        (attr.value.match(/\$[a-z0-9][a-zA-Z0-9]*/g) ?? []).map((p) => [p, '']),
+                      ),
+                    })
 
                     if (js.hasProblems('*')) {
                       this.addDiagnostics(
@@ -622,9 +627,18 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                         ),
                       )
                     }
+                  } else if (js.hasProblems('*')) {
+                    this.addDiagnostics(
+                      'ifAttributes',
+                      ...js.getDiagnosticsWithOffset(
+                        this.getAttributeValueRange(node, attr.name)!.from,
+                        '*',
+                      ),
+                    )
                   } else {
                     this.addDiagnostics('ifAttributes', {
-                      message: 'Call expressions and declarations are not allowed.',
+                      message:
+                        'Call expressions and declarations are not allowed in if statements.',
                       severity: 'error',
                       ...this.getAttributeValueRange(node, attr.name)!,
                     })
@@ -736,7 +750,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             for (const attr of node.attrs) {
               if (!['if', 'into'].includes(attr.name)) {
                 this.addDiagnostics('injectElements', {
-                  message: 'Unsupported attribute.',
+                  message: "Inject tags can only have 'into' and 'if' attributes.",
                   severity: 'warning',
                   ...this.getAttributeNameRange(node, attr.name)!,
                 })
@@ -752,7 +766,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             if (cssAttribute) {
               if (!/^{.*}$/s.test(cssAttribute.value.trim())) {
                 this.addDiagnostics('inlineCSS', {
-                  message: 'Inline CSS must be enclosed in curly brackets.',
+                  message: 'Inline CSS attribute values must be enclosed in curly brackets.',
                   severity: 'error',
                   ...this.getAttributeValueRange(node, 'css')!,
                 })
@@ -845,7 +859,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             for (const attr of node.attrs) {
               if (attr.name !== 'name') {
                 this.addDiagnostics('outletElements', {
-                  message: 'Unsupported attribute.',
+                  message: "Outlets can only have a 'name' attribute.",
                   severity: 'warning',
                   ...this.getAttributeNameRange(node, attr.name)!,
                 })

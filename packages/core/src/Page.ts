@@ -1,4 +1,5 @@
 import { HTML } from './HTML'
+import { JS } from './JS'
 import { Project } from './Project'
 import { Template } from './Template'
 import { AtLeastOne } from './types/generic'
@@ -94,7 +95,11 @@ export class Page extends Template {
       }
     }
 
-    if (this.shouldTest('alpineDirectives', tests) || this.shouldTest('outletElements', tests)) {
+    if (
+      this.shouldTest('alpineDirectives', tests) ||
+      this.shouldTest('ifAttributes', tests) ||
+      this.shouldTest('outletElements', tests)
+    ) {
       for (const node of this._html.walk()) {
         if (HTML.adapter.isElementNode(node)) {
           //
@@ -115,6 +120,31 @@ export class Page extends Template {
                   severity: 'error',
                   ...this._html.getAttributeNameRange(node, attr.name)!,
                 })
+              }
+            }
+          }
+          //
+          // Check if attributes
+          //
+          if (this.shouldTest('ifAttributes', tests)) {
+            for (const attr of node.attrs) {
+              if (attr.name === 'if' && node.tagName !== 'outlet') {
+                if (attr.value.trim()) {
+                  for (const identifier of new JS(attr.value).getIdentifiers()) {
+                    if (isPropertyName(identifier)) {
+                      const range = this._html.getAttributeValueRange(node, attr.name)!
+
+                      this.addDiagnostics('ifAttributes', {
+                        message: 'Properties can only be evaluated in components.',
+                        severity: 'error',
+                        from: range.from + attr.value.indexOf(identifier),
+                        to: range.from + attr.value.indexOf(identifier) + identifier.length,
+                      })
+
+                      break
+                    }
+                  }
+                }
               }
             }
           }

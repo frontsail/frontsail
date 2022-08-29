@@ -202,6 +202,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
 
       if (
         this.shouldTest('dependencies', tests) ||
+        this.shouldTest('ifAttributes', tests) ||
         this.shouldTest('inlineCSS', tests) ||
         this.shouldTest('mustacheValues', tests)
       ) {
@@ -317,6 +318,33 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
                       from: node.sourceCodeLocation!.startOffset,
                       to: node.sourceCodeLocation!.endOffset,
                     })
+                  }
+                }
+              }
+            }
+            //
+            // Check if attributes
+            //
+            if (this.shouldTest('ifAttributes', tests)) {
+              for (const attr of node.attrs) {
+                if (attr.name === 'if' && node.tagName !== 'outlet') {
+                  if (attr.value.trim()) {
+                    const globals = this._project?.listGlobals() ?? []
+
+                    for (const identifier of new JS(attr.value).getIdentifiers()) {
+                      if (isGlobalName(identifier) && !globals.includes(identifier)) {
+                        const range = this._html.getAttributeValueRange(node, attr.name)!
+
+                        this.addDiagnostics('ifAttributes', {
+                          message: `Global variable '${identifier}' does not exist.`,
+                          severity: 'error',
+                          from: range.from + attr.value.indexOf(identifier),
+                          to: range.from + attr.value.indexOf(identifier) + identifier.length,
+                        })
+
+                        break
+                      }
+                    }
                   }
                 }
               }

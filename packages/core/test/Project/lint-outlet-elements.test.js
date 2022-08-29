@@ -40,7 +40,7 @@ test('linting component (1)', () => {
   expect(diagnostics).toHaveLength(1)
   expect(diagnostics).toHaveProperty('0.from', 16)
   expect(diagnostics).toHaveProperty('0.to', 21)
-  expect(diagnostics).toHaveProperty('0.message', 'Unsupported attribute.')
+  expect(diagnostics).toHaveProperty('0.message', "Outlets can only have a 'name' attribute.")
 })
 
 test('linting component (2)', () => {

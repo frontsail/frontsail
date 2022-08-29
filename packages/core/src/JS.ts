@@ -133,7 +133,7 @@ export class JS extends Diagnostics<JSDiagnostics> {
       return Function(`${constants}\nreturn ${this._js}`).call(null)
     } catch (e) {
       this.addDiagnostics('runtime', {
-        message: e.toString(),
+        message: e.toString().replace(/^[a-z0-9]+: /i, '') + '.',
         severity: 'error',
         from: 0,
         to: this._js.length - this._declarator.length,
