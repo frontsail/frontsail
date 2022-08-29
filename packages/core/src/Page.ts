@@ -3,7 +3,7 @@ import { Project } from './Project'
 import { Template } from './Template'
 import { AtLeastOne } from './types/generic'
 import { TemplateDiagnostics } from './types/template'
-import { isAlpineDirective, isPagePath } from './validation'
+import { isAlpineDirective, isPagePath, isPropertyName } from './validation'
 
 /**
  * Handles page specific linting.
@@ -76,6 +76,23 @@ export class Page extends Template {
    */
   lint(...tests: AtLeastOne<TemplateDiagnostics>): this {
     super.lint(...tests)
+
+    // Check mustache values
+    //
+    if (this.shouldTest('mustacheValues', tests)) {
+      for (const mustache of this._html.getMustaches()) {
+        if (isPropertyName(mustache.variable)) {
+          const from = mustache.from + mustache.text.indexOf(mustache.variable)
+
+          this.addDiagnostics('mustacheValues', {
+            message: 'Properties can only be interpolated in components.',
+            severity: 'warning',
+            from,
+            to: from + mustache.variable.length,
+          })
+        }
+      }
+    }
 
     if (this.shouldTest('alpineDirectives', tests) || this.shouldTest('outletElements', tests)) {
       for (const node of this._html.walk()) {

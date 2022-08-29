@@ -47,7 +47,7 @@ test('linting alpine directives (page)', () => {
 test('full lint (page)', () => {
   const diagnostics = project.lintPage('/', '*').getPageDiagnostics('/', '*')
 
-  expect(diagnostics).toHaveLength(5)
+  expect(diagnostics).toHaveLength(6)
   expect(diagnostics).toHaveProperty('3.from', 336)
   expect(diagnostics).toHaveProperty('3.to', 339)
   expect(diagnostics).toHaveProperty(
