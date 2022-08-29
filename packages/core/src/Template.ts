@@ -7,7 +7,7 @@ import { Project } from './Project'
 import { RenderDiagnostic } from './types/code'
 import { AtLeastOne } from './types/generic'
 import { TemplateDiagnostics, TemplateRenderResults } from './types/template'
-import { isComponentName, isPropertyName } from './validation'
+import { isComponentName, isGlobalName, isPropertyName } from './validation'
 
 /**
  * Handles common features of components and pages, such as abstract syntax trees,
@@ -200,7 +200,28 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
       this.clearDiagnostics(...tests)
       this.testAndMergeDiagnostics(this._html, ...tests)
 
-      if (this.shouldTest('dependencies', tests) || this.shouldTest('inlineCSS', tests)) {
+      if (
+        this.shouldTest('dependencies', tests) ||
+        this.shouldTest('inlineCSS', tests) ||
+        this.shouldTest('mustacheValues', tests)
+      ) {
+        // Check mustache values
+        //
+        if (this.shouldTest('mustacheValues', tests)) {
+          for (const mustache of this._html.getMustaches()) {
+            if (isGlobalName(mustache.variable) && !this._project?.hasGlobal(mustache.variable)) {
+              const from = mustache.from + mustache.text.indexOf(mustache.variable)
+
+              this.addDiagnostics('mustacheValues', {
+                message: 'Global variable does not exist.',
+                severity: 'warning',
+                from,
+                to: from + mustache.variable.length,
+              })
+            }
+          }
+        }
+
         for (const node of this._html.walk()) {
           if (HTML.adapter.isElementNode(node)) {
             //
