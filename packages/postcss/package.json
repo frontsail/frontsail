@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/postcss",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "PostCSS fork without Node.js dependencies.",
   "type": "module",
   "main": "lib/index.js",
