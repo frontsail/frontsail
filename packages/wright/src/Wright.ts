@@ -163,7 +163,10 @@ export class Wright {
       html = `<!DOCTYPE html>\n${html}`
     }
 
-    fs.outputFileSync(`${this._dist}${pagePath}.html`, html)
+    fs.outputFileSync(
+      `${this._dist}${pagePath}.html`,
+      html || '<!DOCTYPE html><html><head></head><body></body></html>',
+    )
   }
 
   /**
