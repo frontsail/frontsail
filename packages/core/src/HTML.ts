@@ -772,11 +772,15 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                 })
               } else {
                 const css = new CSS(`& ${cssAttribute.value}`).lint()
-                const cssDiagnostics = css.getDiagnosticsWithOffset(
-                  this.getAttributeValueRange(node, 'css')!.from,
-                  '*',
-                )
-                this.addDiagnostics('inlineCSS', ...cssDiagnostics)
+                const attributeValueRange = this.getAttributeValueRange(node, 'css')!
+
+                css.getDiagnostics('*').forEach((diagnostic) => {
+                  this.addDiagnostics('inlineCSS', {
+                    ...diagnostic,
+                    from: attributeValueRange.from + Math.max(diagnostic.from - 2, 0),
+                    to: attributeValueRange.from + Math.max(diagnostic.to - 2, 0),
+                  })
+                })
               }
             }
           }
