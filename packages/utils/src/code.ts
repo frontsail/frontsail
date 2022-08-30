@@ -75,10 +75,10 @@ export function lineColumnToOffset(
   if (startRow === undefined) {
     from = text.length
   } else {
-    let prev: number = 0
+    let prev: number = start[0] - 1
 
     for (let i = 0; i < start[0] - 1; i++) {
-      prev += (rows[i]?.length ?? 0) + i + 1
+      prev += rows[i]?.length ?? 0
     }
 
     from = Math.min(start[1] - 1, startRow.length) + prev
@@ -87,10 +87,10 @@ export function lineColumnToOffset(
   if (endRow === undefined) {
     to = text.length
   } else {
-    let prev: number = 0
+    let prev: number = end[0] - 1
 
     for (let i = 0; i < end[0] - 1; i++) {
-      prev += (rows[i]?.length ?? 0) + i + 1
+      prev += rows[i]?.length ?? 0
     }
 
     to = Math.max(Math.min(end[1] - 1, endRow.length) + prev, from)

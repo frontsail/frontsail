@@ -19,4 +19,16 @@ test('lineColumnToOffset', () => {
   expect(lineColumnToOffset('foo', [1, 4])).toEqual({ from: 3, to: 3 })
   expect(lineColumnToOffset('foo\nbar', [2, 1])).toEqual({ from: 4, to: 4 })
   expect(lineColumnToOffset('foo\nbar\n', [1, 2], [4, 4])).toEqual({ from: 1, to: 8 })
+  expect(
+    lineColumnToOffset(
+      `& {
+    background: red;
+    %blue {
+      background: blue; }
+    }
+  }`,
+      [6, 3],
+      [6, 4],
+    ),
+  ).toEqual({ from: 71, to: 72 })
 })
