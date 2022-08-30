@@ -18,23 +18,42 @@ import { JSDiagnostics } from './types/js'
  *
  * Glossary:
  *
+ * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
+ *   Values from Alpine directives are extracted from all elements and appended into
+ *   the project's script file. Only the `x-data` (with the template key), `x-bind`,
+ *   `x-for`, and `x-cloak` attributes remain in the HTML.
+ *
  * - **AST** - Refers to the JavaScript abstract sytax tree built with Acorn.
  *
  * - **Acorn** - A small, fast, JavaScript-based JavaScript parser.
  *
  * - **Attribute** - An HTML attribute (e.g. `<div if="foo"></div>`).
+ *
+ * - **Directive** - Refers to an Alpine [directive](https://alpinejs.dev/start-here).
+ *
+ * - **Element** - An HTML element (e.g. `<div></div>`).
  */
 export class JS extends Diagnostics<JSDiagnostics> {
   /**
-   * Raw JavaScript content that is transformed to an AST.
+   * Raw JavaScript content without the prefix and suffix.
+   */
+  protected _rawJS: string
+
+  /**
+   * JavaScript content that is transformed to an AST.
    */
   protected _js: string
 
   /**
-   * A declaration prefix used for invalid JS inputs like anonymous objects in Alpine
+   * A code prefix used for invalid JS inputs like anonymous objects in Alpine
    * directives (e.g. `{ foo: 'bar' }`).
    */
-  protected _declarator: string
+  protected _prefix: string = ''
+
+  /**
+   * Complement to the code prefix.
+   */
+  protected _suffix: string = ''
 
   /**
    * The abstract syntax tree created from the input JS.
@@ -53,29 +72,41 @@ export class JS extends Diagnostics<JSDiagnostics> {
    * Instantiate with an abstract syntax tree.
    *
    * @param js The JavaScript code.
-   * @param declarator Whether to prefix the `js` code with a pseudo declarator.
+   * @param alpineDirective Whether the code is an Alpine directive.
    */
-  constructor(js: string, declarator: boolean = false) {
+  constructor(js: string, alpineDirective: boolean = false) {
     super()
 
-    this._declarator = declarator ? 'const $ = ' : ''
-    this._js = this._declarator + js
+    if (alpineDirective) {
+      if (/(?:[\s\S]*?)\s+(?:in|of)\s+(?:[\s\S]*)/.test(js)) {
+        this._prefix = 'for ('
+        this._suffix = ') {}'
+      } else {
+        this._prefix = '() => { return '
+        this._suffix = '}'
+      }
+    }
+
+    this._rawJS = js
+    this._js = this._prefix + this._rawJS + this._suffix
 
     try {
       this._ast = parse(this._js, { ecmaVersion: 2020 })
     } catch (e) {
+      const from = Math.min(Math.max(e.pos - this._prefix.length, 0), this._rawJS.length)
+
       this.addDiagnostics('syntax', {
         message: e.message.replace(/ \([0-9]+:[0-9]+\)$/, '.'),
         severity: 'error',
-        from: e.pos - this._declarator.length,
-        to: e.pos - this._declarator.length,
+        from,
+        to: from,
       })
     }
   }
 
   /**
    * Add the `this` keyword to identifiers included in `targets` and return the
-   * transformed JavaScript code.
+   * transformed JavaScript code (optimized for Alpine directives).
    */
   addThis(targets: string[]): string {
     let js = this.getRawJS()
@@ -85,14 +116,31 @@ export class JS extends Diagnostics<JSDiagnostics> {
       this.walkSimple({
         Identifier: (node: Node & { name: string }) => {
           if (targets.includes(node.name)) {
-            const from = node.start - this._declarator.length + diff
-            const to = node.end - this._declarator.length + diff
+            const from = node.start - this._prefix.length + diff
+            const to = node.end - this._prefix.length + diff
             js = js.slice(0, from) + `this.${node.name}` + js.slice(to)
             diff += 5 // 'this.'.length
           }
         },
       })
     }
+
+    const assignmentIdentifiersRegex =
+      /(?:^|\s|\()((?!this\.)[\$a-zA-Z_][\$a-zA-Z0-9_]*)[\$a-zA-Z0-9\.'"`_\[\]]*\s*=[^=]/gi
+    let assignmentMatch: RegExpExecArray | null = null
+
+    do {
+      assignmentMatch = assignmentIdentifiersRegex.exec(js)
+
+      if (assignmentMatch && targets.includes(assignmentMatch[1])) {
+        js =
+          js.slice(0, assignmentMatch.index) +
+          js
+            .slice(assignmentMatch.index, assignmentMatch.index + assignmentMatch[0].length)
+            .replace(assignmentMatch[1], `this.${assignmentMatch[1]}`) +
+          js.slice(assignmentMatch.index + assignmentMatch[0].length)
+      }
+    } while (assignmentMatch)
 
     return js
   }
@@ -102,7 +150,7 @@ export class JS extends Diagnostics<JSDiagnostics> {
    * Diagnostics are not cloned.
    */
   clone(): JS {
-    return new JS(this._js)
+    return new JS(this._rawJS, !!this._prefix)
   }
 
   /**
@@ -136,7 +184,7 @@ export class JS extends Diagnostics<JSDiagnostics> {
         message: e.toString().replace(/^[a-z0-9]+: /i, '') + '.',
         severity: 'error',
         from: 0,
-        to: this._js.length - this._declarator.length,
+        to: this._rawJS.length,
       })
     }
   }
@@ -174,8 +222,12 @@ export class JS extends Diagnostics<JSDiagnostics> {
    */
   getObjectProperties(): string[] {
     if (this.isObject()) {
-      const object = findNodeAt(this._ast!, this._declarator.length, this._js.length)!.node as any
-      return object.properties.map((property) => property.key.name).sort()
+      const object = findNodeAt(
+        this._ast!,
+        this._prefix.length,
+        this._prefix.length + this._rawJS.length,
+      )!.node as any
+      return object.properties.map((property: any) => property.key.name).sort()
     }
 
     return []
@@ -185,7 +237,7 @@ export class JS extends Diagnostics<JSDiagnostics> {
    * Return the raw JS content without the pseudo declarator.
    */
   getRawJS(): string {
-    return this._js.replace(this._declarator, '')
+    return this._rawJS
   }
 
   /**
@@ -212,8 +264,8 @@ export class JS extends Diagnostics<JSDiagnostics> {
   isObject(): boolean {
     if (this._ast) {
       return (
-        findNodeAt(this._ast, this._declarator.length, this._js.length)?.node.type ===
-        'ObjectExpression'
+        findNodeAt(this._ast, this._prefix.length, this._prefix.length + this._rawJS.length)?.node
+          .type === 'ObjectExpression'
       )
     }
 

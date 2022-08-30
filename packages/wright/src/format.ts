@@ -123,10 +123,17 @@ function formatHTML(html: HTML): string {
         if (attr.name === 'css') {
           attr.value = formatCSS(attr.value).trim()
         } else if (isAlpineDirective(attr.name)) {
-          attr.value = prettierFormat(`const $ = ${attr.value}`, { ...options, parser: 'babel' })
-            .replace('const $ = ', '')
-            .trim()
-            .replace(/^\((.+)\)$/s, '$1')
+          if (/(?:[\s\S]*?)\s+(?:in|of)\s+(?:[\s\S]*)/.test(attr.value)) {
+            attr.value = prettierFormat(`for (${attr.value}) {}`, { ...options, parser: 'babel' })
+              .trim()
+              .replace('for (', '')
+              .replace(/\)\s*{\s*}$/, '')
+          } else {
+            attr.value = prettierFormat(`const $ = ${attr.value}`, { ...options, parser: 'babel' })
+              .replace('const $ = ', '')
+              .trim()
+              .replace(/^\((.+)\)$/s, '$1')
+          }
         }
       }
 
