@@ -62,9 +62,8 @@ export const starter = {
     version: '0.1.0',
     type: 'module',
     scripts: {
-      build: '@frontsail/cli --build',
-      dev: '@frontsail/cli --dev',
-      frontsail: '@frontsail/cli',
+      cli: 'frontsail',
+      build: 'frontsail --build',
     },
     devDependencies: {
       '@frontsail/cli': '^0.1.1',

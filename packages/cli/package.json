@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/index.cjs",
   "bin": {
-    "@frontsail/cli": "dist/index.cjs"
+    "frontsail": "dist/index.cjs"
   },
   "types": "types/index.d.ts",
   "scripts": {
