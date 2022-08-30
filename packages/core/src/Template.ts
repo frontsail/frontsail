@@ -135,13 +135,14 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
       let index: number = 1
 
       this._html.getAttributeValues('css').forEach((item) => {
-        const selector = `._${key}e${index}_D`
-        const css = new CSS(`${selector.replace(/\//g, '\\/')} ${item.text}`)
+        const escapedKey = key.replace(/\//g, '\\/')
+        const selector = `._${escapedKey}e${index}_D`
+        const css = new CSS(`${selector} ${item.text}`)
 
         if (!css.hasProblems('syntax')) {
           const cssOutput = css
             .build(sortMediaQueries)
-            .replace(/%([a-z][a-zA-Z0-9]*)/g, `._${key}e${index}_$1_D`)
+            .replace(/%([a-z][a-zA-Z0-9]*)/g, `._${escapedKey}e${index}_$1_D`)
 
           if (cssOutput) {
             output.push(cssOutput)
@@ -415,7 +416,6 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
         if (ifAttribute && node.tagName !== 'outlet') {
           if (!new JS(ifAttribute.value).evaluate(variables)) {
             HTML.adapter.detachNode(node)
-            continue
           }
         }
 
@@ -425,6 +425,9 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
         if (cssAttributeIndex > -1) {
           const className = `_${key}e${inlineCSSIndex}_D`
           const classAttribute = node.attrs.find((attr) => attr.name === 'class')
+          const bindClassAttribute = node.attrs.find((attr) => {
+            return /^(?:x-bind)?:class$/.test(attr.name)
+          })
 
           node.attrs.splice(cssAttributeIndex, 1)
 
@@ -432,6 +435,13 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
             classAttribute.value = `${className} ${classAttribute.value}`
           } else {
             node.attrs.push({ name: 'class', value: className })
+          }
+
+          if (bindClassAttribute) {
+            bindClassAttribute.value = bindClassAttribute.value.replace(
+              /%([a-z][a-zA-Z0-9]*)/g,
+              `_${key}e${inlineCSSIndex}_$1_D`,
+            )
           }
 
           inlineCSSIndex++

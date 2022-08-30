@@ -227,7 +227,11 @@ export class Component extends Template {
       throw new Error('Cannot resolve Alpine data without a project.')
     }
 
-    const checksum = hash(this._html.getRawHTML())
+    const componentIndex = this._project.getComponentIndex(this._id)
+    const key = this._project.isProduction() ? `c${componentIndex}` : `${this._id}__`
+    const checksum = hash(key + this._html.getRawHTML())
+
+    let inlineCSSIndex: number = 1
 
     if (this._jsCache.checksum !== checksum) {
       const componentIndex = this._project.getComponentIndex(this._id)
@@ -282,6 +286,21 @@ export class Component extends Template {
 
           for (const attr of node.attrs) {
             if (isAlpineDirective(attr.name)) {
+              if (node.attrs.some((attr) => attr.name === 'css')) {
+                const bindClassAttribute = node.attrs.find((attr) => {
+                  return /^(?:x-bind)?:class$/.test(attr.name)
+                })
+
+                if (bindClassAttribute) {
+                  bindClassAttribute.value = bindClassAttribute.value.replace(
+                    /%([a-z][a-zA-Z0-9]*)/g,
+                    `_${key}e${inlineCSSIndex}_$1_D`,
+                  )
+                }
+
+                inlineCSSIndex++
+              }
+
               if (!hasXBind && !['x-data', 'x-bind', 'x-for', 'x-cloak'].includes(attr.name)) {
                 const runtimeProperties: string[] = []
                 let relative: Element | null = node
