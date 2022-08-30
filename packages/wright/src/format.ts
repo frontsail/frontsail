@@ -123,7 +123,10 @@ function formatHTML(html: HTML): string {
         if (attr.name === 'css') {
           attr.value = formatCSS(attr.value).trim()
         } else if (isAlpineDirective(attr.name)) {
-          attr.value = prettierFormat(attr.value, { ...options, parser: 'babel' }).trim()
+          attr.value = prettierFormat(`const $ = ${attr.value}`, { ...options, parser: 'babel' })
+            .replace('const $ = ', '')
+            .trim()
+            .replace(/^\((.+)\)$/s, '$1')
         }
       }
 
