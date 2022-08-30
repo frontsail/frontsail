@@ -269,7 +269,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
                   node.childNodes.every((childNode) => {
                     return (
                       (HTML.adapter.isElementNode(childNode) && childNode.tagName !== 'inject') ||
-                      (HTML.adapter.isTextNode(childNode) && childNode.value.trim())
+                      HTML.adapter.isTextNode(childNode)
                     )
                   })
                 const outletNames = this._project!.getOutletNames(component.name)
