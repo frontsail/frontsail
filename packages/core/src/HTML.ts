@@ -992,7 +992,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
       code = serialize(this._ast).trim()
     }
 
-    return code.trim().replace(/(css|x-|:|@)="(.+?)"/gs, (_, name, value) => {
+    return code.trim().replace(/(css|(?:x-|:|@)[\$a-z0-9:\._-]+)="(.+?)"/gs, (_, name, value) => {
       return `${name}="${value.replace(/&amp;/g, '&')}"`
     })
   }
