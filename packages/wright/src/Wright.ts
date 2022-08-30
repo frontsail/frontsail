@@ -116,10 +116,17 @@ export class Wright {
 
       if (!prepared.preview && prepared.relativePath && fs.existsSync(prepared.relativePath)) {
         const code = fs.readFileSync(prepared.relativePath, 'utf-8')
-        prepared.preview = codeFrameColumns(code, {
-          start: { line: prepared.start[0], column: prepared.start[1] },
-          end: { line: prepared.end[0], column: prepared.end[1] },
-        })
+
+        if (code.trim()) {
+          prepared.preview = codeFrameColumns(
+            code,
+            {
+              start: { line: prepared.start[0], column: prepared.start[1] },
+              end: { line: prepared.end[0], column: prepared.end[1] },
+            },
+            { linesAbove: 1, linesBelow: 4 },
+          )
+        }
       }
 
       this._diagnostics.push(prepared)
@@ -580,12 +587,14 @@ export class Wright {
           // Assets
           //
           if (match[1] === 'assets') {
-            const assetPath = `/assets/${match[2]}`
+            const assetPath = `/assets/${match[2]}`.toLowerCase()
 
-            if (eventName === 'add') {
+            if (eventName === 'add' || eventName === 'change') {
+              if (this._project.hasAsset(assetPath)) {
+                this._project.removeAsset(assetPath)
+              }
+
               this._project.addAsset(assetPath)
-              fs.copySync(relativePath, `${this._dist}${assetPath}`)
-            } else if (eventName === 'change') {
               fs.copySync(relativePath, `${this._dist}${assetPath}`)
             } else if (eventName === 'unlink') {
               this._project.removeAsset(assetPath)
@@ -596,45 +605,59 @@ export class Wright {
           // Components
           //
           else if (match[1] === 'components' && match[2].endsWith('.html')) {
-            const componentName = match[2].replace(/\.html$/, '')
+            const componentName = match[2].replace(/\.html$/, '').toLowerCase()
 
-            if (eventName === 'add') {
+            if (eventName === 'add' || eventName === 'change') {
               this._format(normalizedPath)
-              this._project.addComponent(componentName, fs.readFileSync(relativePath, 'utf-8'))
-              this._lintComponent(componentName)
-            } else if (eventName === 'change') {
-              this._format(normalizedPath)
-              this._project.updateComponent(componentName, fs.readFileSync(relativePath, 'utf-8'))
+
+              if (this._project.hasComponent(componentName)) {
+                this._project.updateComponent(componentName, fs.readFileSync(relativePath, 'utf-8'))
+              } else {
+                this._project.addComponent(componentName, fs.readFileSync(relativePath, 'utf-8'))
+              }
+
               this._lintComponent(componentName)
             } else if (eventName === 'unlink') {
-              this._project.removeComponent(componentName)
+              this._clearDiagnostics(normalizedPath)
+
+              try {
+                this._project.removeComponent(componentName)
+              } catch (_) {}
             }
 
             this._buildScripts()
             this._buildStyles()
 
-            const includers = this._project.getIncluders(componentName, true)
+            try {
+              const includers = this._project.getIncluders(componentName, true)
 
-            includers.components.forEach((_name) => this._lintComponent(_name))
-            includers.pages.forEach((_path) => this._lintPage(_path)._buildPage(_path))
+              includers.components.forEach((_name) => this._lintComponent(_name))
+              includers.pages.forEach((_path) => this._lintPage(_path)._buildPage(_path))
+            } catch (_) {}
           }
           //
           // Pages
           //
           else if (match[1] === 'pages' && match[2].endsWith('.html')) {
-            const pagePath = '/' + match[2].replace(/\.html$/, '')
+            const pagePath = '/' + match[2].replace(/\.html$/, '').toLowerCase()
 
-            if (eventName === 'add') {
+            if (eventName === 'add' || eventName === 'change') {
               this._format(normalizedPath)
-              this._project.addPage(pagePath, fs.readFileSync(relativePath, 'utf-8'))
-              this._lintPage(pagePath)._buildPage(pagePath)
-            } else if (eventName === 'change') {
-              this._format(normalizedPath)
-              this._project.updatePage(pagePath, fs.readFileSync(relativePath, 'utf-8'))
+
+              if (this._project.hasPage(pagePath)) {
+                this._project.updatePage(pagePath, fs.readFileSync(relativePath, 'utf-8'))
+              } else {
+                this._project.addPage(pagePath, fs.readFileSync(relativePath, 'utf-8'))
+              }
+
               this._lintPage(pagePath)._buildPage(pagePath)
             } else if (eventName === 'unlink') {
-              this._project.removePage(pagePath)
+              this._clearDiagnostics(normalizedPath)
               fs.removeSync(`${this._dist}/${match[2]}`)
+
+              try {
+                this._project.removePage(pagePath)
+              } catch (_) {}
             }
 
             this._buildStyles()
@@ -659,29 +682,35 @@ export class Wright {
    */
   protected _populate(): void {
     glob.sync('src/assets/**/*').forEach((srcPath) => {
-      const relativePath = srcPath.replace('src/', '')
+      const relativePath = srcPath.replace('src/', '').toLowerCase()
 
       try {
         this._project!.addAsset(relativePath)
       } catch (e) {
-        this._addDiagnostics({ relativePath, message: e.message })
+        this._addDiagnostics({ relativePath: srcPath, message: e.message })
       }
     })
 
     glob.sync('src/components/**/*.html').forEach((srcPath) => {
       const relativePath = srcPath.replace('src/', '')
-      const componentName = relativePath.replace('components/', '').replace(/\.html$/, '')
+      const componentName = relativePath
+        .replace('components/', '')
+        .replace(/\.html$/, '')
+        .toLowerCase()
 
       try {
         this._project!.addComponent(componentName, fs.readFileSync(srcPath, 'utf-8'))
       } catch (e) {
-        this._addDiagnostics({ relativePath, message: e.message })
+        this._addDiagnostics({ relativePath: srcPath, message: e.message })
       }
     })
 
     glob.sync('src/pages/**/*.html').forEach((srcPath) => {
       const relativePath = srcPath.replace('src/', '')
-      const pagePath = relativePath.replace('pages', '').replace(/\.html$/, '')
+      const pagePath = relativePath
+        .replace('pages', '')
+        .replace(/\.html$/, '')
+        .toLowerCase()
 
       try {
         this._project!.addPage(pagePath, fs.readFileSync(srcPath, 'utf-8'))
