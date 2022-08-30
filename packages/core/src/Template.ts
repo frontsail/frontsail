@@ -1,4 +1,6 @@
 import { clearArray, hash, uniqueArray } from '@frontsail/utils'
+import { Attribute } from 'parse5/dist/common/token'
+import { Element, Template as TemplateNode } from 'parse5/dist/tree-adapters/default'
 import { CSS } from './CSS'
 import { Diagnostics } from './Diagnostics'
 import { HTML } from './HTML'
@@ -410,7 +412,14 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     // Resolve attributes
     for (const node of html.walk()) {
       if (HTML.adapter.isElementNode(node)) {
-        const ifAttribute = node.attrs.find((attr) => attr.name === 'if')
+        let ifAttribute: Attribute | undefined = node.attrs.find((attr) => attr.name === 'if')
+
+        if (!ifAttribute && node.tagName === 'template') {
+          const childElement = HTML.adapter.getTemplateContent(node as TemplateNode)
+            .childNodes[0] as Element
+
+          ifAttribute = childElement?.attrs?.find((attr) => attr.name === 'if')
+        }
 
         // Remove when if expression evaluates to a falsy value
         if (ifAttribute && node.tagName !== 'outlet') {
