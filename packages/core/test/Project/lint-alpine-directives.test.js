@@ -47,16 +47,18 @@ test('linting alpine directives (page)', () => {
 test('full lint (page)', () => {
   const diagnostics = project.lintPage('/', '*').getPageDiagnostics('/', '*')
 
-  expect(diagnostics).toHaveLength(6)
+  console.log(diagnostics)
+
+  expect(diagnostics).toHaveLength(7)
   expect(diagnostics).toHaveProperty('3.from', 336)
   expect(diagnostics).toHaveProperty('3.to', 339)
   expect(diagnostics).toHaveProperty(
     '3.message',
     "Property 'bar' does not exist in component 'bar'.",
   )
-  expect(diagnostics).toHaveProperty('4.from', 368)
-  expect(diagnostics).toHaveProperty('4.to', 377)
-  expect(diagnostics).toHaveProperty('4.message', 'Mustaches cannot be used in Alpine directives.')
+  expect(diagnostics).toHaveProperty('5.from', 368)
+  expect(diagnostics).toHaveProperty('5.to', 377)
+  expect(diagnostics).toHaveProperty('5.message', 'Mustaches cannot be used in Alpine directives.')
 })
 
 test('linting alpine directives (component 1)', () => {
