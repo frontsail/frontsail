@@ -270,10 +270,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
                 const hasAnonymousInjection =
                   node.childNodes.length > 0 &&
                   node.childNodes.every((childNode) => {
-                    return (
-                      (HTML.adapter.isElementNode(childNode) && childNode.tagName !== 'inject') ||
-                      HTML.adapter.isTextNode(childNode)
-                    )
+                    return !HTML.adapter.isElementNode(childNode) || childNode.tagName !== 'inject'
                   })
                 const outletNames = this._project!.getOutletNames(component.name)
 
