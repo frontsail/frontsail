@@ -4,6 +4,64 @@
 export const starter = {
   vscodeSettingsJSON: {
     'editor.formatOnSave': false,
+    'emmet.triggerExpansionOnTab': true,
+    'html.customData': ['.vscode/frontsail.html-data.json'],
+  },
+  vscodeFrontsailHtmlDataJSON: {
+    version: 1.1,
+    tags: [
+      {
+        name: 'include',
+        description:
+          'Imports a FrontSail component by a name specified in the `component` attribute value of this element.',
+        attributes: [
+          {
+            name: 'component',
+            description: 'Full name of the component to include.',
+          },
+        ],
+        references: [
+          {
+            name: 'FrontSail Documentation',
+            url: 'https://www.frontsail.com/docs/include',
+          },
+        ],
+      },
+      {
+        name: 'inject',
+        description:
+          'Fills its contents into a specific `<outlet>` named as the `into` attribute value of this element.',
+        attributes: [
+          {
+            name: 'into',
+            description: 'An outlet name where the content should be injected.',
+          },
+        ],
+        references: [
+          {
+            name: 'FrontSail Documentation',
+            url: 'https://www.frontsail.com/docs/inject',
+          },
+        ],
+      },
+      {
+        name: 'outlet',
+        description:
+          'A placeholder that FrontSail dynamically fills with content from an `<include>` element.',
+        attributes: [
+          {
+            name: 'name',
+            description: 'A unique name for the outlet (defaults to `main`).',
+          },
+        ],
+        references: [
+          {
+            name: 'FrontSail Documentation',
+            url: 'https://www.frontsail.com/docs/outlet',
+          },
+        ],
+      },
+    ],
   },
   srcGlobalsJSON: {
     $baseTitle: 'FrontSail',
