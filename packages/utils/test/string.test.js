@@ -1,4 +1,4 @@
-import { escape, hash, split } from '..'
+import { escape, hash, slugify, split } from '..'
 
 test('escape', () => {
   expect(escape('<div></div>')).toBe('&lt;div&gt;&lt;/div&gt;')
@@ -17,4 +17,9 @@ test('split', () => {
     { value: 'a', from: 0, to: 1 },
     { value: 'b', from: 2, to: 3 },
   ])
+})
+
+test('slugify', () => {
+  expect(slugify('SEO Friendly String!')).toBe('seo-friendly-string')
+  expect(slugify('123 foo bar', '_', true)).toBe('foo_bar')
 })
