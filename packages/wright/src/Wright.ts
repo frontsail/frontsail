@@ -591,13 +591,13 @@ export class Wright {
 
             if (eventName === 'add' || eventName === 'change') {
               if (this._project.hasAsset(assetPath)) {
-                this._project.removeAsset(assetPath)
+                this._clearDiagnostics(normalizedPath)._project.removeAsset(assetPath)
               }
 
-              this._project.addAsset(assetPath)
+              this._clearDiagnostics(normalizedPath)._project.addAsset(assetPath)
               fs.copySync(relativePath, `${this._dist}${assetPath}`)
             } else if (eventName === 'unlink') {
-              this._project.removeAsset(assetPath)
+              this._clearDiagnostics(normalizedPath)._project.removeAsset(assetPath)
               fs.removeSync(`${this._dist}${assetPath}`)
             }
           }
@@ -682,10 +682,10 @@ export class Wright {
    */
   protected _populate(): void {
     glob.sync('src/assets/**/*').forEach((srcPath) => {
-      const relativePath = srcPath.replace('src/', '').toLowerCase()
+      const assetPath = srcPath.replace('src', '').toLowerCase()
 
       try {
-        this._project!.addAsset(relativePath)
+        this._project.addAsset(assetPath)
       } catch (e) {
         this._addDiagnostics({ relativePath: srcPath, message: e.message })
       }
@@ -699,7 +699,7 @@ export class Wright {
         .toLowerCase()
 
       try {
-        this._project!.addComponent(componentName, fs.readFileSync(srcPath, 'utf-8'))
+        this._project.addComponent(componentName, fs.readFileSync(srcPath, 'utf-8'))
       } catch (e) {
         this._addDiagnostics({ relativePath: srcPath, message: e.message })
       }
@@ -713,7 +713,7 @@ export class Wright {
         .toLowerCase()
 
       try {
-        this._project!.addPage(pagePath, fs.readFileSync(srcPath, 'utf-8'))
+        this._project.addPage(pagePath, fs.readFileSync(srcPath, 'utf-8'))
       } catch (e) {
         this._addDiagnostics({ relativePath, message: e.message })
       }
@@ -725,7 +725,10 @@ export class Wright {
    */
   protected async _rebuild(): Promise<void> {
     this.clearDistDirectory()
+
+    this._project.listAssets().forEach((path) => fs.copySync(`src${path}`, `${this._dist}${path}`))
     this._project.listPages().forEach((path) => this._buildPage(path))
+
     await this._buildScripts()
     this._buildStyles()
   }

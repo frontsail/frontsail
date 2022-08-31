@@ -13,7 +13,7 @@ export function isAlpineDirective(name: string): boolean {
  * isAssetPath('/foo.svg) // false
  */
 export function isAssetPath(path: string): boolean {
-  return /^\/assets\/[a-zA-Z0-9 \(\),\._-]+(?:\/[a-zA-Z0-9 \(\),\._-]+)*$/.test(path)
+  return /^\/assets\/[a-zA-Z0-9 \(\),\._\+\-]+(?:\/[a-zA-Z0-9 \(\),\._\+\-]+)*$/.test(path)
 }
 
 /**

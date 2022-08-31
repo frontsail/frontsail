@@ -8,7 +8,7 @@ import { Diagnostic } from './types/code'
 import { AtLeastOne } from './types/generic'
 import { ProjectOptions, RenderResults } from './types/project'
 import { TemplateDiagnostics } from './types/template'
-import { isGlobalName, isPagePath } from './validation'
+import { isAssetPath, isGlobalName, isPagePath } from './validation'
 
 /**
  * Manages project variables, components, pages, assets, scripts, and styles.
@@ -211,9 +211,13 @@ export class Project extends ProjectDiagnostics {
    * Register a new asset to the project. The asset `path` must match the pattern
    * `/^\/assets\/[a-zA-Z0-9 \(\),\._-]+(?:\/[a-zA-Z0-9 \(\),\._-]+)*$/`.
    *
-   * @throws an error if the asset path already exists.
+   * @throws an error if the asset path is not valid or already exists.
    */
   addAsset(path: string): this {
+    if (!isAssetPath(path)) {
+      throw new Error(`The asset path '${path}' is not valid. Try removing special characters.`)
+    }
+
     if (this.hasAsset(path)) {
       throw new Error(`An asset with the path '${path}' already exists.`)
     }
