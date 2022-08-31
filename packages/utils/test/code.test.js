@@ -1,13 +1,30 @@
 import { lineColumnToOffset, offsetToLineColumn } from '..'
 
 test('offsetToLineColumn', () => {
-  expect(offsetToLineColumn('foo', 0, 1)).toEqual({ start: [1, 1], end: [1, 2] })
-  expect(offsetToLineColumn('foo', 0, 2)).toEqual({ start: [1, 1], end: [1, 3] })
-  expect(offsetToLineColumn('foo', 0, 3)).toEqual({ start: [1, 1], end: [1, 4] })
-  expect(offsetToLineColumn('foo', 0, 4)).toEqual({ start: [1, 1], end: [1, 4] })
-  expect(offsetToLineColumn('foo', 3, 3)).toEqual({ start: [1, 4], end: [1, 4] })
+  expect(offsetToLineColumn('foo', 0)).toEqual({ start: [1, 1], end: [1, 1] })
+  expect(offsetToLineColumn('foo', 0, 1)).toEqual({ start: [1, 1], end: [1, 1] })
+  expect(offsetToLineColumn('foo', 0, 2)).toEqual({ start: [1, 1], end: [1, 2] })
+  expect(offsetToLineColumn('foo', 0, 3)).toEqual({ start: [1, 1], end: [1, 3] })
+  expect(offsetToLineColumn('foo', 0, 4)).toEqual({ start: [1, 1], end: [1, 3] })
+  expect(offsetToLineColumn('foo', 3, 3)).toEqual({ start: [1, 3], end: [1, 3] })
+  expect(offsetToLineColumn('foo\nbar', 2, 5)).toEqual({ start: [1, 3], end: [2, 1] })
   expect(offsetToLineColumn('foo\nbar', 4, 4)).toEqual({ start: [2, 1], end: [2, 1] })
   expect(offsetToLineColumn('foo\nbar\n', 2, 8)).toEqual({ start: [1, 3], end: [3, 1] })
+  expect(
+    offsetToLineColumn(
+      `{
+    clicked: false,
+    href: '',
+    items: [1, 2, 3, 4, 5],
+
+    init() {
+      this.href = this.$root.dataset.test
+      console.log(this.href)
+    },
+}[-`,
+      159,
+    ),
+  ).toEqual({ start: [10, 3], end: [10, 3] })
 })
 
 test('lineColumnToOffset', () => {

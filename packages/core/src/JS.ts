@@ -93,7 +93,7 @@ export class JS extends Diagnostics<JSDiagnostics> {
     try {
       this._ast = parse(this._js, { ecmaVersion: 2020 })
     } catch (e) {
-      const from = Math.min(Math.max(e.pos - this._prefix.length, 0), this._rawJS.length)
+      const from = Math.max(Math.min(e.pos - this._prefix.length, this._rawJS.length - 1), 0)
 
       this.addDiagnostics('syntax', {
         message: e.message.replace(/ \([0-9]+:[0-9]+\)$/, '.'),

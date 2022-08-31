@@ -9,8 +9,8 @@ test('linting alpine directives', () => {
   expect(diagnostics).toHaveProperty('0.from', 13)
   expect(diagnostics).toHaveProperty('0.to', 16)
   expect(diagnostics).toHaveProperty('0.message', 'Alpine data must be an object.')
-  expect(diagnostics).toHaveProperty('1.from', 27)
-  expect(diagnostics).toHaveProperty('1.to', 27)
+  expect(diagnostics).toHaveProperty('1.from', 26)
+  expect(diagnostics).toHaveProperty('1.to', 26)
   expect(diagnostics).toHaveProperty('1.message', 'Unexpected token.')
 })
 

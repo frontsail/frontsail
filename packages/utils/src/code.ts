@@ -7,23 +7,27 @@
 export function offsetToLineColumn(
   text: string,
   from: number,
-  to: number,
+  to?: number,
 ): { start: [line: number, column: number]; end: [line: number, column: number] } {
   const rows = text.split('\n')
   const start: [line: number, column: number] = [-1, -1]
   const end: [line: number, column: number] = [-1, -1]
+
+  if (to === undefined) {
+    to = from
+  }
 
   let prevCharacters: number = 0
 
   for (const [index, row] of rows.entries()) {
     if (start[0] === -1 && from <= prevCharacters + row.length) {
       start[0] = index + 1
-      start[1] = from - prevCharacters + 1
+      start[1] = Math.min(from - prevCharacters + 1, row.length)
     }
 
     if (end[0] === -1 && to <= prevCharacters + row.length) {
       end[0] = index + 1
-      end[1] = to - prevCharacters + 1
+      end[1] = Math.max(to - prevCharacters, 1)
     }
 
     if (start[0] + end[0] > 1) {
@@ -35,14 +39,18 @@ export function offsetToLineColumn(
 
   if (start[0] === -1) {
     start[0] = rows.length
-    start[1] = rows[start[0] - 1].length + 1
+    start[1] = Math.max(rows[start[0] - 1].length, 1)
     end[0] = start[0]
     end[1] = start[1]
   }
 
   if (end[0] === -1) {
     end[0] = rows.length
-    end[1] = rows[end[0] - 1].length + 1
+    end[1] = Math.max(rows[end[0] - 1].length, 1)
+  }
+
+  if (start[0] === end[0] && end[1] < start[1]) {
+    end[1] = start[1]
   }
 
   return { start, end }
