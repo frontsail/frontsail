@@ -1,4 +1,4 @@
-import { hash, uniqueArray } from '@frontsail/utils'
+import { hash, slugify, uniqueArray } from '@frontsail/utils'
 import { Element, Template as TemplateElement } from 'parse5/dist/tree-adapters/default'
 import { HTML } from './HTML'
 import { JS } from './JS'
@@ -68,7 +68,12 @@ export class Component extends Template {
    */
   constructor(name: string, html: string, project?: Project) {
     if (!isComponentName(name)) {
-      throw new Error(`The component name '${name}' is not valid.`)
+      const suggestion = name
+        .split('/')
+        .map((part) => slugify(part, '-', true))
+        .join('/')
+
+      throw new Error(`The component name '${name}' is not valid. Try with '${suggestion}'.`)
     }
 
     super(name, html, project)

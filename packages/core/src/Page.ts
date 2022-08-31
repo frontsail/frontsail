@@ -1,3 +1,4 @@
+import { slugify } from '@frontsail/utils'
 import { HTML } from './HTML'
 import { JS } from './JS'
 import { Project } from './Project'
@@ -56,7 +57,12 @@ export class Page extends Template {
    */
   constructor(path: string, html: string, project?: Project) {
     if (!isPagePath(path)) {
-      throw new Error(`The page path '${path}' is not valid.`)
+      const suggestion = path
+        .split('/')
+        .map((part) => slugify(part, '-', true))
+        .join('/')
+
+      throw new Error(`The page path '${path}' is not valid. Try with '${suggestion}'.`)
     }
 
     super(path, html, project)
