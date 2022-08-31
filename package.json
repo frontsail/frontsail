@@ -3,8 +3,10 @@
   "workspaces": [
     "packages/*"
   ],
+  "type": "module",
   "scripts": {
     "build": "lerna run build",
+    "dev": "node dev.js",
     "dev:utils": "npm run dev -w @frontsail/utils",
     "dev:core": "npm run dev -w @frontsail/core",
     "dev:wright": "npm run dev -w @frontsail/wright",
