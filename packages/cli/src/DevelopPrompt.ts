@@ -279,7 +279,12 @@ export class DevelopPrompt {
 
     await new Promise<void>((resolve) => {
       this._previewServer.init({
-        server: 'dist',
+        server: {
+          baseDir: 'dist',
+          serveStaticOptions: {
+            extensions: ['html'],
+          },
+        },
         port,
         ui: { port: uiPort },
         socket: { port: socketPort },
