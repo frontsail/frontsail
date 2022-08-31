@@ -30,4 +30,5 @@ export {
   isPagePath,
   isPropertyName,
   isSafeSlug,
+  isXForDirective,
 } from './validation'

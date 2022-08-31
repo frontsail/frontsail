@@ -1,4 +1,4 @@
-import { HTML, isAlpineDirective } from '@frontsail/core'
+import { HTML, isAlpineDirective, isXForDirective } from '@frontsail/core'
 import { format as prettierFormat, Options } from 'prettier'
 
 /**
@@ -123,11 +123,14 @@ function formatHTML(html: HTML): string {
         if (attr.name === 'css') {
           attr.value = formatCSS(attr.value).trim()
         } else if (isAlpineDirective(attr.name)) {
-          if (/(?:[\s\S]*?)\s+(?:in|of)\s+(?:[\s\S]*)/.test(attr.value)) {
-            attr.value = prettierFormat(`for (${attr.value}) {}`, { ...options, parser: 'babel' })
+          if (isXForDirective(attr.value)) {
+            const value = attr.value.replace(/^(\s*)\(([\s\S]*?)\)/, '$1[$2]')
+
+            attr.value = prettierFormat(`for (${value}) {}`, { ...options, parser: 'babel' })
               .trim()
               .replace('for (', '')
               .replace(/\)\s*{\s*}$/, '')
+              .replace(/^(\s*)\[([\s\S]*?)\]/, '$1($2)')
           } else {
             attr.value = prettierFormat(`const $ = ${attr.value}`, { ...options, parser: 'babel' })
               .replace('const $ = ', '')

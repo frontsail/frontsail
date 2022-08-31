@@ -28,6 +28,17 @@ export function isAttributeName(name: string): boolean {
 }
 
 /**
+ * Check if a component `name` matches the required pattern.
+ *
+ * @example
+ * isComponentName('foo-bar/baz') // true
+ * isComponentName('/foo-bar/baz') // false
+ */
+export function isComponentName(name: string): boolean {
+  return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/.test(name)
+}
+
+/**
  * Check if a `text` is enclosed by a character included in the `characters` array.
  *
  * @example
@@ -36,17 +47,6 @@ export function isAttributeName(name: string): boolean {
  */
 export function isEnclosed(text: string, characters: string[]): boolean {
   return text.length >= 2 && text[0] === text.slice(-1) && characters.includes(text[0])
-}
-
-/**
- * Check if a `text` is a safe slug.
- *
- * @example
- * isSafeSlug('foo-bar') // true
- * isSafeSlug('0-foo-bar') // false
- */
-export function isSafeSlug(text: string): boolean {
-  return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(text)
 }
 
 /**
@@ -70,17 +70,6 @@ export function isGlobalName(name: string): boolean {
       '$supports',
     ].includes(name) && /^\$[a-z0-9][a-zA-Z0-9]*$/.test(name)
   )
-}
-
-/**
- * Check if a component `name` matches the required pattern.
- *
- * @example
- * isComponentName('foo-bar/baz') // true
- * isComponentName('/foo-bar/baz') // false
- */
-export function isComponentName(name: string): boolean {
-  return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/.test(name)
 }
 
 /**
@@ -171,4 +160,26 @@ export function isPropertyName(name: string): boolean {
       'yield',
     ].includes(name) && /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(name)
   )
+}
+
+/**
+ * Check if a `text` is a safe slug.
+ *
+ * @example
+ * isSafeSlug('foo-bar') // true
+ * isSafeSlug('0-foo-bar') // false
+ */
+export function isSafeSlug(text: string): boolean {
+  return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(text)
+}
+
+/**
+ * Check if a `text` is an `x-for` Alpine directive.
+ *
+ * @example
+ * isXForDirectove('(color, index) in colors') // true
+ * isXForDirectove('colors') // false
+ */
+export function isXForDirective(text: string): boolean {
+  return /(?:[\s\S]*?)\s+(?:in|of)\s+(?:[\s\S]*)/.test(text)
 }

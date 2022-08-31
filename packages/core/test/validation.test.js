@@ -8,6 +8,7 @@ import {
   isPagePath,
   isPropertyName,
   isSafeSlug,
+  isXForDirective,
 } from '..'
 
 test('alpine directive validation', () => {
@@ -58,45 +59,6 @@ test('attribute name validation', () => {
   expect(isAttributeName(':')).toBe(false)
 })
 
-test('enclosed text validation', () => {
-  expect(isEnclosed(`"foo"`, [`"`])).toBe(true)
-  expect(isEnclosed(`"foo"`, [`"`, `'`])).toBe(true)
-  expect(isEnclosed(`_foo_bar_`, [`_`])).toBe(true)
-  expect(isEnclosed(`"foo"`, [`'`])).toBe(false)
-  expect(isEnclosed(`foo"`, [`"`])).toBe(false)
-  expect(isEnclosed(`"foo`, [`"`])).toBe(false)
-  expect(isEnclosed(`"foo" `, [`"`])).toBe(false)
-  expect(isEnclosed(` "foo"`, [`"`])).toBe(false)
-  expect(isEnclosed(`"foo'`, [`"`, `'`])).toBe(false)
-})
-
-test('safe slug validation', () => {
-  expect(isSafeSlug('foo')).toBe(true)
-  expect(isSafeSlug('foo-bar')).toBe(true)
-  expect(isSafeSlug('foo-bar-baz')).toBe(true)
-  expect(isSafeSlug('foo1-bar1')).toBe(true)
-  expect(isSafeSlug('Foo')).toBe(false)
-  expect(isSafeSlug('foo--bar')).toBe(false)
-  expect(isSafeSlug('fooBar')).toBe(false)
-  expect(isSafeSlug('-foo')).toBe(false)
-  expect(isSafeSlug('1foo')).toBe(false)
-  expect(isSafeSlug('foo-')).toBe(false)
-  expect(isSafeSlug('$foo')).toBe(false)
-})
-
-test('global name validation', () => {
-  expect(isGlobalName('$foo')).toBe(true)
-  expect(isGlobalName('$fooBar')).toBe(true)
-  expect(isGlobalName('$fooBarBaz')).toBe(true)
-  expect(isGlobalName('$2foo')).toBe(true)
-  expect(isGlobalName('$foo-bar')).toBe(false)
-  expect(isGlobalName('$foo_bar')).toBe(false)
-  expect(isGlobalName('$Foo')).toBe(false)
-  expect(isGlobalName('$media')).toBe(false)
-  expect(isGlobalName('$keyframes')).toBe(false)
-  expect(isGlobalName('foo')).toBe(false)
-})
-
 test('component name validation', () => {
   expect(isComponentName('foo')).toBe(true)
   expect(isComponentName('foo/bar')).toBe(true)
@@ -110,6 +72,31 @@ test('component name validation', () => {
   expect(isComponentName('foo-')).toBe(false)
   expect(isComponentName('1foo')).toBe(false)
   expect(isComponentName('$foo')).toBe(false)
+})
+
+test('enclosed text validation', () => {
+  expect(isEnclosed(`"foo"`, [`"`])).toBe(true)
+  expect(isEnclosed(`"foo"`, [`"`, `'`])).toBe(true)
+  expect(isEnclosed(`_foo_bar_`, [`_`])).toBe(true)
+  expect(isEnclosed(`"foo"`, [`'`])).toBe(false)
+  expect(isEnclosed(`foo"`, [`"`])).toBe(false)
+  expect(isEnclosed(`"foo`, [`"`])).toBe(false)
+  expect(isEnclosed(`"foo" `, [`"`])).toBe(false)
+  expect(isEnclosed(` "foo"`, [`"`])).toBe(false)
+  expect(isEnclosed(`"foo'`, [`"`, `'`])).toBe(false)
+})
+
+test('global name validation', () => {
+  expect(isGlobalName('$foo')).toBe(true)
+  expect(isGlobalName('$fooBar')).toBe(true)
+  expect(isGlobalName('$fooBarBaz')).toBe(true)
+  expect(isGlobalName('$2foo')).toBe(true)
+  expect(isGlobalName('$foo-bar')).toBe(false)
+  expect(isGlobalName('$foo_bar')).toBe(false)
+  expect(isGlobalName('$Foo')).toBe(false)
+  expect(isGlobalName('$media')).toBe(false)
+  expect(isGlobalName('$keyframes')).toBe(false)
+  expect(isGlobalName('foo')).toBe(false)
 })
 
 test('page path validation', () => {
@@ -143,4 +130,29 @@ test('property name validation', () => {
   expect(isPropertyName('true')).toBe(false)
   expect(isPropertyName('false')).toBe(false)
   expect(isPropertyName('const')).toBe(false)
+})
+
+test('safe slug validation', () => {
+  expect(isSafeSlug('foo')).toBe(true)
+  expect(isSafeSlug('foo-bar')).toBe(true)
+  expect(isSafeSlug('foo-bar-baz')).toBe(true)
+  expect(isSafeSlug('foo1-bar1')).toBe(true)
+  expect(isSafeSlug('Foo')).toBe(false)
+  expect(isSafeSlug('foo--bar')).toBe(false)
+  expect(isSafeSlug('fooBar')).toBe(false)
+  expect(isSafeSlug('-foo')).toBe(false)
+  expect(isSafeSlug('1foo')).toBe(false)
+  expect(isSafeSlug('foo-')).toBe(false)
+  expect(isSafeSlug('$foo')).toBe(false)
+})
+
+test('x-for directive validation', () => {
+  expect(isXForDirective('(color, index) in colors')).toBe(true)
+  expect(isXForDirective('color in colors')).toBe(true)
+  expect(isXForDirective('(color) in colors')).toBe(true)
+  expect(isXForDirective('(color, index) of colors')).toBe(true)
+  expect(isXForDirective('color of colors')).toBe(true)
+  expect(isXForDirective('(color) of colors')).toBe(true)
+  expect(isXForDirective('color from colors')).toBe(false)
+  expect(isXForDirective('colors')).toBe(false)
 })

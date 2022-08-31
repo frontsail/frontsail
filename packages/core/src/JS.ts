@@ -3,6 +3,7 @@ import { Node, parse } from 'acorn'
 import { findNodeAt, full, simple, SimpleVisitors } from 'acorn-walk'
 import { Diagnostics } from './Diagnostics'
 import { JSDiagnostics } from './types/js'
+import { isXForDirective } from './validation'
 
 /**
  * Parses and transforms a JavaScript string into an abstract syntax tree using
@@ -77,9 +78,12 @@ export class JS extends Diagnostics<JSDiagnostics> {
   constructor(js: string, alpineDirective: boolean = false) {
     super()
 
+    this._rawJS = js
+
     if (alpineDirective) {
-      if (/(?:[\s\S]*?)\s+(?:in|of)\s+(?:[\s\S]*)/.test(js)) {
+      if (isXForDirective(js)) {
         this._prefix = 'for ('
+        js = js.replace(/^(\s*)\(([\s\S]*?)\)/, '$1[$3]')
         this._suffix = ') {}'
       } else {
         this._prefix = '() => { return '
@@ -87,8 +91,7 @@ export class JS extends Diagnostics<JSDiagnostics> {
       }
     }
 
-    this._rawJS = js
-    this._js = this._prefix + this._rawJS + this._suffix
+    this._js = this._prefix + js + this._suffix
 
     try {
       this._ast = parse(this._js, { ecmaVersion: 2020 })
