@@ -57,10 +57,15 @@ export class Page extends Template {
    */
   constructor(path: string, html: string, project?: Project) {
     if (!isPagePath(path)) {
-      const suggestion = path
+      let suggestion = path
         .split('/')
+        .filter(Boolean)
         .map((part) => slugify(part, '-', true))
         .join('/')
+
+      if (!suggestion.startsWith('/')) {
+        suggestion = `/${suggestion}`
+      }
 
       throw new Error(`The page path '${path}' is not valid. Try with '${suggestion}'.`)
     }
