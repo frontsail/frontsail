@@ -1,8 +1,9 @@
 import { spawn } from 'child_process'
 
-const packages = ['utils', 'core', 'wright', 'cli']
+const packages = ['utils', 'core', 'wright', 'hooks', 'cli']
+let index = 0
 
-function start(index) {
+function run() {
   spawn(`npm run dev:${packages[index]}`, { stdio: 'pipe', shell: true }).stdout.addListener(
     'data',
     (data) => {
@@ -10,10 +11,11 @@ function start(index) {
       process.stdout.write(message)
 
       if (message.includes('Found 0 errors.') && index + 1 < packages.length) {
-        start(++index)
+        index++
+        run()
       }
     },
   )
 }
 
-start(0)
+run()
