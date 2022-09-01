@@ -6,7 +6,7 @@ import {
   debounce,
   fillObject,
   lineColumnToOffset,
-  offsetToLineColumn,
+  offsetToLineColumn
 } from '@frontsail/utils'
 import chokidar from 'chokidar'
 import CleanCSS from 'clean-css'
@@ -172,7 +172,7 @@ export class Wright {
 
     fs.outputFileSync(
       `${this._dist}${pagePath}.html`,
-      html || '<!DOCTYPE html><html><head></head><body></body></html>',
+      html.includes('</html>') ? html : `<!DOCTYPE html><html><head></head><body>${html}</body></html>`,
     )
   }
 
