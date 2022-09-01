@@ -1,4 +1,5 @@
 import { clearArray, hash, uniqueArray } from '@frontsail/utils'
+import { marked } from 'marked'
 import { Attribute } from 'parse5/dist/common/token'
 import { Element, Template as TemplateNode } from 'parse5/dist/tree-adapters/default'
 import { CSS } from './CSS'
@@ -406,7 +407,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
 
     let inlineCSSIndex: number = 1
 
-    // Resolve attributes
+    // Resolve attributes and markdown
     for (const node of html.walk()) {
       if (HTML.adapter.isElementNode(node)) {
         let ifAttribute: Attribute | undefined = node.attrs.find((attr) => attr.name === 'if')
@@ -452,12 +453,31 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
 
           inlineCSSIndex++
         }
+
+        // Resolve markdown
+        if (node.tagName === 'markdown') {
+          const mdHTML = html
+            .getRawHTML()
+            .slice(
+              node.sourceCodeLocation!.startTag!.endOffset,
+              node.sourceCodeLocation!.endTag!.startOffset,
+            )
+            .split('\n')
+            .map((line) => line.trim())
+            .join('\n')
+
+          marked.parse(mdHTML, (error, innerHTML) => {
+            if (!error) {
+              HTML.replaceElement(node, ...new HTML(innerHTML).getRootNodes())
+            }
+          })
+        }
       }
     }
 
-    // Resolve included components
     for (const node of html.walk()) {
       if (HTML.adapter.isElementNode(node)) {
+        // Resolve included components
         if (node.tagName === 'include') {
           const componentName = node.attrs.find((attr) => attr.name === 'component')?.value
 

@@ -47,6 +47,17 @@ export const starter = {
         ],
       },
       {
+        name: 'markdown',
+        description:
+          'Allows use of Markdown syntax, which is parsed into HTML during the build process.',
+        references: [
+          {
+            name: 'FrontSail Documentation',
+            url: 'https://www.frontsail.com/docs/markdown',
+          },
+        ],
+      },
+      {
         name: 'outlet',
         description:
           'A placeholder that FrontSail dynamically fills with content from an `<include>` element.',

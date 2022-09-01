@@ -31,9 +31,11 @@
     "@frontsail/utils": "^0.1.2",
     "acorn": "^8.8.0",
     "acorn-walk": "^8.2.0",
+    "marked": "^4.1.0",
     "parse5": "^7.0.0"
   },
   "devDependencies": {
+    "@types/marked": "^4.0.6",
     "concurrently": "^7.3.0",
     "cross-env": "^7.0.3",
     "esbuild": "^0.15.5",

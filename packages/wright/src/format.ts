@@ -116,8 +116,32 @@ function formatCSS(code: string): string {
  * @throws an error if the format fails.
  */
 function formatHTML(html: HTML): string {
+  const markdown: string[] = []
+  let markdownIndex: number = 0
+
   for (const node of html.walk()) {
     if (HTML.adapter.isElementNode(node)) {
+      if (node.tagName === 'markdown') {
+        markdown.push(
+          prettierFormat(
+            html
+              .getRawHTML()
+              .slice(
+                node.sourceCodeLocation!.startTag!.endOffset,
+                node.sourceCodeLocation!.endTag!.startOffset,
+              ),
+            { ...options, parser: 'markdown' },
+          ).trim(),
+        )
+
+        node.childNodes.splice(0, node.childNodes.length)
+        HTML.adapter.insertText(node, '\n')
+        HTML.adapter.appendChild(node, HTML.createElement('mdp', { id: `mdp${markdownIndex}` }))
+        HTML.adapter.insertText(node, '\n')
+
+        markdownIndex++
+      }
+
       for (const attr of node.attrs) {
         // Sort css and Alpine attributes
         if (attr.name === 'css') {
@@ -163,8 +187,22 @@ function formatHTML(html: HTML): string {
     }
   }
 
+  // Format HTML
+  let formattedHTML = prettierFormat(html.toString(), { ...options, parser: 'html' })
+
+  // Replace md placeholders
+  formattedHTML = formattedHTML.replace(
+    /^(\s*)<mdp id="mdp([0-9]+)"><\/mdp>$/gm,
+    (_, indent, index) => {
+      return markdown[index]
+        .split('\n')
+        .map((line) => indent + line.trim())
+        .join('\n')
+    },
+  )
+
   // Fix indents, format mustaches, remove empty attribute values, and return
-  return prettierFormat(html.toString(), { ...options, parser: 'html' })
+  return formattedHTML
     .replace(
       /(( *)[^\n]*?([@:a-z0-9\.-]+)="{\n)(.+?)\n(\s*}")/gs,
       (match, start: string, indent: string, name: string, between: string, end: string) => {
@@ -195,6 +233,9 @@ function resolveParser(filePath: string): Options['parser'] {
     : undefined
 }
 
+/**
+ * Sort HTML `attributes` by their name in a specified `order`.
+ */
 function sortAttributes(
   attribues: { name: string; value: string }[],
   order: (string | RegExp)[],

@@ -989,7 +989,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
 
       code = html.toString()
     } else {
-      code = serialize(this._ast).trim()
+      code = serialize(this._ast)
     }
 
     return code.trim().replace(/(css|(?:x-|:|@)[\$a-z0-9:\._-]+)="(.+?)"/gs, (_, name, value) => {

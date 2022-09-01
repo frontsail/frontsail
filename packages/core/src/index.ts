@@ -32,3 +32,9 @@ export {
   isSafeSlug,
   isXForDirective,
 } from './validation'
+import { marked } from 'marked'
+
+// Set default `marked` options
+const renderer = new marked.Renderer()
+renderer.heading = (text, level) => `<h${level}>${text}</h${level}>`
+marked.setOptions({ renderer, silent: true })
