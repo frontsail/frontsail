@@ -180,7 +180,7 @@ export class MainMenuPrompt {
             message: "Do you wan't check the diagnostics?",
             choices: [
               { name: 'Yes (Start development mode)', value: true },
-              { name: 'No  (Go to main menu)', value: false },
+              { name: 'No  (Return to main menu)', value: false },
             ],
             default: true,
           },
