@@ -222,13 +222,16 @@ export class DevelopPrompt {
           contents.push(`§rb(Error) ${diagnostic.message}`)
         }
 
-        contents.push(
-          '',
-          `§b(${diagnostic.relativePath}${codePosition}) ${diagnostic.from}-${diagnostic.to}`,
-        )
+        contents.push('', `§b(${diagnostic.relativePath}${codePosition})`)
 
         if (diagnostic.preview) {
-          contents.push(...diagnostic.preview.split('\n').slice(0, 5))
+          const color = diagnostic.severity === 'warning' ? 'y' : 'r'
+          const coloredPreview = diagnostic.preview
+            .replace(/^( *\|\s*)(\^+)/gm, `$1§${color}($2)`)
+            .replace(/^(> *[0-9]*)( *\|)/gm, `§${color}($1)§d($2)`)
+            .replace(/^( *[0-9]* *\|)/gm, '§d($1)')
+
+          contents.push(...coloredPreview.split('\n').slice(0, 5))
         }
 
         contents.push(
