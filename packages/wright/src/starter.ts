@@ -136,9 +136,6 @@ export const starter = {
       cli: 'frontsail',
       build: 'frontsail --build',
     },
-    dependencies: {
-      '@frontsail/hooks': `^${packageJSON.version}`,
-    },
     devDependencies: {
       '@frontsail/cli': `^${packageJSON.version}`,
       'alpinejs': '^3.10.3',
