@@ -4,7 +4,12 @@ import args from 'args'
 import { build } from './build'
 import { clear, emptyLine, print, printLogo } from './helpers'
 import { InitialPrompt } from './InitialPrompt'
-import { hasEnoughTerminalSpace, hasMinimumNodeVersion } from './validation'
+import {
+  hasEnoughTerminalSpace,
+  hasMinimumNodeVersion,
+  hasNpmDependencies,
+  isFrontSailProject,
+} from './validation'
 
 let commandUsed: boolean = false
 
@@ -12,7 +17,26 @@ args
   .option('silent', 'Hide build logs')
   .command('build', 'Build project', (_, __, options: any) => {
     commandUsed = true
-    build(!!options.silent)
+
+    if (!isFrontSailProject()) {
+      if (!options.silent) {
+        emptyLine()
+        print(
+          'No FrontSail project was found in the current directory. Run §b(npx @frontsail/cli) to create a new project.',
+        )
+        emptyLine()
+      }
+    } else if (!hasNpmDependencies()) {
+      if (!options.silent) {
+        emptyLine()
+        print(
+          'This FrontSail project has missing npm dependencies. Run §b(npm i) or §b(npx @frontsail/cli) to install them.',
+        )
+        emptyLine()
+      }
+    } else {
+      build(!!options.silent)
+    }
   })
 
 args.parse(process.argv)
