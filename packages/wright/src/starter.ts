@@ -133,8 +133,8 @@ export const starter = {
     version: '0.1.0',
     type: 'module',
     scripts: {
-      cli: 'frontsail',
-      build: 'frontsail --build',
+      start: 'frontsail',
+      build: 'frontsail build',
     },
     devDependencies: {
       '@frontsail/cli': `^${packageJSON.version}`,

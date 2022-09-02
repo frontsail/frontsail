@@ -2,9 +2,8 @@ import { wright } from '@frontsail/wright'
 import { spawn } from 'child_process'
 import fs from 'fs-extra'
 import inquirer, { QuestionCollection } from 'inquirer'
-import ms from 'ms'
 import ora from 'ora'
-import { performance } from 'perf_hooks'
+import { build } from './build'
 import { DevelopPrompt } from './DevelopPrompt'
 import { awaitKeys, clear, emptyLine, print, printLogo } from './helpers'
 import { hasNpmDependencies, isEmptyWorkingDirectory, isFrontSailProject } from './validation'
@@ -170,99 +169,43 @@ export class InitialPrompt {
    * Handle the prompt answer 'build'.
    */
   protected async _onBuild(): Promise<void> {
-    let success: boolean
+    const success = await build()
 
-    if (fs.existsSync('frontsail.build.js')) {
-      emptyLine()
-      print(`Discovered custom build file. Running script §b(frontsail.build.js)...`)
-
-      const start = performance.now()
-      const exitCode = await new Promise<number | null>((resolve) => {
-        spawn('node frontsail.build.js --no-serve', { stdio: 'inherit', shell: true }).once(
-          'exit',
-          (code) => resolve(code),
-        )
-      })
-      const time = ms(Math.round(performance.now() - start))
-
-      success = exitCode === 0
-
-      emptyLine()
-      print(`Script finished in §b(${time}).`)
-    } else {
-      emptyLine()
-      const spinner = ora({ text: 'Just a moment...', discardStdin: false }).start()
-      const start = performance.now()
-
-      await wright.start('production')
-
-      const time = ms(Math.round(performance.now() - start))
-      const diagnostics = wright.getDiagnostics()
-
-      spinner.stop()
-
-      if (diagnostics.length === 0) {
-        success = true
-        print(`§gb(Bottoms up!) Build completed in §b(${time}).`)
-      } else {
-        let warnings: number = 0
-        let errors: number = 0
-
-        diagnostics.forEach((diagnostic) => {
-          if (diagnostic.severity === 'warning') {
-            warnings++
+    if (!fs.existsSync('frontsail.build.js') && !success) {
+      inquirer
+        .prompt<{ showDiagnostics: boolean }>([
+          {
+            type: 'list',
+            name: 'showDiagnostics',
+            message: "Do you wan't check the diagnostics?",
+            choices: [
+              { name: 'Yes (Start development mode)', value: true },
+              { name: 'No  (Go to main menu)', value: false },
+            ],
+            default: true,
+          },
+        ])
+        .then(async (answers) => {
+          if (answers.showDiagnostics) {
+            new DevelopPrompt()
           } else {
-            errors++
+            new InitialPrompt('fail')
           }
         })
+    } else {
+      print('§d(Press) §b(Enter) §d(to return to the main menu.)', false)
 
-        const prefix = `§${errors > 0 ? 'r' : 'y'}b(Close to the wind!)`
-        const problems =
-          (errors > 0 ? `§rb(${errors}) error${errors > 1 ? 's' : ''}` : '') +
-          (errors > 0 && warnings > 0 ? ' and ' : '') +
-          (warnings > 0 ? `§yb(${warnings}) warning${warnings > 1 ? 's' : ''}` : '')
+      await new Promise<void>((resolve) =>
+        awaitKeys({
+          return: () => {
+            resolve()
+            return true
+          },
+        }),
+      )
 
-        print(`${prefix} Build completed in §b(${time}) with ${problems}.`)
-        emptyLine()
-
-        inquirer
-          .prompt<{ showDiagnostics: boolean }>([
-            {
-              type: 'list',
-              name: 'showDiagnostics',
-              message: "Do you wan't check the diagnostics?",
-              choices: [
-                { name: 'Yes (Start development mode)', value: true },
-                { name: 'No  (Go to main menu)', value: false },
-              ],
-              default: true,
-            },
-          ])
-          .then(async (answers) => {
-            if (answers.showDiagnostics) {
-              new DevelopPrompt()
-            } else {
-              new InitialPrompt('fail')
-            }
-          })
-
-        return
-      }
+      new InitialPrompt(success ? 'success' : 'fail')
     }
-
-    emptyLine()
-    print('§d(Press) §b(Enter) §d(to return to the main menu.)', false)
-
-    await new Promise<void>((resolve) =>
-      awaitKeys({
-        return: () => {
-          resolve()
-          return true
-        },
-      }),
-    )
-
-    new InitialPrompt(success ? 'success' : 'fail')
   }
 
   /**
