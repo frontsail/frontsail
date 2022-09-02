@@ -3,7 +3,7 @@
 import args from 'args'
 import { build } from './build'
 import { clear, emptyLine, print, printLogo } from './helpers'
-import { InitialPrompt } from './InitialPrompt'
+import { MainMenuPrompt } from './MainMenuPrompt'
 import {
   hasEnoughTerminalSpace,
   hasMinimumNodeVersion,
@@ -85,6 +85,6 @@ if (!commandUsed) {
   // Show home screen
   //
   else {
-    new InitialPrompt()
+    new MainMenuPrompt()
   }
 }

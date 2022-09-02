@@ -14,7 +14,7 @@ import {
   printGap,
   Tab,
 } from './helpers'
-import { InitialPrompt } from './InitialPrompt'
+import { MainMenuPrompt } from './MainMenuPrompt'
 
 /**
  * Describes the possible tab values in this prompt.
@@ -86,7 +86,7 @@ export class DevelopPrompt {
     await wright.stop()
     this._stopServer()
     process.stdout.off('resize', this._refresh)
-    new InitialPrompt('back')
+    new MainMenuPrompt('back')
   }
 
   /**

@@ -41,7 +41,7 @@ interface StarterProjectOptions {
 /**
  * Displays the home interface.
  */
-export class InitialPrompt {
+export class MainMenuPrompt {
   /**
    * The situation (screen, prompt, or action) that occurred prior to this prompt.
    */
@@ -189,7 +189,7 @@ export class InitialPrompt {
           if (answers.showDiagnostics) {
             new DevelopPrompt()
           } else {
-            new InitialPrompt('fail')
+            new MainMenuPrompt('fail')
           }
         })
     } else {
@@ -204,7 +204,7 @@ export class InitialPrompt {
         }),
       )
 
-      new InitialPrompt(success ? 'success' : 'fail')
+      new MainMenuPrompt(success ? 'success' : 'fail')
     }
   }
 
@@ -230,7 +230,7 @@ export class InitialPrompt {
    */
   protected async _onNpmInstall(): Promise<void> {
     const success = await this._initStarterProject({ files: false, git: false, npm: true })
-    new InitialPrompt(success ? 'success' : 'fail')
+    new MainMenuPrompt(success ? 'success' : 'fail')
   }
 
   /**
@@ -239,7 +239,7 @@ export class InitialPrompt {
   protected async _onNewProject(): Promise<void> {
     if (isEmptyWorkingDirectory()) {
       const success = await this._initStarterProject()
-      new InitialPrompt(success ? 'success' : 'fail')
+      new MainMenuPrompt(success ? 'success' : 'fail')
     } else {
       emptyLine()
       print(`It seems like the current directory (${process.cwd()}) is not empty...`)
@@ -262,9 +262,9 @@ export class InitialPrompt {
           if (answers.clean) {
             wright.clearCurrentDirectory()
             const success = await this._initStarterProject()
-            new InitialPrompt(success ? 'success' : 'fail')
+            new MainMenuPrompt(success ? 'success' : 'fail')
           } else {
-            new InitialPrompt('back')
+            new MainMenuPrompt('back')
           }
         })
     }
