@@ -30,7 +30,7 @@ args
       if (!options.silent) {
         emptyLine()
         print(
-          'This FrontSail project has missing npm dependencies. Run §b(npm i) or §b(npx @frontsail/cli) to install them.',
+          'This FrontSail project is missing npm dependencies. Run §b(npm i) or §b(npx @frontsail/cli) to install them.',
         )
         emptyLine()
       }
