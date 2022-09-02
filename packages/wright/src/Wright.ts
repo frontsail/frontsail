@@ -1,12 +1,12 @@
 import { codeFrameColumns } from '@babel/code-frame'
-import { Project } from '@frontsail/core'
+import { isPagePath, Project } from '@frontsail/core'
 import {
   bind,
   clearArray,
   debounce,
   fillObject,
   lineColumnToOffset,
-  offsetToLineColumn
+  offsetToLineColumn,
 } from '@frontsail/utils'
 import chokidar from 'chokidar'
 import CleanCSS from 'clean-css'
@@ -71,7 +71,7 @@ export class Wright {
   /**
    * A random string appended to the filenames of the built scripts and styles.
    */
-  protected _buildHash: string = customAlphabet('1234567890abcdef', 10)()
+  protected _buildHash: string = customAlphabet('01234567890abcdefghijklmnopqrstuvwxyz', 10)()
 
   /**
    * `Chokidar` watcher for file changes in the working directory.
@@ -93,6 +93,10 @@ export class Wright {
    */
   events = new EventEmitter()
 
+  /**
+   * Add `Project` `diagnostics` to the local collection and convert them to
+   * `FileDiagnostic` types.
+   */
   protected _addDiagnostics(...diagnostics: Partial<FileDiagnostic>[]): void {
     diagnostics.forEach((diagnostic) => {
       const prepared = fillObject(diagnostic, {
@@ -106,7 +110,15 @@ export class Wright {
         preview: '',
       }) as FileDiagnostic
 
-      const code = prepared.relativePath ? fs.readFileSync(prepared.relativePath, 'utf-8') : ''
+      let code: string = ''
+
+      if (prepared.relativePath.startsWith('~')) {
+        try {
+          code = this._project.getPage(prepared.relativePath.slice(1)).getRawHTML()
+        } catch (_) {}
+      } else if (prepared.relativePath && fs.existsSync(prepared.relativePath)) {
+        code = prepared.relativePath ? fs.readFileSync(prepared.relativePath, 'utf-8') : ''
+      }
 
       if (code && prepared.start[0] === -1 && prepared.from > -1) {
         const { start, end } = offsetToLineColumn(code, prepared.from, prepared.to)
@@ -114,19 +126,15 @@ export class Wright {
         prepared.end = end
       }
 
-      if (!prepared.preview && prepared.relativePath && fs.existsSync(prepared.relativePath)) {
-        const code = fs.readFileSync(prepared.relativePath, 'utf-8')
-
-        if (code.trim()) {
-          prepared.preview = codeFrameColumns(
-            code,
-            {
-              start: { line: prepared.start[0], column: prepared.start[1] },
-              end: { line: prepared.end[0], column: prepared.end[1] },
-            },
-            { linesAbove: 1, linesBelow: 4 },
-          )
-        }
+      if (!prepared.preview && prepared.relativePath && code.trim()) {
+        prepared.preview = codeFrameColumns(
+          code,
+          {
+            start: { line: prepared.start[0], column: prepared.start[1] },
+            end: { line: prepared.end[0], column: prepared.end[1] },
+          },
+          { linesAbove: 1, linesBelow: 4 },
+        )
       }
 
       this._diagnostics.push(prepared)
@@ -135,44 +143,27 @@ export class Wright {
   }
 
   /**
-   * Build the project files in the local `dist` directory. The builder will continue
-   * to watch for file changes if the `mode` is set to 'development'. In 'production'
-   * builds all output files are optimized/minified.
-   */
-  async build(mode: 'development' | 'production'): Promise<void> {
-    this._project = new Project().setEnvironment(mode)
-
-    this._ensureProjectFiles()
-    this._updateConfig()
-    this._clearAllDiagnostics()
-    this._setGlobals()
-    this._populate()
-    this._lintTemplates()
-
-    await this._rebuild()
-
-    if (this._project.isDevelopment()) {
-      await this._startWatching()
-    }
-  }
-
-  /**
    * Render and build a project page in the local `dist` directory.
    */
-  protected _buildPage(pagePath: string): void {
-    let html = this._project.renderForce(pagePath)
+  buildPage(pagePath: string): void {
+    let html = this._project
+      .renderForce(pagePath)
+      .replace(/"\/script\.js"/g, `"/${this._getScriptsOutname()}"`)
+      .replace(/"\/style\.css"/g, `"/${this._getStylesOutname()}"`)
 
     if (this._subdirectory) {
       html = html.replace(/(data|href|srcset|src)="(\/.+)"/g, `$1="/${this._subdirectory}$2"`)
     }
 
     if (html.startsWith('<html')) {
-      html = `<!DOCTYPE html>\n${html}`
+      html = `<!DOCTYPE html>${html}`
     }
 
     fs.outputFileSync(
       `${this._dist}${pagePath}.html`,
-      html.includes('</html>') ? html : `<!DOCTYPE html><html><head></head><body>${html}</body></html>`,
+      html.includes('</html>')
+        ? html
+        : `<!DOCTYPE html><html><head></head><body>${html}</body></html>`,
     )
   }
 
@@ -474,14 +465,18 @@ export class Wright {
   /**
    * Lint a page with the path `pagePath` and store its diagnostics if any.
    */
-  protected _lintPage(pagePath: string): this {
-    this._clearDiagnostics(`src/pages${pagePath}.html`)._addDiagnostics(
+  protected _lintPage(pagePath: string, relativePath?: string): this {
+    if (typeof relativePath !== 'string') {
+      relativePath = `src/pages${pagePath}.html`
+    }
+
+    this._clearDiagnostics(relativePath)._addDiagnostics(
       ...this._project
         .lintPage(pagePath, '*')
         .getPageDiagnostics(pagePath, '*')
         .map((diagnostic) => ({
           ...diagnostic,
-          relativePath: `src/pages${pagePath}.html`,
+          relativePath,
         })),
     )
 
@@ -491,7 +486,7 @@ export class Wright {
   /**
    * Lint all components and pages.
    */
-  protected _lintTemplates(): this {
+  lintTemplates(): this {
     this._project.listComponents().forEach((componentName) => this._lintComponent(componentName))
     this._project.listPages().forEach((pagePath) => this._lintPage(pagePath))
 
@@ -527,6 +522,13 @@ export class Wright {
   }
 
   /**
+   * Create a new FrontSail project.
+   */
+  newProject(mode: 'development' | 'production'): void {
+    this._project = new Project().setEnvironment(mode)
+  }
+
+  /**
    * Handle file changes from the local `src` directory and project configuration file.
    */
   @bind protected async _onFileChange(
@@ -542,7 +544,7 @@ export class Wright {
         this._format(normalizedPath)
       }
 
-      this._updateConfig(true)
+      this.updateConfig(true)
     }
     //
     // Globals
@@ -554,7 +556,7 @@ export class Wright {
         fs.outputJSONSync(normalizedPath, {})
       }
 
-      this._setGlobals(true)
+      this.setGlobals(true)
     }
     //
     // Scripts
@@ -635,7 +637,7 @@ export class Wright {
               const includers = this._project.getIncluders(componentName, true)
 
               includers.components.forEach((_name) => this._lintComponent(_name))
-              includers.pages.forEach((_path) => this._lintPage(_path)._buildPage(_path))
+              includers.pages.forEach((_path) => this._lintPage(_path).buildPage(_path))
             } catch (_) {}
           }
           //
@@ -653,7 +655,7 @@ export class Wright {
                 this._project.addPage(pagePath, fs.readFileSync(relativePath, 'utf-8'))
               }
 
-              this._lintPage(pagePath)._buildPage(pagePath)
+              this._lintPage(pagePath).buildPage(pagePath)
             } else if (eventName === 'unlink') {
               this._clearDiagnostics(normalizedPath)
               fs.removeSync(`${this._dist}/${match[2]}`)
@@ -683,7 +685,7 @@ export class Wright {
    * Walk through all assets and templates in the `src` directory and register them
    * in the working `Project` instance.
    */
-  protected _populate(): void {
+  populate(): void {
     glob.sync('src/assets/**/*').forEach((srcPath) => {
       const assetPath = srcPath.replace('src', '').toLowerCase()
 
@@ -726,20 +728,35 @@ export class Wright {
   /**
    * Rebuild all `dist` files.
    */
-  protected async _rebuild(): Promise<void> {
+  async rebuild(): Promise<void> {
     this.clearDistDirectory()
 
     this._project.listAssets().forEach((path) => fs.copySync(`src${path}`, `${this._dist}${path}`))
-    this._project.listPages().forEach((path) => this._buildPage(path))
+    this._project.listPages().forEach((path) => this.buildPage(path))
 
     await this._buildScripts()
     this._buildStyles()
   }
 
   /**
+   * Remove a single custom page.
+   */
+  removePage(pagePath: string): void {
+    this._clearDiagnostics(`~${pagePath}`)
+
+    if (isPagePath(pagePath)) {
+      fs.removeSync(`${this._dist}${pagePath}.html`)
+    }
+
+    try {
+      this._project.removePage(pagePath)
+    } catch (_) {}
+  }
+
+  /**
    * Set the globals variables in the project from the local `globals.json` file.
    */
-  protected _setGlobals(rebuild: boolean = false): void {
+  setGlobals(rebuild: boolean = false): void {
     const json = fs.readJsonSync('src/globals.json', { throws: false })
 
     this._clearDiagnostics('src/globals.json')
@@ -767,8 +784,46 @@ export class Wright {
     }
 
     if (rebuild) {
-      this._lintTemplates()
-      this._rebuild()
+      this.lintTemplates()
+      this.rebuild()
+    }
+  }
+
+  /**
+   * Add or update a single custom page.
+   */
+  setPage(pagePath: string, html: string): void {
+    try {
+      if (this._project.hasPage(pagePath)) {
+        this._project.updatePage(pagePath, html)
+      } else {
+        this._project.addPage(pagePath, html)
+      }
+
+      this._lintPage(pagePath, `~${pagePath}`)
+    } catch (e) {
+      this._addDiagnostics({ relativePath: `~${pagePath}`, message: e.message })
+    }
+  }
+
+  /**
+   * Build the project files in the local `dist` directory. The builder will continue
+   * to watch for file changes if the `mode` is set to 'development'. In 'production'
+   * builds all output files are optimized/minified.
+   */
+  async start(mode: 'development' | 'production'): Promise<void> {
+    this.newProject(mode)
+    this._ensureProjectFiles()
+    this.updateConfig()
+    this._clearAllDiagnostics()
+    this.setGlobals()
+    this.populate()
+    this.lintTemplates()
+
+    await this.rebuild()
+
+    if (this._project.isDevelopment()) {
+      await this._startWatching()
     }
   }
 
@@ -818,7 +873,7 @@ export class Wright {
   /**
    * Set the builder settings from the local `frontsail.config.json` file.
    */
-  protected _updateConfig(rebuildOnChange: boolean = false): void {
+  updateConfig(rebuildOnChange: boolean = false): void {
     const json = fs.readJsonSync('frontsail.config.json', { throws: false })
 
     // @todo JSON AST
@@ -835,7 +890,7 @@ export class Wright {
             this._dist = `dist/${this._subdirectory}`
 
             if (rebuildOnChange) {
-              this._rebuild()
+              this.rebuild()
             }
           }
         }

@@ -91,6 +91,8 @@ export function format(message: string): string {
         return pc.dim(text)
       case 'g':
         return pc.green(text)
+      case 'gb':
+        return pc.bgGreen(text)
       case 'l':
         return pc.gray(text)
       case 'li':

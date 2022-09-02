@@ -169,13 +169,16 @@ export class DevelopPrompt {
       stats.forEach((group) => {
         if (typeof group === 'object') {
           if (group.diagnostics.length > 0) {
-            const errors = group.diagnostics.filter((diagnostic) => {
-              return diagnostic.severity === 'error'
-            }).length
+            let warnings: number = 0
+            let errors: number = 0
 
-            const warnings = group.diagnostics.filter((diagnostic) => {
-              return diagnostic.severity === 'warning'
-            }).length
+            group.diagnostics.forEach((diagnostic) => {
+              if (diagnostic.severity === 'warning') {
+                warnings++
+              } else {
+                errors++
+              }
+            })
 
             const problems =
               (errors > 0 ? `${errors} error${errors > 1 ? 's' : ''}` : '') +
@@ -219,7 +222,10 @@ export class DevelopPrompt {
           contents.push(`§rb(Error) ${diagnostic.message}`)
         }
 
-        contents.push('', `§b(${diagnostic.relativePath}${codePosition})`)
+        contents.push(
+          '',
+          `§b(${diagnostic.relativePath}${codePosition}) ${diagnostic.from}-${diagnostic.to}`,
+        )
 
         if (diagnostic.preview) {
           contents.push(...diagnostic.preview.split('\n').slice(0, 5))
@@ -318,7 +324,7 @@ export class DevelopPrompt {
    * Start watchers and attach event listeners for this prompt.
    */
   protected async _subscribe(): Promise<void> {
-    await wright.build('development')
+    await wright.start('development')
     wright.events.addListener('diagnostics', this._refresh)
     wright.events.addListener('stats', this._refresh)
 

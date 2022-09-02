@@ -1,12 +1,9 @@
 {
-  "name": "@frontsail/cli",
-  "version": "0.1.2",
-  "description": "Command line interface for managing FrontSail projects.",
+  "name": "@frontsail/hooks",
+  "version": "0.1.0",
+  "description": "Production build utilities for FrontSail projects.",
   "type": "module",
   "main": "dist/index.cjs",
-  "bin": {
-    "frontsail": "dist/index.cjs"
-  },
   "types": "types/index.d.ts",
   "scripts": {
     "build": "rimraf dist types && node esbuild.js && tsc",
@@ -24,7 +21,7 @@
   "bugs": {
     "url": "https://github.com/frontsail/frontsail/issues"
   },
-  "homepage": "https://github.com/frontsail/frontsail/tree/main/packages/cli#readme",
+  "homepage": "https://github.com/frontsail/frontsail/tree/main/packages/hooks#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -32,26 +29,11 @@
     "node": ">=16.13.0"
   },
   "dependencies": {
-    "@frontsail/utils": "^0.1.2",
+    "@frontsail/core": "^0.1.2",
     "@frontsail/wright": "^0.1.2",
-    "browser-sync": "^2.27.10",
-    "fs-extra": "^10.1.0",
-    "inquirer": "^9.1.0",
-    "ms": "^2.1.3",
-    "ora": "^6.1.2",
-    "picocolors": "^1.0.0",
-    "portfinder": "^1.0.32",
-    "semver": "^7.3.7",
-    "server-destroy": "^1.0.1",
-    "table": "^6.8.0"
+    "fs-extra": "^10.1.0"
   },
   "devDependencies": {
-    "@types/browser-sync": "^2.26.3",
-    "@types/fs-extra": "^9.0.13",
-    "@types/inquirer": "^9.0.1",
-    "@types/ms": "^0.7.31",
-    "@types/semver": "^7.3.12",
-    "@types/server-destroy": "^1.0.1",
     "concurrently": "^7.3.0",
     "esbuild": "^0.15.5",
     "rimraf": "^3.0.2",

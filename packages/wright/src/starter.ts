@@ -1,5 +1,3 @@
-import * as packageJSON from '../package.json'
-
 /**
  * Starter project contents.
  */
@@ -136,8 +134,11 @@ export const starter = {
       cli: 'frontsail',
       build: 'frontsail --build',
     },
+    dependencies: {
+      '@frontsail/hooks': '^0.1.0',
+    },
     devDependencies: {
-      '@frontsail/cli': `^${packageJSON.version}`,
+      '@frontsail/cli': '^0.1.3',
       'alpinejs': '^3.10.3',
     },
   },
