@@ -533,7 +533,7 @@ export class Wright {
   }
 
   /**
-   * Handle file changes from the local `src` directory and project configuration file.
+   * Handle file changes from the local `src` directory and project configuration files.
    */
   @bind protected async _onFileChange(
     eventName: 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir',
@@ -541,6 +541,17 @@ export class Wright {
   ): Promise<void> {
     const normalizedPath = relativePath.replace(/\\/g, '/')
 
+    // Project files
+    //
+    if (
+      ['frontsail.build.js', 'package.json'].includes(normalizedPath) ||
+      /^src\/scripts\/.+\.js$/.test(normalizedPath)
+    ) {
+      if (eventName === 'add' || eventName === 'change') {
+        this._format(normalizedPath)
+      }
+    }
+    //
     // Config
     //
     if (normalizedPath === 'frontsail.config.json') {
@@ -863,11 +874,11 @@ export class Wright {
    * Watch for file changes in the `src` directory and add event listeners to handle
    * callbacks from the `chokidar` watcher.
    *
-   * Also watch for configuration changes.
+   * Also watch for configuration files.
    */
   protected async _startWatching(): Promise<void> {
     this._watcher = chokidar
-      .watch(['src/**/*', 'frontsail.config.json'], {
+      .watch(['src/**/*', 'frontsail.config.json', 'frontsail.build.js', 'package.json'], {
         awaitWriteFinish: { stabilityThreshold: 50 },
         ignoreInitial: true,
       })
