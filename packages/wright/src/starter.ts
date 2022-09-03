@@ -115,6 +115,7 @@ export const starter = {
   },
   gitignore: [
     '/dist/',
+    '/tmp/',
     'node_modules/',
     '.DS_Store',
     '.DS_Store?',

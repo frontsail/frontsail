@@ -70,6 +70,12 @@ export class Wright {
   protected _dist: string = 'dist'
 
   /**
+   * Relative path to the local `tmp` directory where the files will be prebuilt
+   * in production mode.
+   */
+  protected _tmp: string = 'tmp'
+
+  /**
    * A random string appended to the filenames of the built scripts and styles.
    */
   protected _buildHash: string = customAlphabet('01234567890abcdefghijklmnopqrstuvwxyz', 10)()
@@ -146,7 +152,7 @@ export class Wright {
   /**
    * Render and build a project page in the local `dist` directory.
    */
-  buildPage(pagePath: string): void {
+  buildPage(pagePath: string, tmp: boolean = false): void {
     let html = this._project
       .renderForce(pagePath)
       .replace(/"\/script\.js"/g, `"/${this._getScriptsOutname()}"`)
@@ -161,7 +167,7 @@ export class Wright {
     }
 
     fs.outputFileSync(
-      `${this._dist}${pagePath}.html`,
+      `${tmp ? this._tmp : this._dist}${pagePath}.html`,
       html.includes('</html>')
         ? html
         : `<!DOCTYPE html><html><head></head><body>${html}</body></html>`,
@@ -172,6 +178,8 @@ export class Wright {
    * Build the final scripts file in the local `dist` directory.
    */
   protected async _buildScripts(): Promise<void> {
+    const isProd = this._project.isProduction()
+
     let results: esbuild.BuildResult
     let code: string
 
@@ -181,17 +189,17 @@ export class Wright {
       results = await this._esbuild.rebuild().catch((reason) => reason)
     } else {
       const options: esbuild.BuildOptions = {
-        outdir: this._dist,
+        outdir: isProd ? this._tmp : this._dist,
         bundle: true,
         platform: 'neutral',
         mainFields: ['module', 'main'],
         logLevel: 'silent',
         write: false,
-        minify: this._project.isProduction(),
-        incremental: this._project.isDevelopment(),
+        minify: isProd,
+        incremental: !isProd,
       }
 
-      if (this._project.isProduction()) {
+      if (isProd) {
         options.stdin = {
           contents: "import './main.js'\n\n" + this._project.buildScripts(),
           resolveDir: 'src',
@@ -203,7 +211,7 @@ export class Wright {
 
       results = await esbuild.build(options).catch((reason) => reason)
 
-      if (this._project.isDevelopment()) {
+      if (!isProd) {
         this._esbuild = results
       }
     }
@@ -231,11 +239,11 @@ export class Wright {
     } else {
       code = results.outputFiles![0].text
 
-      if (this._project.isDevelopment()) {
+      if (!isProd) {
         code += `\n// src/components/**/*.html\n${this._project.buildScripts()}\n`
       }
 
-      fs.outputFileSync(`${this._dist}/${this._getScriptsOutname()}`, code)
+      fs.outputFileSync(`${isProd ? this._tmp : this._dist}/${this._getScriptsOutname()}`, code)
 
       this._emit('stats')
     }
@@ -245,6 +253,8 @@ export class Wright {
    * Build the final styles file in the local `dist` directory.
    */
   protected _buildStyles(): void {
+    const isProd = this._project.isProduction()
+
     this._clearDiagnostics(/^src\/main\.css$/)._addDiagnostics(
       ...this._project
         .setCustomCSS(fs.readFileSync('src/main.css', 'utf-8'))
@@ -258,7 +268,7 @@ export class Wright {
 
     let css = (this._cssReset ? cssReset.join('\n') : '') + this._project.buildStyles()
 
-    if (this._project.isProduction()) {
+    if (isProd) {
       const cleanCSS = new CleanCSS().minify(css)
 
       if (cleanCSS.errors.length === 0 && cleanCSS.warnings.length === 0) {
@@ -266,7 +276,7 @@ export class Wright {
       }
     }
 
-    fs.outputFileSync(`${this._dist}/${this._getStylesOutname()}`, css)
+    fs.outputFileSync(`${isProd ? this._tmp : this._dist}/${this._getStylesOutname()}`, css)
 
     this._emit('stats')
   }
@@ -744,13 +754,26 @@ export class Wright {
    * Rebuild all `dist` files.
    */
   async rebuild(): Promise<void> {
-    this.clearDistDirectory()
+    const isProd = this._project.isProduction()
 
-    this._project.listAssets().forEach((path) => fs.copySync(`src${path}`, `${this._dist}${path}`))
-    this._project.listPages().forEach((path) => this.buildPage(path))
+    fs.removeSync(this._tmp)
+
+    if (!isProd) {
+      this.clearDistDirectory()
+    }
+
+    this._project
+      .listAssets()
+      .forEach((path) => fs.copySync(`src${path}`, `${isProd ? this._tmp : this._dist}${path}`))
+    this._project.listPages().forEach((path) => this.buildPage(path, isProd))
 
     await this._buildScripts()
     this._buildStyles()
+
+    if (isProd) {
+      this.clearDistDirectory()
+      fs.moveSync(this._tmp, this._dist, { overwrite: true })
+    }
   }
 
   /**
