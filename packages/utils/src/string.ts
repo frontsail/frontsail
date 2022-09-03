@@ -1,4 +1,14 @@
 /**
+ * Convert a `text` to camelCase.
+ *
+ * @example
+ * camelize('Foo Bar') // 'fooBar'
+ */
+export function camelize(text: string): string {
+  return slugify(text).replace(/-./g, (match) => match[1].toUpperCase())
+}
+
+/**
  * Convert `html` special characters to their entity equivalents.
  *
  * @example

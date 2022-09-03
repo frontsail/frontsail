@@ -1,4 +1,10 @@
-import { escape, hash, slugify, split } from '..'
+import { camelize, escape, hash, slugify, split } from '..'
+
+test('camelize', () => {
+  expect(camelize('foo bar')).toBe('fooBar')
+  expect(camelize('FOO')).toBe('foo')
+  expect(camelize('SEO Friendly String!')).toBe('seoFriendlyString')
+})
 
 test('escape', () => {
   expect(escape('<div></div>')).toBe('&lt;div&gt;&lt;/div&gt;')
