@@ -3,6 +3,7 @@ export { CSS } from './CSS'
 export { Diagnostics } from './Diagnostics'
 export { HTML } from './HTML'
 export { JS } from './JS'
+export { JSON } from './JSON'
 export { Page } from './Page'
 export { Project } from './Project'
 export { ProjectDiagnostics } from './ProjectDiagnostics'
@@ -12,6 +13,7 @@ export { CSSDiagnostics, Modifier } from './types/css'
 export { AtLeastOne, WithWildcard } from './types/generic'
 export { AttributeValue, HTMLDiagnostics, MustacheTag } from './types/html'
 export { JSDiagnostics } from './types/js'
+export { JSONDiagnostics } from './types/json'
 export {
   CustomCSSDiagnostics,
   CustomJSDiagnostics,

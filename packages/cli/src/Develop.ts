@@ -213,19 +213,20 @@ export class Develop {
 
       if (diagnostic) {
         const index = diagnostics.indexOf(diagnostic) + 1
+        const color = diagnostic.severity === 'warning' ? 'y' : 'r'
+        const message = diagnostic.message.replace(/(['"]|<)(\S+)(?:\1|>)/gi, `§${color}($2)`)
         const codePosition =
           diagnostic.start[0] > -1 ? `:${diagnostic.start[0]}:${diagnostic.start[1]}` : ''
 
         if (diagnostic.severity === 'warning') {
-          contents.push(`§yb(Warning) ${diagnostic.message}`)
+          contents.push(`§yb(Warning) ${message}`)
         } else {
-          contents.push(`§rb(Error) ${diagnostic.message}`)
+          contents.push(`§rb(Error) ${message}`)
         }
 
         contents.push('', `§b(${diagnostic.relativePath}${codePosition})`)
 
         if (diagnostic.preview) {
-          const color = diagnostic.severity === 'warning' ? 'y' : 'r'
           const coloredPreview = diagnostic.preview
             .replace(/^( *\|\s*)(\^+)/gm, `$1§${color}($2)`)
             .replace(/^(> *[0-9]*)( *\|)/gm, `§${color}($1)§d($2)`)

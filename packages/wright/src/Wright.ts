@@ -1,7 +1,8 @@
 import { codeFrameColumns } from '@babel/code-frame'
-import { isPagePath, Project } from '@frontsail/core'
+import { isGlobalName, isPagePath, JSON as JSONAST, Project } from '@frontsail/core'
 import {
   bind,
+  camelize,
   clearArray,
   debounce,
   fillObject,
@@ -210,7 +211,7 @@ export class Wright {
     if (results.errors.length > 0 || results.warnings.length > 0) {
       results.errors.forEach((error) => {
         this._addDiagnostics({
-          message: error.text,
+          message: error.text + '.',
           severity: 'error',
           relativePath: error.location?.file,
           start: [error.location?.line ?? -1, (error.location?.column ?? -2) + 1],
@@ -220,7 +221,7 @@ export class Wright {
 
       results.warnings.forEach((warning) => {
         this._addDiagnostics({
-          message: warning.text,
+          message: warning.text + '.',
           severity: 'warning',
           relativePath: warning.location?.file,
           start: [warning.location?.line ?? -1, (warning.location?.column ?? -2) + 1],
@@ -760,35 +761,63 @@ export class Wright {
    * Set the globals variables in the project from the local `globals.json` file.
    */
   setGlobals(rebuild: boolean = false): void {
-    const json = fs.readJsonSync('src/globals.json', { throws: false })
+    const json = fs.readFileSync('src/globals.json', 'utf-8')
+    const ast = new JSONAST(json)
 
     this._clearDiagnostics('src/globals.json')
 
-    if (json && typeof json === 'object') {
+    if (ast.hasProblems('*')) {
+      this._addDiagnostics(
+        ...ast
+          .getDiagnostics('*')
+          .map((diagnostic) => ({ ...diagnostic, relativePath: 'src/globals.json' })),
+      )
+    } else {
       try {
+        const nodes = ast.getPropertyNodes()
         const globals: { [name: string]: string } = {}
 
-        for (const name in json) {
-          if (typeof json[name] === 'string') {
-            globals[name] = json[name]
+        for (const node of nodes) {
+          if (isGlobalName(node.key.value)) {
+            if (node.value.type === 'Literal' && typeof node.value.value === 'string') {
+              globals[node.key.value] = node.value.value
+            } else {
+              this._addDiagnostics({
+                relativePath: 'src/globals.json',
+                message: `The value of '${node.key.value}' must be a string.`,
+                severity: 'warning',
+                from: node.value.loc!.start.offset,
+                to: node.value.loc!.end.offset,
+              })
+            }
           } else {
+            const suggestion = '$' + camelize(node.key.value.replace(/([A-Z])/g, '-$1'))
+
             this._addDiagnostics({
-              message: `The global variable '${name}' must be strings.`,
-              severity: 'warning',
               relativePath: 'src/globals.json',
+              message: `The global variable name '${node.key.value}' is not valid. Try with '${suggestion}'.`,
+              severity: 'warning',
+              from: node.key.loc!.start.offset,
+              to: node.key.loc!.end.offset,
             })
           }
         }
 
         this._project.setGlobals(globals)
-      } catch (e) {
-        this._addDiagnostics({ message: e.message, relativePath: 'src/globals.json' })
-      }
-    }
 
-    if (rebuild) {
-      this.lintTemplates()
-      this.rebuild()
+        if (rebuild) {
+          this.lintTemplates()
+          this.rebuild()
+        }
+      } catch (e) {
+        this._addDiagnostics({
+          relativePath: 'src/globals.json',
+          message: e.message,
+          severity: 'error',
+          from: 0,
+          to: json.length,
+        })
+      }
     }
   }
 
@@ -817,8 +846,8 @@ export class Wright {
   async start(mode: 'development' | 'production'): Promise<void> {
     this.newProject(mode)
     this._ensureProjectFiles()
-    this.updateConfig()
     this._clearAllDiagnostics()
+    this.updateConfig()
     this.setGlobals()
     this.populate()
     this.lintTemplates()
@@ -877,38 +906,86 @@ export class Wright {
    * Set the builder settings from the local `frontsail.config.json` file.
    */
   updateConfig(rebuildOnChange: boolean = false): void {
-    const json = fs.readJsonSync('frontsail.config.json', { throws: false })
+    const json = fs.readFileSync('frontsail.config.json', 'utf-8')
+    const ast = new JSONAST(json)
 
-    // @todo JSON AST
-    if (json && typeof json === 'object') {
-      for (const option in json) {
-        //
-        // Subdirectory
-        //
-        if (option === 'subdirectory' && typeof json[option] === 'string') {
-          const subdirectory = json[option].replace(/^\//, '').replace(/\/$/, '')
+    this._clearDiagnostics('frontsail.config.json')
 
-          if (subdirectory !== this._subdirectory) {
-            this._subdirectory = subdirectory
-            this._dist = `dist/${this._subdirectory}`
+    if (ast.hasProblems('*')) {
+      this._addDiagnostics(
+        ...ast
+          .getDiagnostics('*')
+          .map((diagnostic) => ({ ...diagnostic, relativePath: 'frontsail.config.json' })),
+      )
+    } else {
+      try {
+        const nodes = ast.getPropertyNodes()
 
-            if (rebuildOnChange) {
-              this.rebuild()
+        for (const node of nodes) {
+          //
+          // Subdirectory
+          //
+          if (node.key.value === 'subdirectory') {
+            if (node.value.type === 'Literal' && typeof node.value.value === 'string') {
+              const subdirectory = node.value.value.replace(/^\//, '').replace(/\/$/, '')
+
+              if (subdirectory !== this._subdirectory) {
+                this._subdirectory = subdirectory
+                this._dist = `dist/${this._subdirectory}`
+
+                if (rebuildOnChange) {
+                  this.rebuild()
+                }
+              }
+            } else {
+              this._addDiagnostics({
+                relativePath: 'frontsail.config.json',
+                message: "The 'subdirectory' value must be a string.",
+                severity: 'error',
+                from: node.value.loc!.start.offset,
+                to: node.value.loc!.end.offset,
+              })
             }
           }
-        }
-        //
-        // CSS reset
-        //
-        else if (option === 'cssReset' && typeof json[option] === 'boolean') {
-          if (this._cssReset !== json[option]) {
-            this._cssReset = json[option]
+          //
+          // CSS reset
+          //
+          else if (node.key.value === 'cssReset') {
+            if (node.value.type === 'Literal' && typeof node.value.value === 'boolean') {
+              if (this._cssReset !== node.value.value) {
+                this._cssReset = node.value.value
 
-            if (rebuildOnChange) {
-              this._buildStyles()
+                if (rebuildOnChange) {
+                  this._buildStyles()
+                }
+              }
+            } else {
+              this._addDiagnostics({
+                relativePath: 'frontsail.config.json',
+                message: "The 'cssReset' value must be a boolean.",
+                severity: 'error',
+                from: node.value.loc!.start.offset,
+                to: node.value.loc!.end.offset,
+              })
             }
+          } else {
+            this._addDiagnostics({
+              relativePath: 'frontsail.config.json',
+              message: `Unknown option '${node.key.value}'.`,
+              severity: 'warning',
+              from: node.key.loc!.start.offset,
+              to: node.key.loc!.end.offset,
+            })
           }
         }
+      } catch (e) {
+        this._addDiagnostics({
+          relativePath: 'frontsail.config.json',
+          message: e.message,
+          severity: 'error',
+          from: 0,
+          to: json.length,
+        })
       }
     }
   }

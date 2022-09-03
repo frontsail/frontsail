@@ -218,7 +218,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
               const from = mustache.from + mustache.text.indexOf(mustache.variable)
 
               this.addDiagnostics('mustacheValues', {
-                message: 'Global variable does not exist.',
+                message: `Global variable '${mustache.variable}' does not exist.`,
                 severity: 'warning',
                 from,
                 to: from + mustache.variable.length,
@@ -362,7 +362,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
                     const cssAttributeRange = this._html.getAttributeValueRange(node, 'css')!
 
                     this.addDiagnostics('inlineCSS', {
-                      message: 'Global variable does not exist.',
+                      message: `Global variable '${global.variable}' does not exist.`,
                       severity: 'warning',
                       from: cssAttributeRange.from + global.from,
                       to: cssAttributeRange.from + global.to,

@@ -139,7 +139,7 @@ export abstract class ProjectDiagnostics {
       css.getGlobals().forEach((global) => {
         if (!(this as any).hasGlobal(global.variable)) {
           this.addCustomCSSDiagnostics('logical', {
-            message: 'Global variable does not exist.',
+            message: `Global variable '${global.variable}' does not exist.`,
             severity: 'warning',
             from: global.from,
             to: global.to,
