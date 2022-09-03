@@ -1,47 +1,32 @@
 import { wright } from '@frontsail/wright'
-import { spawn } from 'child_process'
 import fs from 'fs-extra'
 import inquirer, { QuestionCollection } from 'inquirer'
-import ora from 'ora'
-import { build } from './build'
-import { DevelopPrompt } from './DevelopPrompt'
-import { awaitKeys, clear, emptyLine, print, printLogo } from './helpers'
-import { hasNpmDependencies, isEmptyWorkingDirectory, isFrontSailProject } from './validation'
+import ora, { Ora } from 'ora'
+import semver from 'semver'
+import { build, initStarterProject } from './build'
+import { Develop } from './Develop'
+import { awaitKeys, clear, emptyLine, getCLIVersion, print, printLogo } from './helpers'
+import {
+  checkLatestVersion,
+  hasNpmDependencies,
+  isEmptyWorkingDirectory,
+  isFrontSailProject,
+} from './validation'
 
 /**
  * Describes the previous screen, prompt, or action.
  */
-type Previously = 'back' | 'fail' | 'none' | 'success'
+type Previously = 'back' | 'fail' | 'none' | 'projectCreated' | 'success'
 
 /**
  * Describes `inquirer` answers for this prompt.
  */
-type Answers = { action: 'build' | 'develop' | 'exit' | 'npmInstall' | 'newProject' }
-
-/**
- * Describes the options for initializing the starter project.
- */
-interface StarterProjectOptions {
-  /**
-   * Whether the starter project files should be created.
-   */
-  files: boolean
-
-  /**
-   * Whether to initialize git.
-   */
-  git: boolean
-
-  /**
-   * Whether to install the npm dependencies.
-   */
-  npm: boolean
-}
+type Answers = { action: 'build' | 'develop' | 'exit' | 'npmInstall' | 'newProject' | 'update' }
 
 /**
  * Displays the home interface.
  */
-export class MainMenuPrompt {
+export class MainMenu {
   /**
    * The situation (screen, prompt, or action) that occurred prior to this prompt.
    */
@@ -54,6 +39,7 @@ export class MainMenuPrompt {
     back: 'Aye aye! What else can I do?',
     fail: 'Down in the doldrums! What are we going to do now?',
     none: "Ahoy, Captain! What's your command?",
+    projectCreated: 'Land Ho! What shall we do next?',
     success: 'Well, that was a big hit! What shall we do next?',
   }
 
@@ -67,9 +53,20 @@ export class MainMenuPrompt {
    */
   constructor(previously: Previously = 'none') {
     this._previously = previously
+    this._init()
+  }
 
-    clear()
-    printLogo()
+  /**
+   * Initialize the prompt.
+   */
+  protected async _init(): Promise<void> {
+    let spinner: Ora | null = null
+    let title: string = ''
+
+    if (this._previously === 'none') {
+      emptyLine()
+      spinner = ora({ text: 'Getting underway...', discardStdin: false }).start()
+    }
 
     const question: QuestionCollection<Answers> = {
       type: 'list',
@@ -78,19 +75,27 @@ export class MainMenuPrompt {
     }
 
     if (isFrontSailProject()) {
-      // @todo check if local cli version is outdated
-
       if (hasNpmDependencies()) {
+        const additionalChoices: { name: string; value: string }[] = []
+        const newerVersion = await checkLatestVersion('@frontsail/cli', getCLIVersion())
+
+        if (newerVersion) {
+          additionalChoices.push({
+            name: 'Update FrontSail',
+            value: 'update',
+          })
+        }
+
         question.choices = [
           { name: 'Start developing', value: 'develop' },
           { name: 'Build project', value: 'build' },
+          ...additionalChoices,
           // @todo Deploy to server (only visible when .env variables DEPLOY_URL and DEPLOY_KEY are present)
           { name: 'Exit', value: 'exit' },
         ]
       } else {
         if (this._previously === 'none') {
-          print("I've found a FrontSail project in here but npm dependencies are missing.")
-          emptyLine()
+          title = "I've found a FrontSail project in here but npm dependencies are missing."
           question.message = 'What should I do?'
         }
 
@@ -106,63 +111,18 @@ export class MainMenuPrompt {
       ]
     }
 
+    spinner?.stop()
+
+    clear()
+    printLogo()
+
+    if (title) {
+      print(title)
+      emptyLine()
+    }
+
     this._questions.push(question)
     this._print()
-  }
-
-  /**
-   * Create starter project files in the current working directory, initialize git,
-   * and install npm dependencies.
-   *
-   * @returns whether the initialization was successful.
-   */
-  protected async _initStarterProject(
-    options: StarterProjectOptions = { files: true, git: true, npm: true },
-  ): Promise<boolean> {
-    emptyLine()
-
-    const spinner = ora({ text: 'Working on it...', discardStdin: false }).start()
-    let npmStatus: number | null = null
-
-    if (options.files) {
-      wright.initStarterProject()
-    }
-
-    if (options.git) {
-      await new Promise<void>((resolve) =>
-        spawn('git init', { shell: true }).once('exit', () => resolve()),
-      )
-    }
-
-    if (options.npm) {
-      npmStatus = await new Promise<number | null>((resolve) => {
-        spawn('npm i', { shell: true }).once('exit', (code) => resolve(code))
-      })
-    }
-
-    spinner.stop()
-
-    if (npmStatus === 1) {
-      print('§rb(Batten down the hatches!)')
-      print(
-        `There was an error installing npm dependencies. Try to install them manually to see where it went wrong.`,
-      )
-      emptyLine()
-      print('§d(Press) §b(Enter) §d(to return to the main menu.)', false)
-
-      await new Promise<void>((resolve) =>
-        awaitKeys({
-          return: () => {
-            resolve()
-            return true
-          },
-        }),
-      )
-
-      return false
-    }
-
-    return true
   }
 
   /**
@@ -187,9 +147,9 @@ export class MainMenuPrompt {
         ])
         .then(async (answers) => {
           if (answers.showDiagnostics) {
-            new DevelopPrompt()
+            new Develop()
           } else {
-            new MainMenuPrompt('fail')
+            new MainMenu('fail')
           }
         })
     } else {
@@ -204,7 +164,7 @@ export class MainMenuPrompt {
         }),
       )
 
-      new MainMenuPrompt(success ? 'success' : 'fail')
+      new MainMenu(success ? 'success' : 'fail')
     }
   }
 
@@ -212,7 +172,7 @@ export class MainMenuPrompt {
    * Handle the prompt answer 'develop'.
    */
   protected async _onDevelop(): Promise<void> {
-    new DevelopPrompt()
+    new Develop()
   }
 
   /**
@@ -229,8 +189,8 @@ export class MainMenuPrompt {
    * Handle the prompt answer 'npmInstall'.
    */
   protected async _onNpmInstall(): Promise<void> {
-    const success = await this._initStarterProject({ files: false, git: false, npm: true })
-    new MainMenuPrompt(success ? 'success' : 'fail')
+    const success = await initStarterProject({ npm: true, return: true })
+    new MainMenu(success ? 'success' : 'fail')
   }
 
   /**
@@ -238,8 +198,8 @@ export class MainMenuPrompt {
    */
   protected async _onNewProject(): Promise<void> {
     if (isEmptyWorkingDirectory()) {
-      const success = await this._initStarterProject()
-      new MainMenuPrompt(success ? 'success' : 'fail')
+      const success = await initStarterProject({ files: true, git: true, npm: true, return: true })
+      new MainMenu(success ? 'projectCreated' : 'fail')
     } else {
       emptyLine()
       print(`It seems like the current directory (${process.cwd()}) is not empty...`)
@@ -261,12 +221,56 @@ export class MainMenuPrompt {
         .then(async (answers) => {
           if (answers.clean) {
             wright.clearCurrentDirectory()
-            const success = await this._initStarterProject()
-            new MainMenuPrompt(success ? 'success' : 'fail')
+            const success = await initStarterProject({
+              files: true,
+              git: true,
+              npm: true,
+              return: true,
+            })
+            new MainMenu(success ? 'projectCreated' : 'fail')
           } else {
-            new MainMenuPrompt('back')
+            new MainMenu('back')
           }
         })
+    }
+  }
+
+  /**
+   * Handle the prompt answer 'update'.
+   */
+  protected async _onUpdate(): Promise<void> {
+    const packageJSON = fs.readJsonSync('package.json')
+
+    for (const dependencies of ['dependencies', 'devDependencies']) {
+      if (packageJSON[dependencies] && typeof packageJSON[dependencies] === 'object') {
+        for (const name in packageJSON[dependencies]) {
+          if (name.startsWith('@frontsail/')) {
+            const currentVersion = semver.coerce(packageJSON[dependencies][name])?.raw
+            const newerVersion = await checkLatestVersion(name, currentVersion ?? '0.0.0')
+
+            if (newerVersion) {
+              packageJSON[dependencies][name] = `^${newerVersion}`
+            }
+          }
+        }
+      }
+    }
+
+    fs.outputJSONSync('package.json', packageJSON, { spaces: 2 })
+
+    const success = await initStarterProject({ npm: true, return: true })
+
+    if (success) {
+      const newCLIVersion = await checkLatestVersion('@frontsail/cli', getCLIVersion())
+
+      print(
+        '§gb(All hands on deck!) FrontSail dependencies have been updated to the latest versions.',
+      )
+      emptyLine()
+      print(`Run §b(npx @frontsail/cli) to use version §b(${newCLIVersion}).`)
+      emptyLine()
+    } else {
+      new MainMenu('fail')
     }
   }
 
@@ -290,6 +294,9 @@ export class MainMenuPrompt {
           break
         case 'newProject':
           this._onNewProject()
+          break
+        case 'update':
+          this._onUpdate()
           break
       }
     })

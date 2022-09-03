@@ -99,7 +99,7 @@ export class Wright {
    */
   protected _addDiagnostics(...diagnostics: Partial<FileDiagnostic>[]): void {
     diagnostics.forEach((diagnostic) => {
-      const prepared = fillObject(diagnostic, {
+      const fd = fillObject(diagnostic, {
         relativePath: '',
         message: '',
         severity: 'error',
@@ -112,32 +112,32 @@ export class Wright {
 
       let code: string = ''
 
-      if (prepared.relativePath.startsWith('~')) {
+      if (fd.relativePath.startsWith('~')) {
         try {
-          code = this._project.getPage(prepared.relativePath.slice(1)).getRawHTML()
+          code = this._project.getPage(fd.relativePath.slice(1)).getRawHTML()
         } catch (_) {}
-      } else if (prepared.relativePath && fs.existsSync(prepared.relativePath)) {
-        code = prepared.relativePath ? fs.readFileSync(prepared.relativePath, 'utf-8') : ''
+      } else if (fd.relativePath && fs.existsSync(fd.relativePath)) {
+        code = fd.relativePath ? fs.readFileSync(fd.relativePath, 'utf-8') : ''
       }
 
-      if (code && prepared.start[0] === -1 && prepared.from > -1) {
-        const { start, end } = offsetToLineColumn(code, prepared.from, prepared.to)
-        prepared.start = start
-        prepared.end = end
+      if (code && fd.start[0] === -1 && fd.from > -1) {
+        const { start, end } = offsetToLineColumn(code, fd.from, fd.to)
+        fd.start = start
+        fd.end = end
       }
 
-      if (!prepared.preview && prepared.relativePath && code.trim()) {
-        prepared.preview = codeFrameColumns(
+      if (!fd.preview && fd.relativePath && code.trim()) {
+        fd.preview = codeFrameColumns(
           code,
           {
-            start: { line: prepared.start[0], column: prepared.start[1] },
-            end: { line: prepared.end[0], column: prepared.end[1] },
+            start: { line: fd.start[0], column: fd.start[1] },
+            end: { line: fd.end[0], column: fd.end[1] },
           },
           { linesAbove: 1, linesBelow: 4 },
         )
       }
 
-      this._diagnostics.push(prepared)
+      this._diagnostics.push(fd)
       this._emit('diagnostics')
     })
   }
@@ -429,8 +429,11 @@ export class Wright {
   /**
    * Create starter project files in the current working directory.
    */
-  initStarterProject(): void {
+  initStarterProject(cliVersion: string = 'latest'): void {
     this._ensureProjectFiles()
+
+    const packageJSON = JSON.parse(JSON.stringify(starter.packageJSON))
+    packageJSON.devDependencies['@frontsail/cli'] = cliVersion
 
     fs.outputJsonSync('.vscode/settings.json', starter.vscodeSettingsJSON, { spaces: 2 })
     fs.outputJsonSync('.vscode/frontsail.html-data.json', starter.vscodeFrontsailHtmlDataJSON, {
@@ -441,7 +444,7 @@ export class Wright {
     fs.outputFileSync('src/components/base.html', starter.srcComponentsBaseHTML.join('\n'))
     fs.outputFileSync('src/pages/index.html', starter.srcPagesIndexHTML.join('\n'))
     fs.outputJsonSync('frontsail.config.json', starter.frontsailConfigJSON, { spaces: 2 })
-    fs.outputJsonSync('package.json', starter.packageJSON, { spaces: 2 })
+    fs.outputJsonSync('package.json', packageJSON, { spaces: 2 })
     fs.outputFileSync('.gitignore', starter.gitignore.join('\n'))
   }
 

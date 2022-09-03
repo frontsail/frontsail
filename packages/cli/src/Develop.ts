@@ -14,7 +14,7 @@ import {
   printGap,
   Tab,
 } from './helpers'
-import { MainMenuPrompt } from './MainMenuPrompt'
+import { MainMenu } from './MainMenu'
 
 /**
  * Describes the possible tab values in this prompt.
@@ -24,7 +24,7 @@ export type TabValues = 'summary' | 'diagnostics'
 /**
  * Displays the develop interface.
  */
-export class DevelopPrompt {
+export class Develop {
   /**
    * The container tabs.
    */
@@ -86,7 +86,7 @@ export class DevelopPrompt {
     await wright.stop()
     this._stopServer()
     process.stdout.off('resize', this._refresh)
-    new MainMenuPrompt('back')
+    new MainMenu('back')
   }
 
   /**

@@ -1,5 +1,74 @@
 import fs from 'fs-extra'
+import fetch from 'node-fetch'
 import semver from 'semver'
+import { emptyLine, print } from './helpers'
+
+/**
+ * Collection of newer versions of npm packages. Has null value if the current
+ * version is the latest.
+ */
+const newerVersions: { [name: string]: string | null } = {}
+
+/**
+ * Check if there is a newer version of an npm package available.
+ */
+export async function checkLatestVersion(
+  packageName: string,
+  currentVersion: string,
+  timeout: number = 1000,
+): Promise<string | null> {
+  if (newerVersions[packageName] !== undefined) {
+    return newerVersions[packageName]
+  }
+
+  const promises = [
+    fetch(`https://registry.npmjs.org/${packageName}/latest`)
+      .then(async (response) => await response.json())
+      .then((json: { version: string }) => {
+        newerVersions[packageName] = semver.gt(json.version, currentVersion) ? json.version : null
+        return newerVersions[packageName]
+      })
+      .catch((_) => null),
+  ]
+
+  if (typeof timeout === 'number') {
+    promises.push(new Promise((resolve) => setTimeout(() => resolve(null), timeout)))
+  }
+
+  return Promise.race<string | null>(promises)
+}
+
+/**
+ * Check if the current working directory has a FrontSail project with installed
+ * npm dependencies.
+ *
+ * @returns whether the project is healthy.
+ */
+export function checkProjectHealth(silent: boolean = false): boolean {
+  if (!isFrontSailProject()) {
+    if (!silent) {
+      emptyLine()
+      print(
+        '§rb(Error) No FrontSail project was found in the current directory. Run §b(npx @frontsail/cli) to create a new project.',
+      )
+      emptyLine()
+    }
+
+    return false
+  } else if (!hasNpmDependencies()) {
+    if (!silent) {
+      emptyLine()
+      print(
+        '§rb(Error) This FrontSail project is missing npm dependencies. Run §b(npm i) or §b(npx @frontsail/cli) to install them.',
+      )
+      emptyLine()
+    }
+
+    return false
+  }
+
+  return true
+}
 
 /**
  * Make sure the terminal has the minimum number of columns and rows and show an
@@ -47,7 +116,16 @@ export function isEmptyWorkingDirectory(): boolean {
  */
 export function isFrontSailProject(): boolean {
   try {
-    return !!fs.readJsonSync('package.json').devDependencies['@frontsail/cli']
+    const packageJSON = fs.readJsonSync('package.json')
+
+    return (
+      (packageJSON.dependencies &&
+        typeof packageJSON.dependencies === 'object' &&
+        !!packageJSON.dependencies['@frontsail/cli']) ||
+      (packageJSON.devDependencies &&
+        typeof packageJSON.devDependencies === 'object' &&
+        !!packageJSON.devDependencies['@frontsail/cli'])
+    )
   } catch (_) {
     return false
   }

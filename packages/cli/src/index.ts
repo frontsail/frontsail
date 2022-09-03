@@ -1,47 +1,69 @@
 #!/usr/bin/env node
 
 import args from 'args'
-import { build } from './build'
+import readline from 'readline'
+import { build, initStarterProject } from './build'
+import { Develop } from './Develop'
 import { clear, emptyLine, print, printLogo } from './helpers'
-import { MainMenuPrompt } from './MainMenuPrompt'
+import { MainMenu } from './MainMenu'
 import {
+  checkProjectHealth,
   hasEnoughTerminalSpace,
   hasMinimumNodeVersion,
-  hasNpmDependencies,
-  isFrontSailProject,
+  isEmptyWorkingDirectory,
 } from './validation'
 
 let commandUsed: boolean = false
 
+readline.emitKeypressEvents(process.stdin)
+
 args
-  .option('silent', 'Hide build logs')
-  .command('build', 'Build project', (_, __, options: any) => {
+  .option('silent', 'Prevent printing messages')
+  .command('build', 'Build current project', (_, __, options: any) => {
     commandUsed = true
 
-    if (!isFrontSailProject()) {
-      if (!options.silent) {
-        emptyLine()
-        print(
-          'No FrontSail project was found in the current directory. Run §b(npx @frontsail/cli) to create a new project.',
-        )
-        emptyLine()
-      }
-    } else if (!hasNpmDependencies()) {
-      if (!options.silent) {
-        emptyLine()
-        print(
-          'This FrontSail project is missing npm dependencies. Run §b(npm i) or §b(npx @frontsail/cli) to install them.',
-        )
-        emptyLine()
-      }
-    } else {
+    if (checkProjectHealth()) {
       build(!!options.silent)
+    }
+  })
+  .command('create', 'Create a new project', (_, __, options: any) => {
+    commandUsed = true
+
+    if (isEmptyWorkingDirectory()) {
+      initStarterProject({
+        files: true,
+        git: true,
+        npm: true,
+        silent: options.silent,
+        slang: false,
+        return: false,
+      }).then((success) => {
+        if (success && !options.silent) {
+          print('§gb(Land Ho!) A new FrontSail project has been created successfully.')
+          emptyLine()
+        }
+      })
+    } else if (!options.silent) {
+      emptyLine()
+      print(`§rb(Error) The current directory (${process.cwd()}) is not empty.`)
+      emptyLine()
+    }
+  })
+  .command('dev', 'Start development mode', (_, __, options: any) => {
+    commandUsed = true
+
+    if (checkProjectHealth()) {
+      showUI('develop')
     }
   })
 
 args.parse(process.argv)
 
 if (!commandUsed) {
+  showUI()
+}
+
+function showUI(screen: 'mainMenu' | 'develop' = 'mainMenu'): void {
   const space = hasEnoughTerminalSpace()
   const version = hasMinimumNodeVersion()
 
@@ -64,7 +86,7 @@ if (!commandUsed) {
       `This CLI tool requires space of at least §g(80) columns and §g(15) rows (detected ${columns} columns and ${rows} rows).`,
     )
     emptyLine()
-    print('§l(Resize your terminal window and try again.)')
+    print('Resize your terminal window and try again.')
     emptyLine()
   }
   //
@@ -78,13 +100,15 @@ if (!commandUsed) {
       `This ship requires a minimum Node.js version of §g(${version.min}) (detected version is §rb(${version.current})).`,
     )
     emptyLine()
-    print('§l(Please update your Node.js or visit https://nodejs.org for additional instructions.)')
+    print('Update your Node.js or visit https://nodejs.org for additional instructions.')
     emptyLine()
   }
   //
-  // Show home screen
+  // Show initial screen
   //
-  else {
-    new MainMenuPrompt()
+  else if (screen === 'mainMenu') {
+    new MainMenu()
+  } else if (screen === 'develop') {
+    new Develop()
   }
 }
