@@ -116,6 +116,8 @@ export const starter = {
   gitignore: [
     '/dist/',
     '/tmp/',
+    '/uploads/',
+    '/frontsail.cms.db',
     'node_modules/',
     '.DS_Store',
     '.DS_Store?',
