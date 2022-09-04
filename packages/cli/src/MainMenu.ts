@@ -264,7 +264,7 @@ export class MainMenu {
       const newCLIVersion = await checkLatestVersion('@frontsail/cli', getCLIVersion())
 
       print(
-        '§gb(All hands on deck!) FrontSail dependencies have been updated to the latest versions.',
+        '§gb( All hands on deck! ) FrontSail dependencies have been updated to the latest versions.',
       )
       emptyLine()
       print(`Run §b(npx @frontsail/cli) to use version §b(${newCLIVersion}).`)

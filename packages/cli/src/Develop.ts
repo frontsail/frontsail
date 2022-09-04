@@ -219,9 +219,9 @@ export class Develop {
           diagnostic.start[0] > -1 ? `:${diagnostic.start[0]}:${diagnostic.start[1]}` : ''
 
         if (diagnostic.severity === 'warning') {
-          contents.push(`§yb(Warning) ${message}`)
+          contents.push(`§yb( Warning ) ${message}`)
         } else {
-          contents.push(`§rb(Error) ${message}`)
+          contents.push(`§rb( Error ) ${message}`)
         }
 
         contents.push('', `§b(${diagnostic.relativePath}${codePosition})`)

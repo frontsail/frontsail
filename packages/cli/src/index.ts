@@ -39,13 +39,13 @@ args
         return: false,
       }).then((success) => {
         if (success && !options.silent) {
-          print('§gb(Land Ho!) A new FrontSail project has been created successfully.')
+          print('§gb( Land Ho! ) A new FrontSail project has been created successfully.')
           emptyLine()
         }
       })
     } else if (!options.silent) {
       emptyLine()
-      print(`§rb(Error) The current directory (${process.cwd()}) is not empty.`)
+      print(`§rb( Error ) The current directory (${process.cwd()}) is not empty.`)
       emptyLine()
     }
   })
@@ -73,15 +73,15 @@ function showUI(screen: 'mainMenu' | 'develop' = 'mainMenu'): void {
     const columns =
       space.columns.current >= space.columns.min
         ? `§g(${space.columns.current})`
-        : `§rb(${space.columns.current})`
+        : `§rb( ${space.columns.current} )`
 
     const rows =
       space.rows.current >= space.rows.min
         ? `§g(${space.rows.current})`
-        : `§rb(${space.rows.current})`
+        : `§rb( ${space.rows.current} )`
 
     clear()
-    print("§rb(We're running a tight ship!)")
+    print("§rb( We're running a tight ship! )")
     print(
       `This CLI tool requires space of at least §g(80) columns and §g(15) rows (detected ${columns} columns and ${rows} rows).`,
     )
@@ -95,9 +95,9 @@ function showUI(screen: 'mainMenu' | 'develop' = 'mainMenu'): void {
   else if (version !== true) {
     clear()
     printLogo()
-    print('§rb(Batten down the hatches!)')
+    print('§rb( Batten down the hatches! )')
     print(
-      `This ship requires a minimum Node.js version of §g(${version.min}) (detected version is §rb(${version.current})).`,
+      `This ship requires a minimum Node.js version of §g(${version.min}) (detected version is §rb( ${version.current} )).`,
     )
     emptyLine()
     print('Update your Node.js or visit https://nodejs.org for additional instructions.')

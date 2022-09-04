@@ -49,7 +49,7 @@ export function checkProjectHealth(silent: boolean = false): boolean {
     if (!silent) {
       emptyLine()
       print(
-        '§rb(Error) No FrontSail project was found in the current directory. Run §b(npx @frontsail/cli) to create a new project.',
+        '§rb( Error ) No FrontSail project was found in the current directory. Run §b(npx @frontsail/cli) to create a new project.',
       )
       emptyLine()
     }
@@ -59,7 +59,7 @@ export function checkProjectHealth(silent: boolean = false): boolean {
     if (!silent) {
       emptyLine()
       print(
-        '§rb(Error) This FrontSail project is missing npm dependencies. Run §b(npm i) or §b(npx @frontsail/cli) to install them.',
+        '§rb( Error ) This FrontSail project is missing npm dependencies. Run §b(npm i) or §b(npx @frontsail/cli) to install them.',
       )
       emptyLine()
     }

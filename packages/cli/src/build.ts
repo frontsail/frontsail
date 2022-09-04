@@ -92,7 +92,7 @@ export async function build(silent: boolean = false): Promise<boolean> {
       success = true
 
       if (!silent) {
-        print(`§gb(Bottoms up!) Build completed in §b(${time}).`)
+        print(`§gb( Bottoms up! ) Build completed in §b(${time}).`)
         emptyLine()
       }
     } else {
@@ -112,9 +112,9 @@ export async function build(silent: boolean = false): Promise<boolean> {
 
         const prefix = `§${errors > 0 ? 'r' : 'y'}b(Close to the wind!)`
         const problems =
-          (errors > 0 ? `§rb(${errors}) error${errors > 1 ? 's' : ''}` : '') +
+          (errors > 0 ? `§rb( ${errors} ) error${errors > 1 ? 's' : ''}` : '') +
           (errors > 0 && warnings > 0 ? ' and ' : '') +
-          (warnings > 0 ? `§yb(${warnings}) warning${warnings > 1 ? 's' : ''}` : '')
+          (warnings > 0 ? `§yb( ${warnings} ) warning${warnings > 1 ? 's' : ''}` : '')
 
         print(`${prefix} Build completed in §b(${time}) with ${problems}.`)
         emptyLine()
@@ -176,13 +176,13 @@ export async function initStarterProject(
   if (npmStatus === 1) {
     if (!options.silent) {
       if (options.slang) {
-        print('§rb(Batten down the hatches!)')
+        print('§rb( Batten down the hatches! )')
         print(
           `There was an error installing npm dependencies. Try to install them manually to see where it went wrong.`,
         )
       } else {
         print(
-          `§rb(Error) while installing npm dependencies. Try to install them manually to see where it went wrong.`,
+          `§rb( Error ) while installing npm dependencies. Try to install them manually to see where it went wrong.`,
         )
       }
 
