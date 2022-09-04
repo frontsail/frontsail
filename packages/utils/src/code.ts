@@ -1,15 +1,62 @@
 /**
- * Transform an offset `text` range specified with `from` and `to` to line-column pairs.
+ * Transform an indented `code` by removing base indents from every line and assuring
+ * that all lines start with `minSpaces` spaces.
+ *
+ * @example
+ * flattenIndents(' foo\n  bar') // 'foo\n bar'
+ * flattenIndents(' foo\n  bar', 1) // ' foo\n  bar'
+ * flattenIndents('foo\n  bar', 1) // ' foo\n  bar'
+ */
+export function flattenIndents(code: string, minSpaces: number = 0): string {
+  let base: number | undefined
+
+  const lines = code.split('\n')
+  const diff = lines.map((line) => {
+    if (!line.trim()) {
+      return 0
+    }
+
+    let spaces: number = 0
+
+    for (const char of line) {
+      if (char === ' ') {
+        spaces++
+      } else {
+        break
+      }
+    }
+
+    const diff = spaces - minSpaces
+
+    if (base === undefined || diff < base) {
+      base = Math.max(diff, 0)
+    }
+
+    return diff
+  })
+
+  base = base ?? 0
+
+  return lines
+    .map((line, i) => {
+      const count = minSpaces + Math.max(diff[i] - base!, 0)
+      return ' '.repeat(count) + line.trimStart()
+    })
+    .join('\n')
+}
+
+/**
+ * Transform an offset `code` range specified with `from` and `to` to line-column pairs.
  *
  * @example
  * offsetToLineColumn('foo', 1, 3) // [1, 1], [1, 3]
  */
 export function offsetToLineColumn(
-  text: string,
+  code: string,
   from: number,
   to?: number,
 ): { start: [line: number, column: number]; end: [line: number, column: number] } {
-  const rows = text.split('\n')
+  const rows = code.split('\n')
   const start: [line: number, column: number] = [-1, -1]
   const end: [line: number, column: number] = [-1, -1]
 
@@ -57,18 +104,18 @@ export function offsetToLineColumn(
 }
 
 /**
- * Transform a `text` range with line-column pairs specified with `start` and `end`
+ * Transform a `code` range with line-column pairs specified with `start` and `end`
  * to an offset range.
  *
  * @example
  * lineColumnToOffset('foo', [1, 1], [1, 3]) // { from: 1, to: 3 }
  */
 export function lineColumnToOffset(
-  text: string,
+  code: string,
   start: [line: number, column: number],
   end?: [line: number, column: number],
 ): { from: number; to: number } {
-  const rows = text.split('\n')
+  const rows = code.split('\n')
 
   let from: number = 0
   let to: number = 0
@@ -81,7 +128,7 @@ export function lineColumnToOffset(
   const endRow = rows[end[0] - 1]
 
   if (startRow === undefined) {
-    from = text.length
+    from = code.length
   } else {
     let prev: number = start[0] - 1
 
@@ -93,7 +140,7 @@ export function lineColumnToOffset(
   }
 
   if (endRow === undefined) {
-    to = text.length
+    to = code.length
   } else {
     let prev: number = end[0] - 1
 

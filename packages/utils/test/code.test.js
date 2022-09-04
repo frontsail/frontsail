@@ -1,4 +1,12 @@
-import { lineColumnToOffset, offsetToLineColumn } from '..'
+import { flattenIndents, lineColumnToOffset, offsetToLineColumn } from '..'
+
+test('flattenIndents', () => {
+  expect(flattenIndents(' foo\n  bar')).toBe('foo\n bar')
+  expect(flattenIndents(' foo\n  bar', 1)).toBe(' foo\n  bar')
+  expect(flattenIndents('foo\n  bar', 1)).toBe(' foo\n  bar')
+  expect(flattenIndents('  foo\n  bar', 1)).toBe(' foo\n bar')
+  expect(flattenIndents(' foo\n bar', 2)).toBe('  foo\n  bar')
+})
 
 test('offsetToLineColumn', () => {
   expect(offsetToLineColumn('foo', 0)).toEqual({ start: [1, 1], end: [1, 1] })

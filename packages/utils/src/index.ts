@@ -7,7 +7,7 @@ export {
   nth,
   uniqueArray,
 } from './array'
-export { lineColumnToOffset, offsetToLineColumn } from './code'
+export { flattenIndents, lineColumnToOffset, offsetToLineColumn } from './code'
 export { bind } from './decorators'
 export { debounce } from './function'
 export { clearObject, fillObject } from './object'
