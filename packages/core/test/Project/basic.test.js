@@ -85,7 +85,7 @@ test('getting included components', () => {
 test('getting outlet names', () => {
   expect(project.getOutletNames('foo')).toEqual([])
   expect(project.getOutletNames('bar')).toEqual([])
-  expect(project.getOutletNames('baz')).toEqual(['baz', 'main'])
+  expect(project.getOutletNames('baz')).toEqual(['main', 'baz'])
   expect(project.getOutletNames('alpine')).toEqual([])
   expect(() => project.getOutletNames('/')).toThrow()
 })

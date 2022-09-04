@@ -355,12 +355,12 @@ export class Wright {
   }
 
   /**
-   * Format file contents with `prettier`.
+   * Expand abbreviations and format file contents with `prettier`.
    */
   protected _format(relativePath: string): this {
     try {
       const code = fs.readFileSync(relativePath, 'utf-8')
-      const formattedCode = format(code, relativePath)
+      const formattedCode = format(code, relativePath, this._project)
 
       while (code !== formattedCode) {
         try {

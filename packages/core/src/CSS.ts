@@ -207,6 +207,13 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
   }
 
   /**
+   * Get the abstract syntax tree.
+   */
+  getAST(): Root | undefined {
+    return this._ast
+  }
+
+  /**
    * Extract and return child at-rules from a `node`.
    */
   static getAtRules(node: Root | Rule | AtRule): AtRule[] {
@@ -311,19 +318,6 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
    */
   static hasDeclarations(rule: Rule | AtRule): boolean {
     return rule.nodes.some((node) => node.type === 'decl')
-  }
-
-  /**
-   * Extract and return declaration nodes from a `rule` recursively.
-   */
-  static hasDeclarationsDeep(rule: Rule | AtRule): boolean {
-    let result: boolean = false
-
-    rule.walkDecls((declaration) => {
-      result = true
-    })
-
-    return result
   }
 
   /**

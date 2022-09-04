@@ -1,5 +1,7 @@
-import { HTML, isAlpineDirective, isXForDirective } from '@frontsail/core'
+import { HTML, isAlpineDirective, isXForDirective, Project } from '@frontsail/core'
+import expand from 'emmet'
 import { format as prettierFormat, Options } from 'prettier'
+import similarity from 'similarity'
 
 /**
  * Formatting options for `prettier`.
@@ -81,16 +83,97 @@ const hrefAttributeOrder: (string | RegExp)[] = [
 const srcAttributeOrder: (string | RegExp)[] = [...defaultAttributeOrder, 'src', 'alt', '*']
 
 /**
- * Format `code` with `prettier` by automatically resolving its parser from the
- * specified `filePath`.
+ * Collection of placeholder words.
+ */
+const placeholders: string[] = [
+  'Ahoy',
+  'Air',
+  'Barque',
+  'Bay',
+  'Berth',
+  'Blackbeard',
+  'Board',
+  'Boat',
+  'Buccaneer',
+  'Cannon',
+  'Captain',
+  'Caravel',
+  'Cargo',
+  'Corsair',
+  'Deck',
+  'Deep',
+  'Dolphin',
+  'Doubloon',
+  'Dry',
+  'Eyepatch',
+  'Fish',
+  'Float',
+  'Fog',
+  'Food',
+  'Foremast',
+  'Foresail',
+  'Freebooter',
+  'Galleon',
+  'Gulf',
+  'Headsail',
+  'Helm',
+  'Hook',
+  'Hull',
+  'Jib',
+  'Kite',
+  'Lake',
+  'Land',
+  'Landlubber',
+  'Leeway',
+  'Lifeboat',
+  'Longboat',
+  'Mainsail',
+  'Ocean',
+  'Pirate',
+  'River',
+  'Rope',
+  'Sail',
+  'Sailboat',
+  'Sailing',
+  'Sailor',
+  'Salt',
+  'Sea',
+  'Shark',
+  'Ship',
+  'Shore',
+  'Sink',
+  'Soak',
+  'Storm',
+  'Surface',
+  'Swim',
+  'Tack',
+  'Tide',
+  'Travel',
+  'Treasure',
+  'Water',
+  'Weather',
+  'Whale',
+  'Whirlpool',
+  'Wind',
+  'Yacht',
+]
+
+/**
+ * Available placeholder words for pseudorandom distribution.
+ */
+const placeholderPool: string[] = []
+
+/**
+ * Expand abbreviations and format `code` with `prettier` by automatically resolving
+ * its parser from the specified `filePath`.
  *
  * @throws an error if the format fails.
  */
-export function format(code: string, filePath: string): string {
+export function format(code: string, filePath: string, project: Project): string {
   const parser = resolveParser(filePath)
 
   if (parser === 'html') {
-    return formatHTML(new HTML(code))
+    return formatHTML(code, project)
   } else if (parser === 'css') {
     return formatCSS(code)
   }
@@ -99,24 +182,87 @@ export function format(code: string, filePath: string): string {
 }
 
 /**
- * Format CSS `code` and sort declarations based on their property names with
- * `prettier-plugin-css-order` (automatically imported by `prettier`).
+ * Expand abbreviations, Format CSS `code` and sort declarations based on their property
+ * names with `prettier-plugin-css-order` (automatically imported by `prettier`).
  *
  * @see https://github.com/brandon-rhodes/Concentric-CSS/blob/master/style3.css
  * @throws an error if the format fails.
  */
 function formatCSS(code: string): string {
+  code = code
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim()
+      const simple = /^{?[^{:]+}?$/.test(trimmed)
+      const match = simple ? null : /^(.+?{\s*)([^{:]+?)(}?)$/.exec(trimmed)
+
+      if (simple || match) {
+        const expanded = (match ? match[2] : trimmed)
+          .split(' ')
+          .map((abbr) => {
+            try {
+              return expand(abbr.trim(), { type: 'stylesheet' }) || abbr
+            } catch (_) {
+              return abbr
+            }
+          })
+          .join(' ')
+
+        return match ? match[1] + expanded + (match[3] ?? '') : expanded
+      }
+
+      return line
+    })
+    .join('\n')
+
   return prettierFormat(code, { ...options, parser: 'css' })
 }
 
 /**
- * Sort all attributes and format `css` and Alpine attributes, and mustaches in a
- * specified `html` instance.
+ * Expand abbreviations, sort all attributes, and format inline CSS, Alpine attributes,
+ * and mustaches in a specified `html` instance.
  *
  * @throws an error if the format fails.
  */
-function formatHTML(html: HTML): string {
+function formatHTML(code: string, project: Project): string {
+  const componentsNames = project.listComponents()
+
+  // Expand abbreviations
+  code = code.replace(/[a-z0-9-\/]+_D/gi, (match) => {
+    const result: { name: string; score: number } = { name: match, score: 0 }
+
+    componentsNames.forEach((name) => {
+      const score = similarity(match, name)
+
+      if (score > result.score) {
+        result.name = name
+        result.score = score
+      }
+    })
+
+    if (result.score > 0) {
+      const component = project.getComponent(result.name)
+      const outlets = component.getOutletNames()
+      const attributes = component
+        .getPropertyNames()
+        .map((name) => `${name}="${randomWord()}"`)
+        .join(' ')
+      const injections =
+        outlets.length === 1 && outlets[0] === 'main'
+          ? `<p>${randomWord()}</p>`
+          : outlets
+              .map((name) => `<inject into="${name}">\n<p>${randomWord()}</p>\n</inject>`)
+              .join('\n')
+
+      return `<include component="${result.name}" ${attributes}>\n${injections}\n</include>`
+    }
+
+    return result.name
+  })
+
+  const html = new HTML(code)
   const markdown: string[] = []
+
   let markdownIndex: number = 0
 
   for (const node of html.walk()) {
@@ -143,9 +289,10 @@ function formatHTML(html: HTML): string {
       }
 
       for (const attr of node.attrs) {
-        // Sort css and Alpine attributes
+        // Format `css` and Alpine attributes
         if (attr.name === 'css') {
-          attr.value = formatCSS(attr.value).trim()
+          const preparedValue = attr.value.trim().replace(/^\s*{?\s*(.*?)\s*}?\s*$/s, '{\n$1\n}')
+          attr.value = formatCSS(preparedValue).trim()
         } else if (isAlpineDirective(attr.name)) {
           if (isXForDirective(attr.value)) {
             const value = attr.value.replace(/^(\s*)\(([\s\S]*?)\)/, '$1[$2]')
@@ -216,6 +363,17 @@ function formatHTML(html: HTML): string {
     .replace(/^ +$/gm, '')
     .replace(/{{\s*([$a-z0-9_]+)\s*}}/gi, '{{ $1 }}')
     .replace(/(<[^>]+?)=""([^>]*?>)/g, '$1$2')
+}
+
+/**
+ * Return a pseudorandom placholder word.
+ */
+function randomWord(): string {
+  if (placeholderPool.length === 0) {
+    placeholderPool.push(...placeholders)
+  }
+
+  return placeholderPool.splice(Math.floor(Math.random() * placeholderPool.length), 1)[0]
 }
 
 /**

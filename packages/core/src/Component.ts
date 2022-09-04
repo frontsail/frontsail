@@ -96,7 +96,7 @@ export class Component extends Template {
    */
   protected _extractOutletNames(): void {
     const outletNames = this._html.getElements('outlet').map(HTML.getOutletName).filter(Boolean)
-    this._outletNames.push(...uniqueArray(outletNames).sort())
+    this._outletNames.push(...uniqueArray(outletNames))
   }
 
   /**
