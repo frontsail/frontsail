@@ -1,4 +1,5 @@
 import { clearArray, hash, uniqueArray } from '@frontsail/utils'
+import { flattenIndents } from '@frontsail/utils/src/code'
 import { marked } from 'marked'
 import { Attribute } from 'parse5/dist/common/token'
 import { Element, Template as TemplateNode } from 'parse5/dist/tree-adapters/default'
@@ -462,11 +463,8 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
               node.sourceCodeLocation!.startTag!.endOffset,
               node.sourceCodeLocation!.endTag!.startOffset,
             )
-            .split('\n')
-            .map((line) => line.trim())
-            .join('\n')
 
-          marked.parse(mdHTML, (error, innerHTML) => {
+          marked.parse(flattenIndents(mdHTML), (error, innerHTML) => {
             if (!error) {
               HTML.replaceElement(node, ...new HTML(innerHTML).getRootNodes())
             }

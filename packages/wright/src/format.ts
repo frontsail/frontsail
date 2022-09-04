@@ -1,4 +1,5 @@
 import { HTML, isAlpineDirective, isXForDirective, Project } from '@frontsail/core'
+import { flattenIndents } from '@frontsail/utils'
 import expand from 'emmet'
 import { format as prettierFormat, Options } from 'prettier'
 import similarity from 'similarity'
@@ -269,15 +270,12 @@ function formatHTML(code: string, project: Project): string {
     if (HTML.adapter.isElementNode(node)) {
       if (node.tagName === 'markdown') {
         markdown.push(
-          prettierFormat(
-            html
-              .getRawHTML()
-              .slice(
-                node.sourceCodeLocation!.startTag!.endOffset,
-                node.sourceCodeLocation!.endTag!.startOffset,
-              ),
-            { ...options, parser: 'markdown' },
-          ).trim(),
+          html
+            .getRawHTML()
+            .slice(
+              node.sourceCodeLocation!.startTag!.endOffset,
+              node.sourceCodeLocation!.endTag!.startOffset,
+            ),
         )
 
         node.childNodes.splice(0, node.childNodes.length)
@@ -341,10 +339,11 @@ function formatHTML(code: string, project: Project): string {
   formattedHTML = formattedHTML.replace(
     /^(\s*)<mdp id="mdp([0-9]+)"><\/mdp>$/gm,
     (_, indent, index) => {
-      return markdown[index]
-        .split('\n')
-        .map((line) => indent + line.trim())
-        .join('\n')
+      const formatted = prettierFormat(markdown[index], { ...options, parser: 'markdown' })
+        .trimEnd()
+        .replace(/\n\n\n*/g, '\n\n')
+
+      return flattenIndents(formatted, indent?.length ?? 0)
     },
   )
 
