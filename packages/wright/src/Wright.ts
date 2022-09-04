@@ -73,7 +73,7 @@ export class Wright {
    * Relative path to the local `tmp` directory where the files will be prebuilt
    * in production mode.
    */
-  protected _tmp: string = 'tmp'
+  protected _tmp: string = '.tmp'
 
   /**
    * A random string appended to the filenames of the built scripts and styles.
