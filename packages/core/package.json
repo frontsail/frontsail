@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/core",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "A lightweight framework for building static websites.",
   "type": "module",
   "main": "dist/index.js",
@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@frontsail/postcss": "^0.1.1",
-    "@frontsail/utils": "^0.1.5",
+    "@frontsail/utils": "^0.1.6",
     "acorn": "^8.8.0",
     "acorn-walk": "^8.2.0",
     "json-to-ast": "^2.1.0",
