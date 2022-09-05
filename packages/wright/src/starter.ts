@@ -47,9 +47,11 @@ export const starter = {
     subdirectory: '',
   },
   gitignore: [
+    '/.cache/',
     '/.tmp/',
     '/dist/',
     '/uploads/',
+    '/frontsail.cms.db',
     'node_modules/',
     '.DS_Store',
     '.DS_Store?',
