@@ -461,7 +461,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
             .getRawHTML()
             .slice(
               node.sourceCodeLocation!.startTag!.endOffset,
-              node.sourceCodeLocation!.endTag!.startOffset,
+              node.sourceCodeLocation!.endTag?.startOffset ?? node.sourceCodeLocation!.endOffset,
             )
 
           marked.parse(flattenIndents(mdHTML), (error, innerHTML) => {
