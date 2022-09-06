@@ -822,7 +822,11 @@ export class Wright {
               })
             }
           } else {
-            const suggestion = '$' + camelize(node.key.value.replace(/([A-Z])/g, '-$1'))
+            let suggestion = '$' + camelize(node.key.value.replace(/([A-Z])/g, '-$1'))
+
+            if (!isGlobalName(suggestion)) {
+              suggestion += 1
+            }
 
             this._addDiagnostics({
               relativePath: 'src/globals.json',
