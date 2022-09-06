@@ -154,7 +154,11 @@ export class Component extends Template {
       })
     }
 
-    if (this.shouldTest('alpineDirectives', tests) || this.shouldTest('outletElements', tests)) {
+    if (
+      this.shouldTest('alpineDirectives', tests) ||
+      this.shouldTest('includeElements', tests) ||
+      this.shouldTest('outletElements', tests)
+    ) {
       for (const node of this._html.walk()) {
         if (HTML.adapter.isElementNode(node)) {
           //
@@ -175,6 +179,19 @@ export class Component extends Template {
                   ...this._html.getAttributeValueRange(node, attr.name)!,
                 })
               }
+            }
+          }
+          //
+          // Check include elements
+          //
+          if (node.tagName === 'include' && this.shouldTest('includeElements', tests)) {
+            if (rootNodes.includes(node)) {
+              this.addDiagnostics('includeElements', {
+                message: 'Include elements cannot be used as a component root.',
+                severity: 'error',
+                from: node.sourceCodeLocation!.startOffset,
+                to: node.sourceCodeLocation!.endOffset,
+              })
             }
           }
           //
