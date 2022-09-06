@@ -310,7 +310,10 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
                       this.addDiagnostics('dependencies', {
                         message: `Outlet '${intoValue}' does not exist in component '${componentName}'.`,
                         severity: 'warning',
-                        ...this._html.getAttributeValueRange(node, 'into')!,
+                        ...(this._html.getAttributeValueRange(node, 'into') ?? {
+                          from: node.sourceCodeLocation!.startTag!.startOffset,
+                          to: node.sourceCodeLocation!.startTag!.endOffset,
+                        }),
                       })
                     }
                   } else {
