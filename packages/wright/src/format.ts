@@ -295,12 +295,14 @@ function formatHTML(code: string, project: Project): string {
           if (isXForDirective(attr.value)) {
             const value = attr.value.replace(/^(\s*)\(([\s\S]*?)\)/, '$1[$2]')
 
-            attr.value = prettierFormat(`for (${value}) {}`, { ...options, parser: 'babel' })
-              .trim()
-              .replace('for (', '')
-              .replace(/\)\s*{\s*}$/, '')
-              .replace(/^(\s*)\[([\s\S]*?)\]/, '$1($2)')
-          } else {
+            if (value.trim()) {
+              attr.value = prettierFormat(`for (${value}) {}`, { ...options, parser: 'babel' })
+                .trim()
+                .replace('for (', '')
+                .replace(/\)\s*{\s*}$/, '')
+                .replace(/^(\s*)\[([\s\S]*?)\]/, '$1($2)')
+            }
+          } else if (attr.value.trim()) {
             attr.value = prettierFormat(`const $ = ${attr.value}`, { ...options, parser: 'babel' })
               .replace('const $ = ', '')
               .trim()
