@@ -79,7 +79,7 @@ export class Wright {
   /**
    * A random string appended to the filenames of the built scripts and styles.
    */
-  protected _buildHash: string = customAlphabet('01234567890abcdefghijklmnopqrstuvwxyz', 10)()
+  protected _buildHash: string
 
   /**
    * `Chokidar` watcher for file changes in the working directory.
@@ -583,6 +583,7 @@ export class Wright {
    */
   newProject(mode: 'development' | 'production'): void {
     this._project = new Project().setEnvironment(mode)
+    this._buildHash = customAlphabet('01234567890abcdefghijklmnopqrstuvwxyz', 10)()
   }
 
   /**
