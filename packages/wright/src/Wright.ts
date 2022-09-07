@@ -382,6 +382,29 @@ export class Wright {
   }
 
   /**
+   * Try to fix pages with duplicate paths.
+   */
+  protected _fixDuplicatePages(): void {
+    this._duplicatePagePaths.slice().forEach((duplicatePagePath) => {
+      try {
+        if (!this._project.hasPage(duplicatePagePath)) {
+          const filePath = pagePathToFilePath(duplicatePagePath)!
+          const relativePath = this._resolveRelativePagePath(filePath, false)
+          const index = this._duplicatePagePaths.indexOf(duplicatePagePath)
+          this._duplicatePagePaths.splice(index, 1)
+
+          try {
+            this._project.addPage(duplicatePagePath, fs.readFileSync(relativePath, 'utf-8'))
+            this._lintPage(duplicatePagePath).buildPage(duplicatePagePath)
+          } catch (e) {
+            this._addDiagnostics({ relativePath, message: e.message })
+          }
+        }
+      } catch (_) {}
+    })
+  }
+
+  /**
    * Get the stored diagnostics.
    */
   getDiagnostics(filter?: { relativePath?: RegExp }): FileDiagnostic[] {
@@ -708,8 +731,9 @@ export class Wright {
 
               try {
                 this._project.removePage(pagePath)
-                this._resolveRelativePagePath(match[2])
               } catch (_) {}
+
+              this._fixDuplicatePages()
             }
 
             this._buildStyles()
@@ -760,7 +784,7 @@ export class Wright {
       try {
         const relativeFilePath = srcPath.replace('src/pages/', '')
         const pagePath = filePathToPagePath(relativeFilePath)!
-        const uniqueSrcPath = this._resolveRelativePagePath(relativeFilePath)
+        const uniqueSrcPath = this._resolveRelativePagePath(relativeFilePath, false)
 
         try {
           this._project.addPage(pagePath, fs.readFileSync(uniqueSrcPath, 'utf-8'))
@@ -845,29 +869,8 @@ export class Wright {
   protected _resolveRelativePagePath(
     relativeFilePath: string,
     clearDiagnostics: boolean = true,
-    fixDuplicates: boolean = true,
   ): string {
     const pagePath = filePathToPagePath(relativeFilePath)
-
-    if (fixDuplicates) {
-      this._duplicatePagePaths.slice().forEach((duplicatePagePath) => {
-        try {
-          if (!this._project.hasPage(duplicatePagePath)) {
-            const filePath = pagePathToFilePath(duplicatePagePath)!
-            const relativePath = this._resolveRelativePagePath(filePath, false, false)
-            const index = this._duplicatePagePaths.indexOf(duplicatePagePath)
-            this._duplicatePagePaths.splice(index, 1)
-
-            try {
-              this._project.addPage(duplicatePagePath, fs.readFileSync(relativePath, 'utf-8'))
-              this._lintPage(duplicatePagePath).buildPage(duplicatePagePath)
-            } catch (e) {
-              this._addDiagnostics({ relativePath, message: e.message })
-            }
-          }
-        } catch (_) {}
-      })
-    }
 
     if (pagePath && pagePath !== '/' && !pagePath.endsWith('/index')) {
       const filePath = pagePathToFilePath(pagePath)!
@@ -876,11 +879,6 @@ export class Wright {
       const firstExists = fs.existsSync(first)
       const secondExists = fs.existsSync(second)
 
-      if (clearDiagnostics) {
-        this._clearDiagnostics(first)
-        this._clearDiagnostics(second)
-      }
-
       if (firstExists && secondExists) {
         if (!this._duplicatePagePaths.includes(pagePath)) {
           this._duplicatePagePaths.push(pagePath)
@@ -888,8 +886,20 @@ export class Wright {
 
         this._removeBubble(`${this._dist}/${filePath}`)
 
-        throw new Error(`Duplicate page paths: '${first}' and '${second}'.`)
-      } else if (firstExists) {
+        throw new Error(
+          `Duplicate pages: '${first.replace('src/pages/', '')}' and '${second.replace(
+            'src/pages/',
+            '',
+          )}'.`,
+        )
+      }
+
+      if (clearDiagnostics) {
+        this._clearDiagnostics(first)
+        this._clearDiagnostics(second)
+      }
+
+      if (firstExists) {
         return first
       } else if (secondExists) {
         return second
