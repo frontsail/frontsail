@@ -246,7 +246,7 @@ export class MainMenu {
         for (const name in packageJSON[dependencies]) {
           if (name.startsWith('@frontsail/')) {
             const currentVersion = semver.coerce(packageJSON[dependencies][name])?.raw
-            const newerVersion = await checkLatestVersion(name, currentVersion ?? '0.0.0')
+            const newerVersion = await checkLatestVersion(name, currentVersion ?? '0.0.0', 30000)
 
             if (newerVersion) {
               packageJSON[dependencies][name] = `^${newerVersion}`
