@@ -49,7 +49,7 @@ export function init(): void {
  * Remove a page from the current project.
  */
 export function removePage(path: string): void {
-  wright.removePage(path)
+  wright.removeCustomPage(path)
 }
 
 /**
@@ -57,5 +57,5 @@ export function removePage(path: string): void {
  * If there is an existing page with the same `path`, it will be updated instead.
  */
 export function setPage(path: string, html: string): void {
-  wright.setPage(path, html)
+  wright.setCustomPage(path, html)
 }

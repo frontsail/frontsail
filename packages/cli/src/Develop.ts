@@ -1,6 +1,7 @@
 import { bind, nth } from '@frontsail/utils'
-import { wright } from '@frontsail/wright'
+import { pagePathToFilePath, wright } from '@frontsail/wright'
 import bs from 'browser-sync'
+import fs from 'fs-extra'
 import portfinder from 'portfinder'
 import serverDestroy from 'server-destroy'
 import {
@@ -291,9 +292,46 @@ export class Develop {
       this._previewServer.init({
         server: {
           baseDir: 'dist',
-          serveStaticOptions: {
-            extensions: ['html'],
-          },
+          middleware: [
+            (req, res, next) => {
+              if (req.url) {
+                if (req.url !== '/') {
+                  let location = req.url.replace(/\/*$/, '')
+
+                  if (location === 'index.html') {
+                    location = '/'
+                  } else if (location.endsWith('/index.html')) {
+                    location = req.url.replace(/\/index\.html*$/, '')
+                  } else {
+                    location = req.url.replace(/\.html*$/, '')
+                  }
+
+                  if (location !== req.url) {
+                    res.writeHead(302, { location })
+                    return res.end()
+                  }
+                }
+
+                const filePath = pagePathToFilePath(req.url)
+
+                if (filePath && fs.existsSync(`${wright.getDistName()}/${filePath}`)) {
+                  const html = fs.readFileSync(`${wright.getDistName()}/${filePath}`, 'utf-8')
+                  res.write(html)
+                  return res.end()
+                } else if (
+                  !fs.existsSync(wright.getDistName() + req.url) &&
+                  fs.existsSync(`${wright.getDistName()}/404/index.html`)
+                ) {
+                  const html = fs.readFileSync(`${wright.getDistName()}/404/index.html`)
+                  res.write(html)
+                  res.writeHead(404)
+                  return res.end()
+                }
+              }
+
+              return next()
+            },
+          ],
         },
         port,
         ui: { port: uiPort },
@@ -303,8 +341,8 @@ export class Develop {
         notify: false,
         open: false,
         callbacks: {
-          ready: () => {
-            serverDestroy((this._previewServer as any).instance.io.httpServer)
+          ready: (_: any, instance: any) => {
+            serverDestroy(instance.io.httpServer)
             resolve()
           },
         },

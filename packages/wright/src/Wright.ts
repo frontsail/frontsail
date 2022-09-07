@@ -18,6 +18,7 @@ import glob from 'glob'
 import { customAlphabet } from 'nanoid'
 import prettyBytes from 'pretty-bytes'
 import { format } from './format'
+import { filePathToPagePath, pagePathToFilePath } from './helpers'
 import { cssReset, starter } from './starter'
 import { FileDiagnostic } from './types/code'
 
@@ -96,6 +97,11 @@ export class Wright {
   protected _cssReset: boolean = true
 
   /**
+   * List of page paths with duplicate source entries.
+   */
+  protected _duplicatePagePaths: string[] = []
+
+  /**
    * Event emitter instance.
    */
   events = new EventEmitter()
@@ -124,7 +130,7 @@ export class Wright {
           code = this._project.getPage(fd.relativePath.slice(1)).getRawHTML()
         } catch (_) {}
       } else if (fd.relativePath && fs.existsSync(fd.relativePath)) {
-        code = fd.relativePath ? fs.readFileSync(fd.relativePath, 'utf-8') : ''
+        code = fs.readFileSync(fd.relativePath, 'utf-8')
       }
 
       if (code && fd.start[0] === -1 && fd.from > -1) {
@@ -167,7 +173,7 @@ export class Wright {
     }
 
     fs.outputFileSync(
-      `${tmp ? this._tmp : this._dist}${pagePath}.html`,
+      `${tmp ? this._tmp : this._dist}/${pagePathToFilePath(pagePath)}`,
       html.includes('</html>')
         ? html
         : `<!DOCTYPE html><html><head></head><body>${html}</body></html>`,
@@ -307,8 +313,10 @@ export class Wright {
 
     for (const diagnostic of [...this._diagnostics]) {
       if (
-        (typeof relativePath === 'string' && diagnostic.relativePath === relativePath) ||
-        (typeof relativePath !== 'string' && relativePath.test(diagnostic.relativePath))
+        (typeof relativePath === 'string' &&
+          diagnostic.relativePath.toLowerCase() === relativePath.toLowerCase()) ||
+        (typeof relativePath !== 'string' &&
+          relativePath.test(diagnostic.relativePath.toLowerCase()))
       ) {
         this._diagnostics.splice(index, 1)
         updated = true
@@ -384,6 +392,13 @@ export class Wright {
 
       return true
     })
+  }
+
+  /**
+   * Get the name of the `dist` directory.
+   */
+  getDistName(): string {
+    return this._dist
   }
 
   /**
@@ -478,7 +493,15 @@ export class Wright {
    */
   protected _lintPage(pagePath: string, relativePath?: string): this {
     if (typeof relativePath !== 'string') {
-      relativePath = `src/pages${pagePath}.html`
+      if (pagePath === '/') {
+        relativePath = 'src/pages/index.html'
+      } else if (fs.existsSync(`src/pages${pagePath}/index.html`)) {
+        relativePath = `src/pages${pagePath}/index.html`
+      } else if (fs.existsSync(`src/pages${pagePath}.html`)) {
+        relativePath = `src/pages${pagePath}.html`
+      } else {
+        relativePath = `~${pagePath}`
+      }
     }
 
     this._clearDiagnostics(relativePath)._addDiagnostics(
@@ -625,7 +648,7 @@ export class Wright {
               fs.copySync(relativePath, `${this._dist}${assetPath}`)
             } else if (eventName === 'unlink') {
               this._clearDiagnostics(normalizedPath)._project.removeAsset(assetPath)
-              fs.removeSync(`${this._dist}${assetPath}`)
+              this._removeBubble(`${this._dist}${assetPath}`)
             }
           }
           //
@@ -666,24 +689,26 @@ export class Wright {
           // Pages
           //
           else if (match[1] === 'pages' && match[2].endsWith('.html')) {
-            const pagePath = '/' + match[2].replace(/\.html$/, '').toLowerCase()
+            const uniqueRelativePath = this._resolveRelativePagePath(match[2])
+            const pagePath = filePathToPagePath(match[2], true)!
 
             if (eventName === 'add' || eventName === 'change') {
-              this._format(normalizedPath)
+              this._format(uniqueRelativePath)
 
               if (this._project.hasPage(pagePath)) {
-                this._project.updatePage(pagePath, fs.readFileSync(relativePath, 'utf-8'))
+                this._project.updatePage(pagePath, fs.readFileSync(uniqueRelativePath, 'utf-8'))
               } else {
-                this._project.addPage(pagePath, fs.readFileSync(relativePath, 'utf-8'))
+                this._project.addPage(pagePath, fs.readFileSync(uniqueRelativePath, 'utf-8'))
               }
 
               this._lintPage(pagePath).buildPage(pagePath)
             } else if (eventName === 'unlink') {
-              this._clearDiagnostics(normalizedPath)
-              fs.removeSync(`${this._dist}/${match[2]}`)
+              this._clearDiagnostics(uniqueRelativePath)
+              this._removeBubble(`${this._dist}/${pagePathToFilePath(pagePath)}`)
 
               try {
                 this._project.removePage(pagePath)
+                this._resolveRelativePagePath(match[2])
               } catch (_) {}
             }
 
@@ -719,9 +744,8 @@ export class Wright {
     })
 
     glob.sync('src/components/**/*.html').forEach((srcPath) => {
-      const relativePath = srcPath.replace('src/', '')
-      const componentName = relativePath
-        .replace('components/', '')
+      const componentName = srcPath
+        .replace('src/components/', '')
         .replace(/\.html$/, '')
         .toLowerCase()
 
@@ -733,16 +757,21 @@ export class Wright {
     })
 
     glob.sync('src/pages/**/*.html').forEach((srcPath) => {
-      const relativePath = srcPath.replace('src/', '')
-      const pagePath = relativePath
-        .replace('pages', '')
-        .replace(/\.html$/, '')
-        .toLowerCase()
-
       try {
-        this._project.addPage(pagePath, fs.readFileSync(srcPath, 'utf-8'))
+        const relativeFilePath = srcPath.replace('src/pages/', '')
+        const pagePath = filePathToPagePath(relativeFilePath)!
+        const uniqueSrcPath = this._resolveRelativePagePath(relativeFilePath)
+
+        try {
+          this._project.addPage(pagePath, fs.readFileSync(uniqueSrcPath, 'utf-8'))
+        } catch (e) {
+          this._addDiagnostics({ relativePath: uniqueSrcPath, message: e.message })
+        }
       } catch (e) {
-        this._addDiagnostics({ relativePath, message: e.message })
+        this._clearDiagnostics(srcPath)._addDiagnostics({
+          message: e.message,
+          relativePath: srcPath,
+        })
       }
     })
   }
@@ -776,16 +805,115 @@ export class Wright {
   /**
    * Remove a single custom page.
    */
-  removePage(pagePath: string): void {
+  removeCustomPage(pagePath: string): void {
     this._clearDiagnostics(`~${pagePath}`)
 
     if (isPagePath(pagePath)) {
-      fs.removeSync(`${this._dist}${pagePath}.html`)
+      this._removeBubble(`${this._dist}/${pagePathToFilePath(pagePath)}`)
     }
 
     try {
       this._project.removePage(pagePath)
     } catch (_) {}
+  }
+
+  /**
+   * Remove a file or directory by its `path` and its empty parent directories recursively.
+   */
+  protected _removeBubble(path: string): void {
+    if (fs.existsSync(path)) {
+      const isDir = fs.lstatSync(path).isDirectory()
+
+      if (!isDir || fs.readdirSync(path).length === 0) {
+        fs.removeSync(path)
+
+        const parentDir = path.split('/').slice(0, -1).join('/')
+
+        if (parentDir) {
+          this._removeBubble(parentDir)
+        }
+      }
+    }
+  }
+
+  /**
+   * Get the unique relative page path from two possible sources (e.g. 'src/foo.html'
+   * and 'src/foo/index.html').
+   *
+   * @throws an error if another relative path exists for the same page.
+   */
+  protected _resolveRelativePagePath(
+    relativeFilePath: string,
+    clearDiagnostics: boolean = true,
+    fixDuplicates: boolean = true,
+  ): string {
+    const pagePath = filePathToPagePath(relativeFilePath)
+
+    if (fixDuplicates) {
+      this._duplicatePagePaths.slice().forEach((duplicatePagePath) => {
+        try {
+          if (!this._project.hasPage(duplicatePagePath)) {
+            const filePath = pagePathToFilePath(duplicatePagePath)!
+            const relativePath = this._resolveRelativePagePath(filePath, false, false)
+            const index = this._duplicatePagePaths.indexOf(duplicatePagePath)
+            this._duplicatePagePaths.splice(index, 1)
+
+            try {
+              this._project.addPage(duplicatePagePath, fs.readFileSync(relativePath, 'utf-8'))
+              this._lintPage(duplicatePagePath).buildPage(duplicatePagePath)
+            } catch (e) {
+              this._addDiagnostics({ relativePath, message: e.message })
+            }
+          }
+        } catch (_) {}
+      })
+    }
+
+    if (pagePath && pagePath !== '/' && !pagePath.endsWith('/index')) {
+      const filePath = pagePathToFilePath(pagePath)!
+      const first = `src/pages/${filePath}`
+      const second = first.replace(/\/index\.html$/, '.html')
+      const firstExists = fs.existsSync(first)
+      const secondExists = fs.existsSync(second)
+
+      if (clearDiagnostics) {
+        this._clearDiagnostics(first)
+        this._clearDiagnostics(second)
+      }
+
+      if (firstExists && secondExists) {
+        if (!this._duplicatePagePaths.includes(pagePath)) {
+          this._duplicatePagePaths.push(pagePath)
+        }
+
+        this._removeBubble(`${this._dist}/${filePath}`)
+
+        throw new Error(`Duplicate page paths: '${first}' and '${second}'.`)
+      } else if (firstExists) {
+        return first
+      } else if (secondExists) {
+        return second
+      }
+    }
+
+    return `src/pages/${relativeFilePath}`
+  }
+
+  /**
+   * Add or update a single custom page.
+   */
+  setCustomPage(pagePath: string, html: string): void {
+    try {
+      if (this._project.hasPage(pagePath)) {
+        this._project.updatePage(pagePath, html)
+      } else {
+        this._project.addPage(pagePath, html)
+      }
+
+      this._lintPage(pagePath, `~${pagePath}`)
+    } catch (e) {
+      this._addDiagnostics({ relativePath: `~${pagePath}`, message: e.message })
+    }
   }
 
   /**
@@ -853,23 +981,6 @@ export class Wright {
           to: json.length,
         })
       }
-    }
-  }
-
-  /**
-   * Add or update a single custom page.
-   */
-  setPage(pagePath: string, html: string): void {
-    try {
-      if (this._project.hasPage(pagePath)) {
-        this._project.updatePage(pagePath, html)
-      } else {
-        this._project.addPage(pagePath, html)
-      }
-
-      this._lintPage(pagePath, `~${pagePath}`)
-    } catch (e) {
-      this._addDiagnostics({ relativePath: `~${pagePath}`, message: e.message })
     }
   }
 

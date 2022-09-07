@@ -7,7 +7,8 @@
   "types": "types/index.d.ts",
   "scripts": {
     "build": "rimraf dist types && node esbuild.js && tsc",
-    "dev": "rimraf dist types && concurrently --raw \"node esbuild.js --watch\" \"tsc --watch --preserveWatchOutput\""
+    "dev": "rimraf dist types && concurrently --raw \"node esbuild.js --watch\" \"tsc --watch --preserveWatchOutput\"",
+    "test": "cross-env NODE_OPTIONS=\"--experimental-vm-modules --no-warnings\" jest"
   },
   "repository": {
     "type": "git",
@@ -52,6 +53,8 @@
     "@types/glob": "^7.2.0",
     "@types/similarity": "^1.2.1",
     "concurrently": "^7.3.0",
+    "cross-env": "^7.0.3",
+    "jest": "^28.1.3",
     "rimraf": "^3.0.2",
     "typescript": "^4.7.4"
   },
