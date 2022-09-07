@@ -110,7 +110,7 @@ export async function build(silent: boolean = false): Promise<boolean> {
           }
         })
 
-        const prefix = `§${errors > 0 ? 'r' : 'y'}b(Close to the wind!)`
+        const prefix = `§${errors > 0 ? 'r' : 'y'}b( Close to the wind! )`
         const problems =
           (errors > 0 ? `§rb( ${errors} ) error${errors > 1 ? 's' : ''}` : '') +
           (errors > 0 && warnings > 0 ? ' and ' : '') +
