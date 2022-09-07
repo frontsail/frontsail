@@ -313,10 +313,8 @@ export class Wright {
 
     for (const diagnostic of [...this._diagnostics]) {
       if (
-        (typeof relativePath === 'string' &&
-          diagnostic.relativePath.toLowerCase() === relativePath.toLowerCase()) ||
-        (typeof relativePath !== 'string' &&
-          relativePath.test(diagnostic.relativePath.toLowerCase()))
+        (typeof relativePath === 'string' && diagnostic.relativePath === relativePath) ||
+        (typeof relativePath !== 'string' && relativePath.test(diagnostic.relativePath))
       ) {
         this._diagnostics.splice(index, 1)
         updated = true
@@ -679,7 +677,7 @@ export class Wright {
           // Components
           //
           else if (match[1] === 'components' && match[2].endsWith('.html')) {
-            const componentName = match[2].replace(/\.html$/, '').toLowerCase()
+            const componentName = match[2].replace(/\.html$/, '')
 
             if (eventName === 'add' || eventName === 'change') {
               this._format(normalizedPath)
@@ -759,7 +757,7 @@ export class Wright {
    */
   populate(): void {
     glob.sync('src/assets/**/*').forEach((srcPath) => {
-      const assetPath = srcPath.replace('src', '').toLowerCase()
+      const assetPath = srcPath.replace('src', '')
 
       try {
         this._project.addAsset(assetPath)
@@ -769,10 +767,7 @@ export class Wright {
     })
 
     glob.sync('src/components/**/*.html').forEach((srcPath) => {
-      const componentName = srcPath
-        .replace('src/components/', '')
-        .replace(/\.html$/, '')
-        .toLowerCase()
+      const componentName = srcPath.replace('src/components/', '').replace(/\.html$/, '')
 
       try {
         this._project.addComponent(componentName, fs.readFileSync(srcPath, 'utf-8'))
@@ -784,7 +779,7 @@ export class Wright {
     glob.sync('src/pages/**/*.html').forEach((srcPath) => {
       try {
         const relativeFilePath = srcPath.replace('src/pages/', '')
-        const pagePath = filePathToPagePath(relativeFilePath)!
+        const pagePath = filePathToPagePath(relativeFilePath, true)!
         const uniqueSrcPath = this._resolveRelativePagePath(relativeFilePath, false)
 
         try {

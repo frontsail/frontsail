@@ -6,8 +6,6 @@ import { isPagePath } from '@frontsail/core'
 export function filePathToPagePath(filePath: string, loose: boolean = false): string | null {
   let pagePath: string | null = null
 
-  filePath = filePath.toLowerCase()
-
   if (filePath === 'index.html' || filePath.endsWith('/index.html')) {
     pagePath = '/' + filePath.replace(/\/?index\.html$/, '')
   } else if (filePath.endsWith('.html')) {
