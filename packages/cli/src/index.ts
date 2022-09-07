@@ -57,7 +57,7 @@ args
     }
   })
 
-args.parse(process.argv)
+args.parse(process.argv, { name: 'npx @frontsail/cli' } as any)
 
 if (!commandUsed) {
   showUI()
