@@ -23,4 +23,9 @@ export interface FileDiagnostic extends Diagnostic {
    * Formatted code excerpt focused on the problematic code range.
    */
   preview: string
+
+  /**
+   * A reference for the diagnostic used when filtering.
+   */
+  reference?: string
 }

@@ -14,6 +14,7 @@ export type Injections = { [outletName: string]: ChildNode[] }
  */
 export interface TemplateDiagnostics extends HTMLDiagnostics {
   dependencies: Diagnostic[]
+  references: Diagnostic[]
   templateSpecific: Diagnostic[]
 }
 

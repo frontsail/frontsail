@@ -1,5 +1,12 @@
 import { codeFrameColumns } from '@babel/code-frame'
-import { isGlobalName, isPagePath, JSON as JSONAST, Project } from '@frontsail/core'
+import {
+  AtLeastOne,
+  isGlobalName,
+  isPagePath,
+  JSON as JSONAST,
+  Project,
+  TemplateDiagnostics,
+} from '@frontsail/core'
 import {
   bind,
   camelize,
@@ -165,7 +172,7 @@ export class Wright {
       .replace(/"\/style\.css"/g, `"/${this._getStylesOutname()}"`)
 
     if (this._subdirectory) {
-      html = html.replace(/(data|href|srcset|src)="(\/.+)"/g, `$1="/${this._subdirectory}$2"`)
+      html = html.replace(/(data|href|srcset|src)="(\/.+?)"/g, `$1="/${this._subdirectory}$2"`)
     }
 
     if (html.startsWith('<html')) {
@@ -393,7 +400,7 @@ export class Wright {
 
           try {
             this._project.addPage(duplicatePagePath, fs.readFileSync(relativePath, 'utf-8'))
-            this._lintPage(duplicatePagePath).buildPage(duplicatePagePath)
+            this._lintPage(duplicatePagePath, undefined, '*').buildPage(duplicatePagePath)
           } catch (e) {
             this._addDiagnostics({ relativePath, message: e.message })
           }
@@ -495,14 +502,16 @@ export class Wright {
   /**
    * Lint a component named `componentName` and store its diagnostics if any.
    */
-  protected _lintComponent(componentName: string): this {
-    this._clearDiagnostics(`src/components/${componentName}.html`)._addDiagnostics(
+  protected _lintComponent(componentName: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
+    const relativePath = `src/components/${componentName}.html`
+
+    this._clearDiagnostics(relativePath)._addDiagnostics(
       ...this._project
-        .lintComponent(componentName, '*')
+        .lintComponent(componentName, ...tests)
         .getComponentDiagnostics(componentName, '*')
         .map((diagnostic) => ({
           ...diagnostic,
-          relativePath: `src/components/${componentName}.html`,
+          relativePath,
         })),
     )
 
@@ -512,7 +521,11 @@ export class Wright {
   /**
    * Lint a page with the path `pagePath` and store its diagnostics if any.
    */
-  protected _lintPage(pagePath: string, relativePath?: string): this {
+  protected _lintPage(
+    pagePath: string,
+    relativePath?: string,
+    ...tests: AtLeastOne<TemplateDiagnostics>
+  ): this {
     if (typeof relativePath !== 'string') {
       if (pagePath === '/') {
         relativePath = 'src/pages/index.html'
@@ -527,7 +540,7 @@ export class Wright {
 
     this._clearDiagnostics(relativePath)._addDiagnostics(
       ...this._project
-        .lintPage(pagePath, '*')
+        .lintPage(pagePath, ...tests)
         .getPageDiagnostics(pagePath, '*')
         .map((diagnostic) => ({
           ...diagnostic,
@@ -541,9 +554,12 @@ export class Wright {
   /**
    * Lint all components and pages.
    */
-  lintTemplates(): this {
-    this._project.listComponents().forEach((componentName) => this._lintComponent(componentName))
-    this._project.listPages().forEach((pagePath) => this._lintPage(pagePath))
+  lintTemplates(...tests: AtLeastOne<TemplateDiagnostics>): this {
+    this._project
+      .listComponents()
+      .forEach((componentName) => this._lintComponent(componentName, ...tests))
+
+    this._project.listPages().forEach((pagePath) => this._lintPage(pagePath, undefined, ...tests))
 
     return this
   }
@@ -668,6 +684,7 @@ export class Wright {
 
               this._clearDiagnostics(normalizedPath)._project.addAsset(assetPath)
               fs.copySync(relativePath, `${this._dist}${assetPath}`)
+              this.lintTemplates('references')
             } else if (eventName === 'unlink') {
               this._clearDiagnostics(normalizedPath)._project.removeAsset(assetPath)
               this._removeBubble(`${this._dist}${assetPath}`)
@@ -688,7 +705,7 @@ export class Wright {
                 this._project.addComponent(componentName, fs.readFileSync(relativePath, 'utf-8'))
               }
 
-              this._lintComponent(componentName)
+              this._lintComponent(componentName, '*')
             } else if (eventName === 'unlink') {
               this._clearDiagnostics(normalizedPath)
 
@@ -703,8 +720,10 @@ export class Wright {
             try {
               const includers = this._project.getIncluders(componentName, true)
 
-              includers.components.forEach((_name) => this._lintComponent(_name))
-              includers.pages.forEach((_path) => this._lintPage(_path).buildPage(_path))
+              includers.components.forEach((_name) => this._lintComponent(_name, '*'))
+              includers.pages.forEach((_path) => {
+                this._lintPage(_path, undefined, '*').buildPage(_path)
+              })
             } catch (_) {}
           }
           //
@@ -723,7 +742,8 @@ export class Wright {
                 this._project.addPage(pagePath, fs.readFileSync(uniqueRelativePath, 'utf-8'))
               }
 
-              this._lintPage(pagePath).buildPage(pagePath)
+              this.lintTemplates('references')
+              this._lintPage(pagePath, undefined, '*').buildPage(pagePath)
             } else if (eventName === 'unlink') {
               this._clearDiagnostics(uniqueRelativePath)
               this._removeBubble(`${this._dist}/${pagePathToFilePath(pagePath)}`)
@@ -916,7 +936,7 @@ export class Wright {
         this._project.addPage(pagePath, html)
       }
 
-      this._lintPage(pagePath, `~${pagePath}`)
+      this._lintPage(pagePath, `~${pagePath}`, '*')
     } catch (e) {
       this._addDiagnostics({ relativePath: `~${pagePath}`, message: e.message })
     }
@@ -975,7 +995,7 @@ export class Wright {
         this._project.setGlobals(globals)
 
         if (rebuild) {
-          this.lintTemplates()
+          this.lintTemplates('*')
           this.rebuild()
         }
       } catch (e) {
@@ -1002,7 +1022,7 @@ export class Wright {
     this.updateConfig()
     this.setGlobals()
     this.populate()
-    this.lintTemplates()
+    this.lintTemplates('*')
 
     await this.rebuild()
 

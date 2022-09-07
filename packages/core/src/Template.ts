@@ -86,6 +86,11 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   protected _dependencies: string[] = []
 
   /**
+   * List of asset and page references used in this template.
+   */
+  protected _references: { name: string; from: number; to: number }[] = []
+
+  /**
    * Cache for the latest inline CSS build.
    */
   protected _cssCache: { checksum: number; css: string } = { checksum: 0, css: '' }
@@ -104,6 +109,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     mustacheLocations: [],
     mustacheValues: [],
     outletElements: [],
+    references: [],
     syntax: [],
     templateSpecific: [],
   }
@@ -122,6 +128,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     this._html = new HTML(html)
     this._project = project
     this._resolveDependencies()
+    this._resolveReferences()
   }
 
   /**
@@ -209,7 +216,8 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
         this.shouldTest('dependencies', tests) ||
         this.shouldTest('ifAttributes', tests) ||
         this.shouldTest('inlineCSS', tests) ||
-        this.shouldTest('mustacheValues', tests)
+        this.shouldTest('mustacheValues', tests) ||
+        this.shouldTest('references', tests)
       ) {
         // Check mustache values
         //
@@ -226,6 +234,31 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
               })
             }
           }
+        }
+        //
+        // Check references
+        //
+        if (this.shouldTest('references', tests) && this._project) {
+          this._references.forEach((reference) => {
+            let message: string = ''
+
+            if (reference.name.startsWith('/assets/')) {
+              if (!this._project!.hasAsset(reference.name)) {
+                message = `Asset '${reference.name}' does not exist.`
+              }
+            } else if (!this._project!.hasPage(reference.name)) {
+              message = `Page '${reference.name}' does not exist.`
+            }
+
+            if (message) {
+              this.addDiagnostics('references', {
+                message,
+                severity: 'warning',
+                from: reference.from,
+                to: reference.to,
+              })
+            }
+          })
         }
 
         for (const node of this._html.walk()) {
@@ -557,5 +590,23 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     })
 
     clearArray(this._dependencies).push(...uniqueArray(names).sort())
+  }
+
+  /**
+   * Extract assets and pages from the HTML.
+   */
+  protected _resolveReferences(): void {
+    const regex = /(data|href|srcset|src)="(\/.+?)"/g
+    let match: RegExpExecArray | null = null
+    clearArray(this._references)
+
+    do {
+      match = regex.exec(this._html.getRawHTML())
+
+      if (match && match[2] !== '/script.js' && match[2] !== '/style.css') {
+        const from = match.index + match[1].length + 2
+        this._references.push({ name: match[2], from, to: from + match[2].length })
+      }
+    } while (match)
   }
 }

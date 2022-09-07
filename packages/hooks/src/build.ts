@@ -42,7 +42,7 @@ export function init(): void {
   wright.updateConfig()
   wright.setGlobals()
   wright.populate()
-  wright.lintTemplates()
+  wright.lintTemplates('*')
 }
 
 /**
