@@ -637,7 +637,7 @@ export class Wright {
           // Assets
           //
           if (match[1] === 'assets') {
-            const assetPath = `/assets/${match[2]}`.toLowerCase()
+            const assetPath = `/assets/${match[2]}`
 
             if (eventName === 'add' || eventName === 'change') {
               if (this._project.hasAsset(assetPath)) {
