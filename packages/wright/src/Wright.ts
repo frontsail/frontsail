@@ -11,18 +11,19 @@ import {
   bind,
   camelize,
   clearArray,
+  clearObject,
   debounce,
   fillObject,
   lineColumnToOffset,
   offsetToLineColumn,
 } from '@frontsail/utils'
-import chokidar from 'chokidar'
+import watcher from '@parcel/watcher'
 import CleanCSS from 'clean-css'
 import esbuild from 'esbuild'
 import EventEmitter from 'events'
 import fs from 'fs-extra'
-import glob from 'glob'
 import { customAlphabet } from 'nanoid'
+import path from 'path'
 import prettyBytes from 'pretty-bytes'
 import { format } from './format'
 import { filePathToPagePath, pagePathToFilePath } from './helpers'
@@ -89,9 +90,20 @@ export class Wright {
   protected _buildHash: string
 
   /**
-   * `Chokidar` watcher for file changes in the working directory.
+   * `Parcel` watcher for file changes in the working directory.
    */
-  protected _watcher: chokidar.FSWatcher | null = null
+  protected _watcher: watcher.AsyncSubscription | null = null
+
+  /**
+   * List of directories and files inside of `src/assets`, `src/components`, and
+   * `src/pages`.
+   */
+  protected _srcTree: { [path: string]: 'file' | 'directory' } = {}
+
+  /**
+   * Collection of registered page paths with their relative `src` paths.
+   */
+  protected _pageSrcPaths: Map<string, string> = new Map()
 
   /**
    * Current build results from `esbuild`.
@@ -104,14 +116,135 @@ export class Wright {
   protected _cssReset: boolean = true
 
   /**
-   * List of page paths with duplicate source entries.
-   */
-  protected _duplicatePagePaths: string[] = []
-
-  /**
    * Event emitter instance.
    */
   events = new EventEmitter()
+
+  /**
+   * Add an asset to the current project.
+   */
+  protected _addAsset(srcPath: string, build: boolean = false): this {
+    const isFile = fs.lstatSync(srcPath).isFile()
+
+    this._clearDiagnostics(srcPath)
+    this._srcTree[srcPath] = isFile ? 'file' : 'directory'
+
+    if (isFile) {
+      const assetPath = srcPath.replace('src', '')
+
+      try {
+        if (!this._project.hasAsset(assetPath)) {
+          this._project.addAsset(assetPath)
+          this._checkReference(assetPath)
+        }
+
+        if (build) {
+          fs.copySync(srcPath, `${this._dist}${assetPath}`)
+        }
+      } catch (e) {
+        this._addDiagnostics({ relativePath: srcPath, message: e.message, source: 'core' })
+      }
+    } else {
+      fs.readdirSync(srcPath).forEach((subPath) => {
+        this._addAsset(`${srcPath}/${subPath}`, build)
+      })
+    }
+
+    return this
+  }
+
+  /**
+   * Add a component to the current project.
+   */
+  protected _addComponent(srcPath: string, build: boolean = false): this {
+    const isFile = fs.lstatSync(srcPath).isFile()
+
+    this._clearDiagnostics(srcPath)
+    this._srcTree[srcPath] = isFile ? 'file' : 'directory'
+
+    if (isFile) {
+      if (srcPath.endsWith('.html')) {
+        const componentName = srcPath.slice(15, -5)
+        const html = fs.readFileSync(srcPath, 'utf-8')
+
+        this._format(srcPath)
+
+        try {
+          if (this._project.hasComponent(componentName)) {
+            this._project.updateComponent(componentName, html)
+          } else {
+            this._project.addComponent(componentName, html)
+          }
+
+          this._lintComponent(componentName, '*')
+
+          if (build) {
+            this._postBuildComponent(componentName)
+          }
+        } catch (e) {
+          this._addDiagnostics({ relativePath: srcPath, message: e.message, source: 'core' })
+        }
+      }
+    } else {
+      fs.readdirSync(srcPath).forEach((subPath) => {
+        this._addComponent(`${srcPath}/${subPath}`, build)
+      })
+    }
+
+    return this
+  }
+
+  /**
+   * Add a page to the current project.
+   */
+  protected _addPage(srcPath: string, build: boolean = false): this {
+    const isFile = fs.lstatSync(srcPath).isFile()
+
+    this._clearDiagnostics(srcPath)
+    this._srcTree[srcPath] = isFile ? 'file' : 'directory'
+
+    if (isFile) {
+      if (srcPath.endsWith('.html')) {
+        const pagePath = filePathToPagePath(srcPath.replace('src/pages/', ''), true)!
+
+        this._format(srcPath)
+
+        if (this._pageSrcPaths.has(pagePath) && this._pageSrcPaths.get(pagePath) !== srcPath) {
+          this._addDiagnostics({
+            message: `Duplicate pages: '${pagePath}' and '${this._pageSrcPaths.get(pagePath)}'.`,
+            relativePath: srcPath,
+          })
+        } else {
+          const html = fs.readFileSync(srcPath, 'utf-8')
+
+          try {
+            if (this._project.hasPage(pagePath)) {
+              this._project.updatePage(pagePath, html)
+            } else {
+              this._project.addPage(pagePath, html)
+              this._pageSrcPaths.set(pagePath, srcPath)
+              this._checkReference(pagePath)
+            }
+
+            this._lintPage(pagePath, '*')
+
+            if (build) {
+              this.buildPage(pagePath)
+              this._buildStyles()
+            }
+          } catch (e) {
+            this._addDiagnostics({ relativePath: srcPath, message: e.message, source: 'core' })
+          }
+        }
+      }
+    } else {
+      fs.readdirSync(srcPath).forEach((subPath) => {
+        this._addPage(`${srcPath}/${subPath}`, build)
+      })
+    }
+
+    return this
+  }
 
   /**
    * Add `Project` `diagnostics` to the local collection and convert them to
@@ -128,6 +261,7 @@ export class Wright {
         start: [-1, -1],
         end: [-1, -1],
         preview: '',
+        source: 'wright',
       }) as FileDiagnostic
 
       let code: string = ''
@@ -273,10 +407,14 @@ export class Wright {
         .setCustomCSS(fs.readFileSync('src/main.css', 'utf-8'))
         .lintCustomCSS('*')
         .getCustomCSSDiagnostics('*')
-        .map((diagnostic) => ({
-          ...diagnostic,
-          relativePath: 'src/main.css',
-        })),
+        .map(
+          (diagnostic) =>
+            ({
+              ...diagnostic,
+              relativePath: 'src/main.css',
+              source: 'core',
+            } as Partial<FileDiagnostic>),
+        ),
     )
 
     let css = (this._cssReset ? cssReset.join('\n') : '') + this._project.buildStyles()
@@ -292,6 +430,25 @@ export class Wright {
     fs.outputFileSync(`${isProd ? this._tmp : this._dist}/${this._getStylesOutname()}`, css)
 
     this._emit('stats')
+  }
+
+  /**
+   * Lint a specific `referenceName` in templates where it's used.
+   */
+  protected _checkReference(referenceName: string): this {
+    this._project.listComponents().forEach((name) => {
+      if (this._project.getComponent(name).hasReference(referenceName)) {
+        this._lintComponent(name, 'references')
+      }
+    })
+
+    this._project.listPages().forEach((path) => {
+      if (this._project.getPage(path).hasReference(referenceName)) {
+        this._lintPage(path, 'references')
+      }
+    })
+
+    return this
   }
 
   /**
@@ -314,14 +471,15 @@ export class Wright {
   /**
    * Clear diagnostics related to a specified `relativePath`.
    */
-  protected _clearDiagnostics(relativePath: string | RegExp): this {
+  protected _clearDiagnostics(relativePath: string | RegExp, coreOnly: boolean = false): this {
     let index: number = 0
     let updated: boolean = false
 
     for (const diagnostic of [...this._diagnostics]) {
       if (
-        (typeof relativePath === 'string' && diagnostic.relativePath === relativePath) ||
-        (typeof relativePath !== 'string' && relativePath.test(diagnostic.relativePath))
+        ((typeof relativePath === 'string' && diagnostic.relativePath === relativePath) ||
+          (typeof relativePath !== 'string' && relativePath.test(diagnostic.relativePath))) &&
+        (!coreOnly || diagnostic.source === 'core')
       ) {
         this._diagnostics.splice(index, 1)
         updated = true
@@ -384,29 +542,6 @@ export class Wright {
     } catch (_) {}
 
     return this
-  }
-
-  /**
-   * Try to fix pages with duplicate paths.
-   */
-  protected _fixDuplicatePages(): void {
-    this._duplicatePagePaths.slice().forEach((duplicatePagePath) => {
-      try {
-        if (!this._project.hasPage(duplicatePagePath)) {
-          const filePath = pagePathToFilePath(duplicatePagePath)!
-          const relativePath = this._resolveRelativePagePath(filePath, false)
-          const index = this._duplicatePagePaths.indexOf(duplicatePagePath)
-          this._duplicatePagePaths.splice(index, 1)
-
-          try {
-            this._project.addPage(duplicatePagePath, fs.readFileSync(relativePath, 'utf-8'))
-            this._lintPage(duplicatePagePath, undefined, '*').buildPage(duplicatePagePath)
-          } catch (e) {
-            this._addDiagnostics({ relativePath, message: e.message })
-          }
-        }
-      } catch (_) {}
-    })
   }
 
   /**
@@ -505,14 +640,18 @@ export class Wright {
   protected _lintComponent(componentName: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
     const relativePath = `src/components/${componentName}.html`
 
-    this._clearDiagnostics(relativePath)._addDiagnostics(
+    this._clearDiagnostics(relativePath, true)._addDiagnostics(
       ...this._project
         .lintComponent(componentName, ...tests)
         .getComponentDiagnostics(componentName, '*')
-        .map((diagnostic) => ({
-          ...diagnostic,
-          relativePath,
-        })),
+        .map(
+          (diagnostic) =>
+            ({
+              ...diagnostic,
+              relativePath,
+              source: 'core',
+            } as Partial<FileDiagnostic>),
+        ),
     )
 
     return this
@@ -521,32 +660,24 @@ export class Wright {
   /**
    * Lint a page with the path `pagePath` and store its diagnostics if any.
    */
-  protected _lintPage(
-    pagePath: string,
-    relativePath?: string,
-    ...tests: AtLeastOne<TemplateDiagnostics>
-  ): this {
-    if (typeof relativePath !== 'string') {
-      if (pagePath === '/') {
-        relativePath = 'src/pages/index.html'
-      } else if (fs.existsSync(`src/pages${pagePath}/index.html`)) {
-        relativePath = `src/pages${pagePath}/index.html`
-      } else if (fs.existsSync(`src/pages${pagePath}.html`)) {
-        relativePath = `src/pages${pagePath}.html`
-      } else {
-        relativePath = `~${pagePath}`
-      }
-    }
+  protected _lintPage(pagePath: string, ...tests: AtLeastOne<TemplateDiagnostics>): this {
+    const relativePath = this._pageSrcPaths.get(pagePath)
 
-    this._clearDiagnostics(relativePath)._addDiagnostics(
-      ...this._project
-        .lintPage(pagePath, ...tests)
-        .getPageDiagnostics(pagePath, '*')
-        .map((diagnostic) => ({
-          ...diagnostic,
-          relativePath,
-        })),
-    )
+    if (relativePath) {
+      this._clearDiagnostics(relativePath, true)._addDiagnostics(
+        ...this._project
+          .lintPage(pagePath, ...tests)
+          .getPageDiagnostics(pagePath, '*')
+          .map(
+            (diagnostic) =>
+              ({
+                ...diagnostic,
+                relativePath,
+                source: 'core',
+              } as Partial<FileDiagnostic>),
+          ),
+      )
+    }
 
     return this
   }
@@ -559,7 +690,7 @@ export class Wright {
       .listComponents()
       .forEach((componentName) => this._lintComponent(componentName, ...tests))
 
-    this._project.listPages().forEach((pagePath) => this._lintPage(pagePath, undefined, ...tests))
+    this._project.listPages().forEach((pagePath) => this._lintPage(pagePath, ...tests))
 
     return this
   }
@@ -598,177 +729,113 @@ export class Wright {
   newProject(mode: 'development' | 'production'): void {
     this._project = new Project().setEnvironment(mode)
     this._buildHash = customAlphabet('01234567890abcdefghijklmnopqrstuvwxyz', 10)()
+    this._pageSrcPaths.clear()
   }
 
   /**
    * Handle file changes from the local `src` directory and project configuration files.
    */
-  @bind protected async _onFileChange(
-    eventName: 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir',
-    relativePath: string,
-  ): Promise<void> {
-    const normalizedPath = relativePath.replace(/\\/g, '/')
+  @bind protected async _onFileChange(_: Error | null, events: watcher.Event[]): Promise<void> {
+    events
+      .filter((event) => {
+        event.path = path.relative(process.cwd(), event.path).replace(/\\/g, '/')
 
-    // Project files
-    //
-    if (
-      ['frontsail.build.js', 'package.json'].includes(normalizedPath) ||
-      /^src\/scripts\/.+\.js$/.test(normalizedPath)
-    ) {
-      if (eventName === 'add' || eventName === 'change') {
-        this._format(normalizedPath)
-      }
-    }
-    //
-    // Config
-    //
-    if (normalizedPath === 'frontsail.config.json') {
-      if (eventName === 'add' || eventName === 'change') {
-        this._format(normalizedPath)
-      }
-
-      this.updateConfig(true)
-    }
-    //
-    // Globals
-    //
-    else if (normalizedPath === 'src/globals.json') {
-      if (eventName === 'add' || eventName === 'change') {
-        this._format(normalizedPath)
-      } else if (eventName === 'unlink') {
-        fs.outputJSONSync(normalizedPath, {})
-      }
-
-      this.setGlobals(true)
-    }
-    //
-    // Scripts
-    //
-    else if (normalizedPath === 'src/main.js') {
-      if (eventName === 'add' || eventName === 'change') {
-        this._format(normalizedPath)
-      } else if (eventName === 'unlink') {
-        fs.ensureFileSync(normalizedPath)
-      }
-
-      await this._buildScripts()
-    } else if (normalizedPath.startsWith('src/scripts/')) {
-      await this._buildScripts()
-    }
-    //
-    // Styles
-    //
-    else if (normalizedPath === 'src/main.css') {
-      if (eventName === 'add' || eventName === 'change') {
-        this._format(normalizedPath)
-      } else if (eventName === 'unlink') {
-        fs.ensureFileSync(normalizedPath)
-      }
-
-      this._buildStyles()
-    } else {
-      const match = /^src\/(assets|components|pages)\/(.+)$/.exec(normalizedPath)
-
-      if (match) {
-        try {
-          //
-          // Assets
-          //
-          if (match[1] === 'assets') {
-            const assetPath = `/assets/${match[2]}`
-
-            if (eventName === 'add' || eventName === 'change') {
-              if (this._project.hasAsset(assetPath)) {
-                this._clearDiagnostics(normalizedPath)._project.removeAsset(assetPath)
-              }
-
-              this._clearDiagnostics(normalizedPath)._project.addAsset(assetPath)
-              fs.copySync(relativePath, `${this._dist}${assetPath}`)
-            } else if (eventName === 'unlink') {
-              this._clearDiagnostics(normalizedPath)._project.removeAsset(assetPath)
-              this._removeBubble(`${this._dist}${assetPath}`)
-            }
-
-            this.lintTemplates('references')
-          }
-          //
-          // Components
-          //
-          else if (match[1] === 'components' && match[2].endsWith('.html')) {
-            const componentName = match[2].replace(/\.html$/, '')
-
-            if (eventName === 'add' || eventName === 'change') {
-              this._format(normalizedPath)
-
-              if (this._project.hasComponent(componentName)) {
-                this._project.updateComponent(componentName, fs.readFileSync(relativePath, 'utf-8'))
-              } else {
-                this._project.addComponent(componentName, fs.readFileSync(relativePath, 'utf-8'))
-              }
-
-              this._lintComponent(componentName, '*')
-            } else if (eventName === 'unlink') {
-              this._clearDiagnostics(normalizedPath)
-
-              try {
-                this._project.removeComponent(componentName)
-              } catch (_) {}
-            }
-
-            this._buildScripts()
-            this._buildStyles()
-
-            try {
-              const includers = this._project.getIncluders(componentName, true)
-
-              includers.components.forEach((_name) => this._lintComponent(_name, '*'))
-              includers.pages.forEach((_path) => {
-                this._lintPage(_path, undefined, '*').buildPage(_path)
-              })
-            } catch (_) {}
-          }
-          //
-          // Pages
-          //
-          else if (match[1] === 'pages' && match[2].endsWith('.html')) {
-            const uniqueRelativePath = this._resolveRelativePagePath(match[2])
-            const pagePath = filePathToPagePath(match[2], true)!
-
-            if (eventName === 'add' || eventName === 'change') {
-              this._format(uniqueRelativePath)
-
-              if (this._project.hasPage(pagePath)) {
-                this._project.updatePage(pagePath, fs.readFileSync(uniqueRelativePath, 'utf-8'))
-              } else {
-                this._project.addPage(pagePath, fs.readFileSync(uniqueRelativePath, 'utf-8'))
-                this.lintTemplates('references')
-              }
-
-              this._lintPage(pagePath, undefined, '*').buildPage(pagePath)
-            } else if (eventName === 'unlink') {
-              this._clearDiagnostics(uniqueRelativePath)
-              this._removeBubble(`${this._dist}/${pagePathToFilePath(pagePath)}`)
-
-              try {
-                this._project.removePage(pagePath)
-              } catch (_) {}
-
-              this._fixDuplicatePages()
-              this.lintTemplates('references')
-            }
-
-            this._buildStyles()
-          }
-        } catch (e) {
-          if (fs.existsSync(normalizedPath)) {
-            this._clearDiagnostics(normalizedPath)._addDiagnostics({
-              message: e.message,
-              relativePath: normalizedPath,
-            })
+        return (
+          event.path.startsWith('src/') ||
+          ['frontsail.config.json', 'frontsail.build.js', 'package.json'].includes(event.path)
+        )
+      })
+      .sort((a) => (a.type === 'delete' ? -1 : 0))
+      .forEach(async (event) => {
+        // Project files
+        //
+        if (
+          ['frontsail.build.js', 'package.json'].includes(event.path) ||
+          /^src\/scripts\/.+\.js$/.test(event.path)
+        ) {
+          if (event.type === 'create' || event.type === 'update') {
+            this._format(event.path)
           }
         }
-      }
-    }
+        //
+        // Config
+        //
+        if (event.path === 'frontsail.config.json') {
+          if (event.type === 'create' || event.type === 'update') {
+            this._format(event.path)
+          }
+
+          this.updateConfig(true)
+        }
+        //
+        // Globals
+        //
+        else if (event.path === 'src/globals.json') {
+          if (event.type === 'create' || event.type === 'update') {
+            this._format(event.path)
+          } else if (event.type === 'delete') {
+            fs.outputJSONSync(event.path, {})
+          }
+
+          this.setGlobals(true)
+        }
+        //
+        // Scripts
+        //
+        else if (event.path === 'src/main.js') {
+          if (event.type === 'create' || event.type === 'update') {
+            this._format(event.path)
+          } else if (event.type === 'delete') {
+            fs.ensureFileSync(event.path)
+          }
+
+          await this._buildScripts()
+        } else if (event.path.startsWith('src/scripts/')) {
+          await this._buildScripts()
+        }
+        //
+        // Styles
+        //
+        else if (event.path === 'src/main.css') {
+          if (event.type === 'create' || event.type === 'update') {
+            this._format(event.path)
+          } else if (event.type === 'delete') {
+            fs.ensureFileSync(event.path)
+          }
+
+          this._buildStyles()
+        }
+        //
+        // Assets
+        //
+        else if (event.path.startsWith('src/assets/')) {
+          if (event.type === 'delete') {
+            this._removeAsset(event.path)
+          } else {
+            this._addAsset(event.path, true)
+          }
+        }
+        //
+        // Components
+        //
+        else if (event.path.startsWith('src/components/')) {
+          if (event.type === 'delete') {
+            this._removeComponent(event.path)
+          } else {
+            this._addComponent(event.path, true)
+          }
+        }
+        //
+        // Pages
+        //
+        else if (event.path.startsWith('src/pages/')) {
+          if (event.type === 'delete') {
+            this._removePage(event.path)
+          } else {
+            this._addPage(event.path, true)
+          }
+        }
+      })
 
     this._emit('stats')
   }
@@ -778,44 +845,27 @@ export class Wright {
    * in the working `Project` instance.
    */
   populate(): void {
-    glob.sync('src/assets/**/*').forEach((srcPath) => {
-      const assetPath = srcPath.replace('src', '')
+    clearObject(this._srcTree)
+    fs.readdirSync('src/assets').forEach((path) => this._addAsset(`src/assets/${path}`))
+    fs.readdirSync('src/components').forEach((path) => this._addComponent(`src/components/${path}`))
+    fs.readdirSync('src/pages').forEach((path) => this._addPage(`src/pages/${path}`))
+  }
 
-      try {
-        this._project.addAsset(assetPath)
-      } catch (e) {
-        this._addDiagnostics({ relativePath: srcPath, message: e.message })
-      }
-    })
+  /**
+   * Actions after building a component.
+   */
+  protected _postBuildComponent(componentName: string): this {
+    this._buildScripts()
+    this._buildStyles()
 
-    glob.sync('src/components/**/*.html').forEach((srcPath) => {
-      const componentName = srcPath.replace('src/components/', '').replace(/\.html$/, '')
+    try {
+      const includers = this._project.getIncluders(componentName, true)
 
-      try {
-        this._project.addComponent(componentName, fs.readFileSync(srcPath, 'utf-8'))
-      } catch (e) {
-        this._addDiagnostics({ relativePath: srcPath, message: e.message })
-      }
-    })
+      includers.components.forEach((name) => this._lintComponent(name, '*'))
+      includers.pages.forEach((path) => this._lintPage(path, '*').buildPage(path))
+    } catch (_) {}
 
-    glob.sync('src/pages/**/*.html').forEach((srcPath) => {
-      try {
-        const relativeFilePath = srcPath.replace('src/pages/', '')
-        const pagePath = filePathToPagePath(relativeFilePath, true)!
-        const uniqueSrcPath = this._resolveRelativePagePath(relativeFilePath, false)
-
-        try {
-          this._project.addPage(pagePath, fs.readFileSync(uniqueSrcPath, 'utf-8'))
-        } catch (e) {
-          this._addDiagnostics({ relativePath: uniqueSrcPath, message: e.message })
-        }
-      } catch (e) {
-        this._clearDiagnostics(srcPath)._addDiagnostics({
-          message: e.message,
-          relativePath: srcPath,
-        })
-      }
-    })
+    return this
   }
 
   /**
@@ -846,9 +896,18 @@ export class Wright {
 
   /**
    * Remove a single custom page.
+   *
+   * @throws an error when trying to remove a source page.
    */
   removeCustomPage(pagePath: string): void {
-    this._clearDiagnostics(`~${pagePath}`)
+    if (this._pageSrcPaths.has(pagePath) && !this._pageSrcPaths.get(pagePath)!.startsWith('~')) {
+      throw new Error(`The page '${pagePath}' is not a custom page and cannot be removed.`)
+    }
+
+    const relativePath = `~${pagePath}`
+
+    this._clearDiagnostics(relativePath)
+    this._pageSrcPaths.delete(pagePath)
 
     if (isPagePath(pagePath)) {
       this._removeBubble(`${this._dist}/${pagePathToFilePath(pagePath)}`)
@@ -860,9 +919,101 @@ export class Wright {
   }
 
   /**
+   * Remove an asset from the current project.
+   */
+  protected _removeAsset(srcPath: string): this {
+    const type = this._srcTree[srcPath]
+
+    delete this._srcTree[srcPath]
+
+    if (type === 'file') {
+      const assetPath = srcPath.replace('src', '')
+
+      try {
+        this._clearDiagnostics(srcPath)
+          ._removeBubble(`${this._dist}${assetPath}`)
+          ._project.removeAsset(assetPath)
+
+        this._checkReference(assetPath)
+      } catch (_) {}
+    } else if (type === 'directory') {
+      Object.keys(this._srcTree)
+        .filter((path) => path.startsWith(`${srcPath}/`))
+        .forEach((subPath) => this._removeAsset(subPath))
+    }
+
+    return this
+  }
+
+  /**
+   * Remove a component from the current project.
+   */
+  protected _removeComponent(srcPath: string): this {
+    const type = this._srcTree[srcPath]
+    const componentName = srcPath.slice(15, -5)
+
+    delete this._srcTree[srcPath]
+
+    if (type === 'file') {
+      if (srcPath.endsWith('.html')) {
+        try {
+          this._clearDiagnostics(srcPath)._project.removeComponent(componentName)
+          this._postBuildComponent(componentName)
+        } catch (_) {}
+      }
+    } else if (type === 'directory') {
+      Object.keys(this._srcTree)
+        .filter((path) => path.startsWith(`${srcPath}/`))
+        .forEach((subPath) => this._removeComponent(subPath))
+    }
+
+    return this
+  }
+
+  /**
+   * Remove a page from the current project.
+   */
+  protected _removePage(srcPath: string): this {
+    const type = this._srcTree[srcPath]
+    const pagePath = filePathToPagePath(srcPath.replace('src/pages/', ''), true)!
+
+    delete this._srcTree[srcPath]
+
+    if (type === 'file') {
+      if (srcPath.endsWith('.html')) {
+        try {
+          this._clearDiagnostics(srcPath)
+            ._removeBubble(`${this._dist}/${pagePathToFilePath(pagePath)}`)
+            ._project.removePage(pagePath)
+
+          this._pageSrcPaths.delete(pagePath)
+          this._buildStyles()
+
+          // Resolve duplicate
+          for (const path in this._srcTree) {
+            if (
+              path === `src/pages${pagePath}.html` ||
+              path === `src/pages${pagePath}/index.html`
+            ) {
+              this._addPage(path, true)
+              break
+            }
+          }
+        } catch (_) {}
+      }
+    } else if (type === 'directory') {
+      Object.keys(this._srcTree)
+        .filter((path) => path.startsWith(`${srcPath}/`))
+        .forEach((subPath) => this._removePage(subPath))
+    }
+
+    return this
+  }
+
+  /**
    * Remove a file or directory by its `path` and its empty parent directories recursively.
    */
-  protected _removeBubble(path: string): void {
+  protected _removeBubble(path: string): this {
     if (fs.existsSync(path)) {
       const isDir = fs.lstatSync(path).isDirectory()
 
@@ -876,71 +1027,34 @@ export class Wright {
         }
       }
     }
-  }
 
-  /**
-   * Get the unique relative page path from two possible sources (e.g. 'src/foo.html'
-   * and 'src/foo/index.html').
-   *
-   * @throws an error if another relative path exists for the same page.
-   */
-  protected _resolveRelativePagePath(
-    relativeFilePath: string,
-    clearDiagnostics: boolean = true,
-  ): string {
-    const pagePath = filePathToPagePath(relativeFilePath)
-
-    if (pagePath && pagePath !== '/' && !pagePath.endsWith('/index')) {
-      const filePath = pagePathToFilePath(pagePath)!
-      const first = `src/pages/${filePath}`
-      const second = first.replace(/\/index\.html$/, '.html')
-      const firstExists = fs.existsSync(first)
-      const secondExists = fs.existsSync(second)
-
-      if (firstExists && secondExists) {
-        if (!this._duplicatePagePaths.includes(pagePath)) {
-          this._duplicatePagePaths.push(pagePath)
-        }
-
-        this._removeBubble(`${this._dist}/${filePath}`)
-
-        throw new Error(
-          `Duplicate pages: '${first.replace('src/pages/', '')}' and '${second.replace(
-            'src/pages/',
-            '',
-          )}'.`,
-        )
-      }
-
-      if (clearDiagnostics) {
-        this._clearDiagnostics(first)
-        this._clearDiagnostics(second)
-      }
-
-      if (firstExists) {
-        return first
-      } else if (secondExists) {
-        return second
-      }
-    }
-
-    return `src/pages/${relativeFilePath}`
+    return this
   }
 
   /**
    * Add or update a single custom page.
+   *
+   * @throws an error when trying to update a source page.
    */
   setCustomPage(pagePath: string, html: string): void {
+    if (this._pageSrcPaths.has(pagePath) && !this._pageSrcPaths.get(pagePath)!.startsWith('~')) {
+      throw new Error(`The page '${pagePath}' is not a custom page and cannot be updated.`)
+    }
+
+    const relativePath = `~${pagePath}`
+    this._clearDiagnostics(relativePath)
+
     try {
       if (this._project.hasPage(pagePath)) {
         this._project.updatePage(pagePath, html)
       } else {
         this._project.addPage(pagePath, html)
+        this._pageSrcPaths.set(pagePath, relativePath)
       }
 
-      this._lintPage(pagePath, `~${pagePath}`, '*')
+      this._lintPage(pagePath, '*')
     } catch (e) {
-      this._addDiagnostics({ relativePath: `~${pagePath}`, message: e.message })
+      this._addDiagnostics({ relativePath, message: e.message, source: 'core' })
     }
   }
 
@@ -1035,17 +1149,14 @@ export class Wright {
 
   /**
    * Watch for file changes in the `src` directory and add event listeners to handle
-   * callbacks from the `chokidar` watcher.
+   * callbacks from the `Parcel` watcher.
    *
    * Also watch for configuration files.
    */
   protected async _startWatching(): Promise<void> {
-    this._watcher = chokidar
-      .watch(['src/**/*', 'frontsail.config.json', 'frontsail.build.js', 'package.json'], {
-        awaitWriteFinish: { stabilityThreshold: 50 },
-        ignoreInitial: true,
-      })
-      .on('all', this._onFileChange)
+    this._watcher = await watcher.subscribe(process.cwd(), this._onFileChange, {
+      ignore: ['node_modules'],
+    })
   }
 
   /**
@@ -1054,18 +1165,17 @@ export class Wright {
    */
   async stop(): Promise<void> {
     if (this._project.isDevelopment()) {
-      await this._stopWatching()
+      this._stopWatching()
     }
   }
 
   /**
    * Remove listeners from all watchers and close them afterwards.
    */
-  protected async _stopWatching(): Promise<void> {
-    // Stop `Chokidar` watcher
+  protected _stopWatching(): void {
+    // Stop `Parcel` watcher
     if (this._watcher) {
-      this._watcher.off('all', this._onFileChange)
-      await this._watcher.close()
+      this._watcher.unsubscribe()
       this._watcher = null
     }
 

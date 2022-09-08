@@ -11,6 +11,8 @@ export async function buildAll(): Promise<void> {
 /**
  * Build a single page by its `path`.
  * If a `html` string is given, the page will be updated beforehand.
+ *
+ * @throws an error when trying to update a source page.
  */
 export function buildPage(path: string, html?: string): void {
   if (typeof html === 'string') {
@@ -47,6 +49,8 @@ export function init(): void {
 
 /**
  * Remove a page from the current project.
+ *
+ * @throws an error when trying to remove a source page.
  */
 export function removePage(path: string): void {
   wright.removeCustomPage(path)
@@ -55,6 +59,8 @@ export function removePage(path: string): void {
 /**
  * Register a new page with its `html` content in the current project.
  * If there is an existing page with the same `path`, it will be updated instead.
+ *
+ * @throws an error when trying to update a source page.
  */
 export function setPage(path: string, html: string): void {
   wright.setCustomPage(path, html)

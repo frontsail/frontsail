@@ -194,6 +194,13 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   }
 
   /**
+   * Check if the template has a reference named `name`.
+   */
+  hasReference(name: string): boolean {
+    return this._references.some((reference) => reference.name === name)
+  }
+
+  /**
    * Check if the template includes a specific component. This method does not
    * recursively check dependencies of the included components. For depth checks,
    * use the method `includesComponent` in the `Project` class.

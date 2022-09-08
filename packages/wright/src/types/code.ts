@@ -25,7 +25,7 @@ export interface FileDiagnostic extends Diagnostic {
   preview: string
 
   /**
-   * A reference for the diagnostic used when filtering.
+   * A source reference for the diagnostic used when filtering.
    */
-  reference?: string
+  source: 'core' | 'wright'
 }
