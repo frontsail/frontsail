@@ -684,11 +684,12 @@ export class Wright {
 
               this._clearDiagnostics(normalizedPath)._project.addAsset(assetPath)
               fs.copySync(relativePath, `${this._dist}${assetPath}`)
-              this.lintTemplates('references')
             } else if (eventName === 'unlink') {
               this._clearDiagnostics(normalizedPath)._project.removeAsset(assetPath)
               this._removeBubble(`${this._dist}${assetPath}`)
             }
+
+            this.lintTemplates('references')
           }
           //
           // Components
@@ -740,9 +741,9 @@ export class Wright {
                 this._project.updatePage(pagePath, fs.readFileSync(uniqueRelativePath, 'utf-8'))
               } else {
                 this._project.addPage(pagePath, fs.readFileSync(uniqueRelativePath, 'utf-8'))
+                this.lintTemplates('references')
               }
 
-              this.lintTemplates('references')
               this._lintPage(pagePath, undefined, '*').buildPage(pagePath)
             } else if (eventName === 'unlink') {
               this._clearDiagnostics(uniqueRelativePath)
@@ -753,6 +754,7 @@ export class Wright {
               } catch (_) {}
 
               this._fixDuplicatePages()
+              this.lintTemplates('references')
             }
 
             this._buildStyles()
