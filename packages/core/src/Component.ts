@@ -265,7 +265,7 @@ export class Component extends Template {
         return ''
       }
 
-      const xData = rootElement.attrs.find((attr) => attr.name === 'x-data')?.value ?? '{}'
+      const xData = rootElement.attrs.find((attr) => attr.name === 'x-data')?.value || '{}'
       const data = new JS(xData, true)
 
       let xBindIndex: number = 1
