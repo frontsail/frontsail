@@ -290,19 +290,13 @@ test('linting outlet elements (3)', () => {
     .lint('outletElements')
     .getDiagnostics('outletElements')
 
-  expect(diagnostics).toHaveLength(3)
-  expect(diagnostics).toHaveProperty('0.from', 9)
-  expect(diagnostics).toHaveProperty('0.to', 46)
-  expect(diagnostics).toHaveProperty(
-    '0.message',
-    "Outlets cannot be nested within 'include' elements.",
-  )
-  expect(diagnostics).toHaveProperty('1.from', 17)
-  expect(diagnostics).toHaveProperty('1.to', 22)
+  expect(diagnostics).toHaveLength(2)
+  expect(diagnostics).toHaveProperty('0.from', 17)
+  expect(diagnostics).toHaveProperty('0.to', 22)
+  expect(diagnostics).toHaveProperty('0.message', "Outlets can only have a 'name' attribute.")
+  expect(diagnostics).toHaveProperty('1.from', 33)
+  expect(diagnostics).toHaveProperty('1.to', 36)
   expect(diagnostics).toHaveProperty('1.message', "Outlets can only have a 'name' attribute.")
-  expect(diagnostics).toHaveProperty('2.from', 33)
-  expect(diagnostics).toHaveProperty('2.to', 36)
-  expect(diagnostics).toHaveProperty('2.message', "Outlets can only have a 'name' attribute.")
 })
 
 test('linting outlet elements (4)', () => {

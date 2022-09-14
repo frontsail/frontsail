@@ -477,7 +477,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
 
       if (injections[name]) {
         HTML.replaceElement(element, ...injections[name])
-      } else {
+      } else if (!HTML.hasParent(element, 'include')) {
         HTML.adapter.detachNode(element)
       }
     })
@@ -847,13 +847,6 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             if (HTML.hasParent(node, 'outlet')) {
               this.addDiagnostics('outletElements', {
                 message: 'Outlets cannot be nested within each other.',
-                severity: 'error',
-                from: node.sourceCodeLocation!.startOffset,
-                to: node.sourceCodeLocation!.endOffset,
-              })
-            } else if (HTML.hasParent(node, 'include')) {
-              this.addDiagnostics('outletElements', {
-                message: "Outlets cannot be nested within 'include' elements.",
                 severity: 'error',
                 from: node.sourceCodeLocation!.startOffset,
                 to: node.sourceCodeLocation!.endOffset,
