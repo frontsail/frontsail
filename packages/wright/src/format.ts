@@ -194,7 +194,7 @@ function formatCSS(code: string): string {
     .split('\n')
     .map((line) => {
       const trimmed = line.trim()
-      const simple = /^{?[^{:]+}?$/.test(trimmed)
+      const simple = /^{?[^{:,]+}?$/.test(trimmed)
       const match = simple ? null : /^(.+?{\s*)([^{:]+?)(}?)$/.exec(trimmed)
 
       if (simple || match) {
