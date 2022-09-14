@@ -625,6 +625,7 @@ export class Wright {
     packageJSON.devDependencies['@frontsail/cli'] = cliVersion
 
     fs.outputJsonSync('.vscode/settings.json', starter.vscodeSettingsJSON, { spaces: 2 })
+    fs.outputFileSync('src/assets/favicon.ico', starter.faviconICO, 'base64')
     fs.outputJsonSync('src/globals.json', starter.srcGlobalsJSON, { spaces: 2 })
     fs.outputFileSync('src/main.js', starter.srcMainJS.join('\n'))
     fs.outputFileSync('src/components/base.html', starter.srcComponentsBaseHTML.join('\n'))
