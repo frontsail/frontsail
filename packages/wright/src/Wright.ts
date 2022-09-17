@@ -306,7 +306,9 @@ export class Wright {
       .replace(/"\/style\.css"/g, `"/${this._getStylesOutname()}"`)
 
     if (this._subdirectory) {
-      html = html.replace(/(data|href|srcset|src)="(\/.+?)"/g, `$1="/${this._subdirectory}$2"`)
+      html = html
+        .replace(/(data|href|srcset|src)="(\/.+?)"/g, `$1="/${this._subdirectory}$2"`)
+        .replace(/url\(\/assets\/(.+?)\)/g, `url(/${this._subdirectory}/assets/$1)`)
     }
 
     if (html.startsWith('<html')) {
