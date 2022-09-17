@@ -419,6 +419,10 @@ export class Wright {
 
     let css = (this._cssReset ? cssReset.join('\n') : '') + this._project.buildStyles()
 
+    if (this._subdirectory) {
+      css = css.replace(/url\((\/.+?)\)/g, `url(/${this._subdirectory}$1)`)
+    }
+
     if (isProd) {
       const cleanCSS = new CleanCSS().minify(css)
 
