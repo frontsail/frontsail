@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/wright",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "The FrontSail project builder.",
   "type": "module",
   "main": "dist/index.cjs",
