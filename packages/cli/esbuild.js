@@ -7,7 +7,7 @@ esbuild.build({
   bundle: true,
   platform: 'node',
   mainFields: ['module', 'main'],
-  external: ['browser-sync', 'esbuild', 'fsevents', '@parcel/watcher', 'prettier'],
+  external: ['@parcel/watcher', 'browser-sync', 'esbuild', 'fsevents', 'prettier'],
   minify: !process.argv.includes('--watch'),
   watch: process.argv.includes('--watch'),
 })

@@ -1,5 +1,5 @@
 import fs from 'fs-extra'
-import fetch from 'node-fetch'
+import fetch from 'node-fetch/lib'
 import semver from 'semver'
 import { emptyLine, print } from './helpers'
 
@@ -23,12 +23,12 @@ export async function checkLatestVersion(
 
   const promises = [
     fetch(`https://registry.npmjs.org/${packageName}/latest`)
-      .then(async (response) => await response.json())
+      .then(async (response: any) => await response.json())
       .then((json: { version: string }) => {
         newerVersions[packageName] = semver.gt(json.version, currentVersion) ? json.version : null
         return newerVersions[packageName]
       })
-      .catch((_) => null),
+      .catch((_: any) => null),
   ]
 
   if (typeof timeout === 'number') {
