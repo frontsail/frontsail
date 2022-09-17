@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/cli",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Command line interface for managing FrontSail projects.",
   "type": "module",
   "main": "dist/index.cjs",
@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@frontsail/utils": "^0.1.6",
-    "@frontsail/wright": "^0.1.11",
+    "@frontsail/wright": "^0.1.12",
     "args": "^5.0.3",
     "browser-sync": "^2.27.10",
     "fs-extra": "^10.1.0",
