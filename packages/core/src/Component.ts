@@ -320,23 +320,24 @@ export class Component extends Template {
             }
           }
 
+          // Resolve class modifiers
+          if (node.attrs.some((attr) => attr.name === 'css')) {
+            const bindClassAttribute = node.attrs.find((attr) => {
+              return /^(?:x-bind)?:class$/.test(attr.name)
+            })
+
+            if (bindClassAttribute) {
+              bindClassAttribute.value = bindClassAttribute.value.replace(
+                /%([a-z][a-zA-Z0-9]*)/g,
+                `_${key}e${inlineCSSIndex}_$1_D`,
+              )
+            }
+
+            inlineCSSIndex++
+          }
+
           for (const attr of node.attrs) {
             if (isAlpineDirective(attr.name)) {
-              if (node.attrs.some((attr) => attr.name === 'css')) {
-                const bindClassAttribute = node.attrs.find((attr) => {
-                  return /^(?:x-bind)?:class$/.test(attr.name)
-                })
-
-                if (bindClassAttribute) {
-                  bindClassAttribute.value = bindClassAttribute.value.replace(
-                    /%([a-z][a-zA-Z0-9]*)/g,
-                    `_${key}e${inlineCSSIndex}_$1_D`,
-                  )
-                }
-
-                inlineCSSIndex++
-              }
-
               if (!hasXBind && !['x-data', 'x-bind', 'x-for', 'x-cloak'].includes(attr.name)) {
                 const runtimeProperties: string[] = []
                 let relative: Element | null = node
