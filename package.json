@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "test": "lerna run test",
     "version": "lerna version",
-    "publish": "lerna publish from-package"
+    "publish": "npm run build && lerna publish from-package"
   },
   "author": "Muris Ceman <muris@frontsail.com>",
   "license": "MIT",

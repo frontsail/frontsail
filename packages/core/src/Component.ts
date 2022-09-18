@@ -277,7 +277,18 @@ export class Component extends Template {
 
       const dataProperties = [
         ...data.getObjectProperties(),
-        ...['$data', '$dispatch', '$el', '$id', '$nextTick', '$refs', '$root', '$store', '$watch'],
+        ...[
+          '$data',
+          '$dispatch',
+          '$el',
+          '$event',
+          '$id',
+          '$nextTick',
+          '$refs',
+          '$root',
+          '$store',
+          '$watch',
+        ],
       ]
       const runtime: { element: Element; properties: string[] }[] = []
       const bindings: string[] = []
