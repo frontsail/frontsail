@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/wright",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "The FrontSail project builder.",
   "type": "module",
   "main": "dist/index.cjs",
@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@babel/code-frame": "^7.18.6",
-    "@frontsail/core": "^0.1.13",
+    "@frontsail/core": "^0.1.15",
     "@frontsail/utils": "^0.1.6",
     "@parcel/watcher": "^2.0.5",
     "clean-css": "^5.3.1",
