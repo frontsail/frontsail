@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/core",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "A lightweight framework for building static websites.",
   "type": "module",
   "main": "dist/index.js",
