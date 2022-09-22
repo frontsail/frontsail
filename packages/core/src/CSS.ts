@@ -379,19 +379,6 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
           }
         } while (match)
       })
-
-      this._ast!.walkAtRules((atRule) => {
-        if (CSS.hasDeclarations(atRule) && !CSS.hasParentRule(atRule)) {
-          CSS.getDeclarations(atRule).forEach((declaration) => {
-            this.addDiagnostics('logical', {
-              message: 'Missing parent rule.',
-              severity: 'warning',
-              from: declaration.source!.start!.offset,
-              to: declaration.source!.end!.offset + 1,
-            })
-          })
-        }
-      })
     }
 
     return this
