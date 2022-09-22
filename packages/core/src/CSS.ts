@@ -268,7 +268,7 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
    * Get a list of all global variables in the CSS code.
    */
   static getGlobals(css: string): GlobalVariable[] {
-    const regex = /(?:\$|@)([a-z0-9][a-zA-Z0-9]*)/g
+    const regex = /(?:\$|@)([a-z0-9][a-zA-Z0-9-]*)/g
     const variables: GlobalVariable[] = []
     let match: RegExpExecArray | null
 
