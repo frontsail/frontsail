@@ -169,8 +169,6 @@ export class Wright {
         const componentName = srcPath.slice(15, -5)
         const html = fs.readFileSync(srcPath, 'utf-8')
 
-        this._format(srcPath)
-
         try {
           if (this._project.hasComponent(componentName)) {
             this._project.updateComponent(componentName, html)
@@ -208,8 +206,6 @@ export class Wright {
     if (isFile) {
       if (srcPath.endsWith('.html')) {
         const pagePath = filePathToPagePath(srcPath.replace('src/pages/', ''), true)!
-
-        this._format(srcPath)
 
         if (this._pageSrcPaths.has(pagePath) && this._pageSrcPaths.get(pagePath) !== srcPath) {
           this._addDiagnostics({
@@ -837,7 +833,7 @@ export class Wright {
           if (event.type === 'delete') {
             this._removeComponent(event.path)
           } else {
-            this._addComponent(event.path, true)
+            this._format(event.path)._addComponent(event.path, true)
           }
         }
         //
@@ -847,7 +843,7 @@ export class Wright {
           if (event.type === 'delete') {
             this._removePage(event.path)
           } else {
-            this._addPage(event.path, true)
+            this._format(event.path)._addPage(event.path, true)
           }
         }
       })
