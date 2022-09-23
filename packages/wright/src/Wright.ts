@@ -18,12 +18,14 @@ import {
   offsetToLineColumn,
 } from '@frontsail/utils'
 import watcher from '@parcel/watcher'
+import autoprefixer from 'autoprefixer'
 import CleanCSS from 'clean-css'
 import esbuild from 'esbuild'
 import EventEmitter from 'events'
 import fs from 'fs-extra'
 import { customAlphabet } from 'nanoid'
 import path from 'path'
+import postcss from 'postcss'
 import prettyBytes from 'pretty-bytes'
 import { format } from './format'
 import { filePathToPagePath, pagePathToFilePath } from './helpers'
@@ -426,6 +428,10 @@ export class Wright {
     if (this._subdirectory) {
       css = css.replace(/url\((\/.+?)\)/g, `url(/${this._subdirectory}$1)`)
     }
+
+    try {
+      css = postcss([autoprefixer]).process(css, { from: undefined }).css
+    } catch (_) {}
 
     if (isProd) {
       const cleanCSS = new CleanCSS().minify(css)
