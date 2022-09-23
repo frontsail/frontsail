@@ -32,8 +32,11 @@
     "node": ">=16.13.0"
   },
   "dependencies": {
+    "@parcel/watcher": "^2.0.5",
     "browser-sync": "^2.27.10",
-    "eastasianwidth": "^0.2.0"
+    "eastasianwidth": "^0.2.0",
+    "esbuild": "^0.15.5",
+    "prettier": "^2.7.1"
   },
   "devDependencies": {
     "@frontsail/utils": "^0.1.6",
