@@ -350,7 +350,9 @@ export class Wright {
 
       if (isProd) {
         options.stdin = {
-          contents: "import './main.js'\n\n" + this._project.buildScripts(),
+          contents:
+            "import './main.js'\n\nimport Alpine from 'alpinejs'\n\n" +
+            this._project.buildScripts(),
           resolveDir: 'src',
           sourcefile: 'components/**/*.html',
         }
