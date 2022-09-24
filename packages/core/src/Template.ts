@@ -11,7 +11,7 @@ import { Project } from './Project'
 import { RenderDiagnostic } from './types/code'
 import { AtLeastOne } from './types/generic'
 import { TemplateDiagnostics, TemplateRenderResults } from './types/template'
-import { isComponentName, isGlobalName, isPropertyName } from './validation'
+import { isComponentName, isGlobalName, isPropertyName, isSafeSlug } from './validation'
 
 /**
  * Handles common features of components and pages, such as abstract syntax trees,
@@ -111,6 +111,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
     outletElements: [],
     references: [],
     syntax: [],
+    tagAttributes: [],
     templateSpecific: [],
   }
 
@@ -468,6 +469,14 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
           if (!new JS(ifAttribute.value).evaluate(variables)) {
             HTML.adapter.detachNode(node)
           }
+        }
+
+        // Resolve `tag` name
+        const tagAttributeIndex = node.attrs.findIndex((attr) => attr.name === 'tag')
+
+        if (tagAttributeIndex > -1 && isSafeSlug(node.attrs[tagAttributeIndex].value)) {
+          node.tagName = node.attrs[tagAttributeIndex].value
+          node.attrs.splice(tagAttributeIndex, 1)
         }
 
         // Replace `css` attributes with CSS classes

@@ -164,6 +164,7 @@ test('filtering tests', () => {
     'mustacheValues',
     'outletElements',
     'syntax',
+    'tagAttributes',
   ]
 
   expect(html.filterTests(['*'])).toEqual(types)

@@ -26,6 +26,7 @@ export interface HTMLDiagnostics {
   mustacheValues: Diagnostic[]
   outletElements: Diagnostic[]
   syntax: Diagnostic[]
+  tagAttributes: Diagnostic[]
 }
 
 /**

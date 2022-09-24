@@ -329,3 +329,17 @@ test('linting inline css', () => {
     'Inline CSS attribute values must be enclosed in curly brackets.',
   )
 })
+
+test('linting tag attributes', () => {
+  const diagnostics = new HTML('<div tag="0-span"><img tag="br"><span tag=""></span></div>')
+    .lint('tagAttributes')
+    .getDiagnostics('tagAttributes')
+
+  expect(diagnostics).toHaveLength(2)
+  expect(diagnostics).toHaveProperty('0.from', 10)
+  expect(diagnostics).toHaveProperty('0.to', 16)
+  expect(diagnostics).toHaveProperty('0.message', "Invalid tag name. Try with 'span'.")
+  expect(diagnostics).toHaveProperty('1.from', 38)
+  expect(diagnostics).toHaveProperty('1.to', 41)
+  expect(diagnostics).toHaveProperty('1.message', 'Tag attributes cannot be empty.')
+})

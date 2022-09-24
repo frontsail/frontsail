@@ -145,6 +145,7 @@ export function isPropertyName(name: string): boolean {
       'super',
       'switch',
       'synchronized',
+      'tag',
       'this',
       'throw',
       'throws',

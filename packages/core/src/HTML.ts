@@ -1,4 +1,4 @@
-import { clearArray, escape, uniqueArray } from '@frontsail/utils'
+import { clearArray, escape, slugify, uniqueArray } from '@frontsail/utils'
 import { defaultTreeAdapter, parse, parseFragment, serialize } from 'parse5'
 import {
   ChildNode,
@@ -23,6 +23,7 @@ import {
   isEnclosed,
   isGlobalName,
   isPropertyName,
+  isSafeSlug,
 } from './validation'
 
 /**
@@ -134,6 +135,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
     mustacheValues: [],
     outletElements: [],
     syntax: [],
+    tagAttributes: [],
   }
 
   /**
@@ -859,6 +861,30 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                   message: "Outlets can only have a 'name' attribute.",
                   severity: 'warning',
                   ...this.getAttributeNameRange(node, attr.name)!,
+                })
+              }
+            }
+          }
+          //
+          // Check tag attributes
+          //
+          if (this.shouldTest('tagAttributes', tests)) {
+            const tagAttribute = node.attrs.find((attr) => attr.name === 'tag')
+
+            if (tagAttribute) {
+              if (!tagAttribute.value.trim()) {
+                this.addDiagnostics('tagAttributes', {
+                  message: 'Tag attributes cannot be empty.',
+                  severity: 'error',
+                  ...this.getAttributeNameRange(node, tagAttribute.name)!,
+                })
+              } else if (!isSafeSlug(tagAttribute.value)) {
+                const suggestion = slugify(tagAttribute.value, '-', true)
+
+                this.addDiagnostics('tagAttributes', {
+                  message: `Invalid tag name. Try with '${suggestion}'.`,
+                  severity: 'error',
+                  ...this.getAttributeValueRange(node, tagAttribute.name)!,
                 })
               }
             }
