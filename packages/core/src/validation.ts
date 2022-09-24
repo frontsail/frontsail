@@ -35,7 +35,7 @@ export function isAttributeName(name: string): boolean {
  * isComponentName('/foo-bar/baz') // false
  */
 export function isComponentName(name: string): boolean {
-  return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/.test(name)
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/.test(name)
 }
 
 /**

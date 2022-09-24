@@ -70,7 +70,7 @@ export class Component extends Template {
     if (!isComponentName(name)) {
       const suggestion = name
         .split('/')
-        .map((part) => slugify(part, '-', true))
+        .map((part) => slugify(part))
         .join('/')
 
       throw new Error(`The component name '${name}' is not valid. Try with '${suggestion}'.`)

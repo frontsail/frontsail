@@ -61,9 +61,9 @@ export interface ProjectOptions {
 
   /**
    * Collection of registered `Component` instances in the project. The object keys
-   * must start with a safe slug (e.g. 'layout') and the rest of the string can
-   * contain slugs (e.g. '123-teaser') separated by forward slashes (`/`).
-   * Examples: 'hero', 'ui/button', 'layout/123-teaser', etc.
+   * must start with a slug (e.g. 'layout') and the rest of the string can contain
+   * slugs (e.g. '123-teaser') separated by forward slashes (`/`). Examples: 'hero',
+   * 'ui/button', 'layout/123-teaser', etc.
    *
    * @see Component for more details.
    */

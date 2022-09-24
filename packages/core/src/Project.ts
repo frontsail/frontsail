@@ -84,8 +84,8 @@ import { isAssetPath, isGlobalName, isPagePath } from './validation'
  *
  * - **Template ID** - Refers to a component name (e.g. 'ui/text-input') or a page
  *   path (e.g. '/contact'). The IDs must contain slugs that can be separated by
- *   forward slashes (`/`). Component IDs always start with a safe slug and page
- *   IDs with a forward slash.
+ *   forward slashes (`/`). Component IDs always start with a slug and page IDs
+ *   with a forward slash.
  *
  * - **Template key** - A unique string identifier that is used in the base class
  *   name for CSS rules generated from `css` attributes and in the default Alpine
@@ -120,9 +120,9 @@ export class Project extends ProjectDiagnostics {
 
   /**
    * Collection of registered `Component` instances in the project. The object keys
-   * must start with a safe slug (e.g. 'layout') and the rest of the string can
-   * contain slugs (e.g. '123-teaser') separated by forward slashes (`/`).
-   * Examples: 'hero', 'ui/button', 'layout/123-teaser', etc.
+   * must start with a slug (e.g. 'layout') and the rest of the string can contain
+   * slugs (e.g. '123-teaser') separated by forward slashes (`/`). Examples: 'hero',
+   * 'ui/button', 'layout/123-teaser', etc.
    *
    * @see Component for more details.
    */
@@ -229,7 +229,7 @@ export class Project extends ProjectDiagnostics {
 
   /**
    * Register a new component to the project. The component `name` must match the
-   * pattern `/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/`.
+   * pattern `/^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/`.
    *
    * @throws an error if the component name is taken.
    */

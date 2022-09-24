@@ -60,7 +60,7 @@ export class Page extends Template {
       let suggestion = path
         .split('/')
         .filter(Boolean)
-        .map((part) => slugify(part, '-', true))
+        .map((part) => slugify(part))
         .join('/')
 
       if (!suggestion.startsWith('/')) {

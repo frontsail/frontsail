@@ -65,12 +65,12 @@ test('component name validation', () => {
   expect(isComponentName('foo/bar/baz')).toBe(true)
   expect(isComponentName('foo-bar')).toBe(true)
   expect(isComponentName('foo-bar/baz')).toBe(true)
+  expect(isComponentName('1foo')).toBe(true)
   expect(isComponentName('Foo')).toBe(false)
   expect(isComponentName('foo_bar')).toBe(false)
   expect(isComponentName('/foo')).toBe(false)
   expect(isComponentName('-foo')).toBe(false)
   expect(isComponentName('foo-')).toBe(false)
-  expect(isComponentName('1foo')).toBe(false)
   expect(isComponentName('$foo')).toBe(false)
 })
 

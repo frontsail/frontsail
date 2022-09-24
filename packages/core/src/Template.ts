@@ -59,7 +59,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
   /**
    * A component name (e.g. 'ui/text-input') or a page path (e.g. '/contact').
    * The IDs must contain slugs that can be separated by forward slashes (`/`).
-   * Component IDs always start with a safe slug and page IDs with a forward slash.
+   * Component IDs always start with a slug and page IDs with a forward slash.
    */
   protected _id: string
 
