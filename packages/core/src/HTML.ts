@@ -669,8 +669,14 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
                   })
                 }
               } else if (attr.name !== 'if' && !isPropertyName(attr.name)) {
+                const suggestion = slugify(attr.name, '_')
+                const message =
+                  suggestion === attr.name
+                    ? `The keyword '${attr.name}' is reserved and cannot be used as a property name.`
+                    : `The property name '${attr.name}' is not valid. Try with '${suggestion}'.`
+
                 this.addDiagnostics('includeElements', {
-                  message: 'Invalid property name.',
+                  message,
                   severity: 'warning',
                   ...this.getAttributeNameRange(node, attr.name)!,
                 })

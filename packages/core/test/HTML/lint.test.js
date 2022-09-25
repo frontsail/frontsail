@@ -19,7 +19,7 @@ test('linting attribute names', () => {
     .lint('attributeNames')
     .getDiagnostics('attributeNames')
 
-  expect(diagnostics).toHaveLength(3)
+  expect(diagnostics).toHaveLength(2)
   expect(diagnostics).toHaveProperty('0.from', 5)
   expect(diagnostics).toHaveProperty('0.to', 7)
   expect(diagnostics).toHaveProperty(
@@ -32,9 +32,6 @@ test('linting attribute names', () => {
     '1.message',
     'Mustache syntax is not allowed in attribute names.',
   )
-  expect(diagnostics).toHaveProperty('2.from', 15)
-  expect(diagnostics).toHaveProperty('2.to', 22)
-  expect(diagnostics).toHaveProperty('2.message', 'Invalid attribute name.')
 })
 
 test('linting if attributes (1)', () => {
@@ -73,7 +70,10 @@ test('linting include elements (1)', () => {
   expect(diagnostics).toHaveLength(2)
   expect(diagnostics).toHaveProperty('0.from', 28)
   expect(diagnostics).toHaveProperty('0.to', 36)
-  expect(diagnostics).toHaveProperty('0.message', 'Invalid property name.')
+  expect(diagnostics).toHaveProperty(
+    '0.message',
+    "The property name 'data-baz' is not valid. Try with 'data_baz'.",
+  )
   expect(diagnostics).toHaveProperty('1.from', 0)
   expect(diagnostics).toHaveProperty('1.to', 37)
   expect(diagnostics).toHaveProperty('1.message', "Missing 'component' attribute.")
@@ -90,7 +90,10 @@ test('linting include elements (2)', () => {
   expect(diagnostics).toHaveProperty('0.message', 'Invalid component name.')
   expect(diagnostics).toHaveProperty('1.from', 26)
   expect(diagnostics).toHaveProperty('1.to', 33)
-  expect(diagnostics).toHaveProperty('1.message', 'Invalid property name.')
+  expect(diagnostics).toHaveProperty(
+    '1.message',
+    "The property name 'bar-baz' is not valid. Try with 'bar_baz'.",
+  )
 })
 
 test('linting include elements (3)', () => {
@@ -101,7 +104,10 @@ test('linting include elements (3)', () => {
   expect(diagnostics).toHaveLength(1)
   expect(diagnostics).toHaveProperty('0.from', 12)
   expect(diagnostics).toHaveProperty('0.to', 16)
-  expect(diagnostics).toHaveProperty('0.message', 'Invalid property name.')
+  expect(diagnostics).toHaveProperty(
+    '0.message',
+    "The keyword 'into' is reserved and cannot be used as a property name.",
+  )
 })
 
 test('linting inject elements (1)', () => {

@@ -24,7 +24,7 @@ export function isAssetPath(path: string): boolean {
  * isAttributeName('-click') // false
  */
 export function isAttributeName(name: string): boolean {
-  return /^[:@]?[a-z][a-z0-9]*(?:[:\.-][a-z0-9]+)*$/.test(name)
+  return /^[:@]?[a-z][a-z0-9]*(?:[:\._-][a-z0-9]+)*$/.test(name)
 }
 
 /**
