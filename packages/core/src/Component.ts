@@ -123,15 +123,6 @@ export class Component extends Template {
     if (this.shouldTest('templateSpecific', tests)) {
       rootNodes.forEach((rootNode, index) => {
         if (HTML.adapter.isElementNode(rootNode)) {
-          if (rootNode.tagName === 'template') {
-            this.addDiagnostics('templateSpecific', {
-              message: 'Templates cannot be used as root nodes.',
-              severity: 'error',
-              from: rootNode.sourceCodeLocation!.startTag!.startOffset,
-              to: rootNode.sourceCodeLocation!.startTag!.endOffset,
-            })
-          }
-
           for (const attr of rootNode.attrs) {
             if (['x-if', 'x-for'].includes(attr.name)) {
               this.addDiagnostics('templateSpecific', {
@@ -224,7 +215,10 @@ export class Component extends Template {
     const html = this._html.clone()
 
     this._resolveAlpineTemplates(html)
-    this._resolveAlpineDirectives(html)
+
+    if (!html.hasTemplateAsRootNode()) {
+      this._resolveAlpineDirectives(html)
+    }
 
     return new HTML(html.toString())
   }

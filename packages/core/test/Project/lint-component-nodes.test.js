@@ -59,20 +59,17 @@ test('linting component nodes (3)', () => {
 test('linting component nodes (4)', () => {
   const diagnostics = project.lintComponent('qux', '*').getComponentDiagnostics('qux', '*')
 
-  expect(diagnostics).toHaveLength(3)
-  expect(diagnostics).toHaveProperty('0.from', 0)
-  expect(diagnostics).toHaveProperty('0.to', 34)
-  expect(diagnostics).toHaveProperty('0.message', 'Templates cannot be used as root nodes.')
-  expect(diagnostics).toHaveProperty('1.from', 10)
-  expect(diagnostics).toHaveProperty('1.to', 14)
+  expect(diagnostics).toHaveLength(2)
+  expect(diagnostics).toHaveProperty('0.from', 10)
+  expect(diagnostics).toHaveProperty('0.to', 14)
   expect(diagnostics).toHaveProperty(
-    '1.message',
+    '0.message',
     "The 'x-if' directive cannot be used in the root element.",
   )
-  expect(diagnostics).toHaveProperty('2.from', 15)
-  expect(diagnostics).toHaveProperty('2.to', 20)
+  expect(diagnostics).toHaveProperty('1.from', 15)
+  expect(diagnostics).toHaveProperty('1.to', 20)
   expect(diagnostics).toHaveProperty(
-    '2.message',
+    '1.message',
     "The 'x-for' directive cannot be used in the root element.",
   )
 })

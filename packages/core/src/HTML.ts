@@ -468,6 +468,19 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
   }
 
   /**
+   * Check if the only root element is a `template`.
+   */
+  hasTemplateAsRootNode(): boolean {
+    const rootNodes = this.getRootNodes()
+
+    return (
+      rootNodes.length === 1 &&
+      HTML.adapter.isElementNode(rootNodes[0]) &&
+      rootNodes[0].tagName === 'template'
+    )
+  }
+
+  /**
    * Replace `<outlet>` elements with contents from `injections` and return a new
    * HTML instance with the injected content.
    */
@@ -772,7 +785,13 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             const cssAttribute = node.attrs.find((attr) => attr.name === 'css')
 
             if (cssAttribute) {
-              if (!/^{.*}$/s.test(cssAttribute.value.trim())) {
+              if (node.tagName === 'template') {
+                this.addDiagnostics('inlineCSS', {
+                  message: 'Template elements do not support inline CSS.',
+                  severity: 'error',
+                  ...this.getAttributeNameRange(node, 'css')!,
+                })
+              } else if (!/^{.*}$/s.test(cssAttribute.value.trim())) {
                 this.addDiagnostics('inlineCSS', {
                   message: 'Inline CSS attribute values must be enclosed in curly brackets.',
                   severity: 'error',

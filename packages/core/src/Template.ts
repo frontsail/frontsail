@@ -2,7 +2,7 @@ import { clearArray, hash, uniqueArray } from '@frontsail/utils'
 import { flattenIndents } from '@frontsail/utils/src/code'
 import { marked } from 'marked'
 import { Attribute } from 'parse5/dist/common/token'
-import { Element, Template as TemplateNode } from 'parse5/dist/tree-adapters/default'
+import { Element, Template as TemplateElement } from 'parse5/dist/tree-adapters/default'
 import { CSS } from './CSS'
 import { Diagnostics } from './Diagnostics'
 import { HTML } from './HTML'
@@ -458,7 +458,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
         let ifAttribute: Attribute | undefined = node.attrs.find((attr) => attr.name === 'if')
 
         if (!ifAttribute && node.tagName === 'template') {
-          const childElement = HTML.adapter.getTemplateContent(node as TemplateNode)
+          const childElement = HTML.adapter.getTemplateContent(node as TemplateElement)
             .childNodes[0] as Element
 
           ifAttribute = childElement?.attrs?.find((attr) => attr.name === 'if')
@@ -563,10 +563,15 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
             _iterations.push(iteration)
 
             const results = componentClone.render(includeProperties, [..._iterations])
-            const rootNode = results.html.getRootNodes()[0]
+            const rootNodes = results.html.getRootNodes()
 
-            if (rootNode) {
-              HTML.replaceElement(node, rootNode)
+            if (rootNodes.length > 0) {
+              if (results.html.hasTemplateAsRootNode()) {
+                const template = rootNodes[0] as TemplateElement
+                HTML.replaceElement(node, ...HTML.adapter.getTemplateContent(template).childNodes)
+              } else {
+                HTML.replaceElement(node, ...rootNodes)
+              }
             } else {
               HTML.adapter.detachNode(node)
             }
