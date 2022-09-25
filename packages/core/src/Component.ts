@@ -457,13 +457,19 @@ export class Component extends Template {
     const xForElements: Element[] = []
 
     for (const node of html.walk()) {
-      if (HTML.adapter.isElementNode(node) && node.tagName !== 'template') {
-        if (node.attrs.some((attr) => attr.name === 'x-if')) {
-          xIfElements.push(node)
-        }
+      if (HTML.adapter.isElementNode(node)) {
+        if (node.tagName === 'template') {
+          if (!node.attrs.some((attr) => attr.name === 'hidden')) {
+            node.attrs.push({ name: 'hidden', value: '' })
+          }
+        } else {
+          if (node.attrs.some((attr) => attr.name === 'x-if')) {
+            xIfElements.push(node)
+          }
 
-        if (node.attrs.some((attr) => attr.name === 'x-for')) {
-          xForElements.push(node)
+          if (node.attrs.some((attr) => attr.name === 'x-for')) {
+            xForElements.push(node)
+          }
         }
       }
     }
@@ -476,7 +482,10 @@ export class Component extends Template {
         const parent = HTML.adapter.getParentNode(element)!
         const template = HTML.createElement(
           'template',
-          Object.fromEntries([[directive, element.attrs[index].value]]),
+          Object.fromEntries([
+            [directive, element.attrs[index].value],
+            ['hidden', ''],
+          ]),
         ) as TemplateElement
         const templateContent = HTML.adapter.createDocumentFragment()
 
