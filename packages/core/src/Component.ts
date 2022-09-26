@@ -243,20 +243,38 @@ export class Component extends Template {
       throw new Error('Cannot resolve Alpine data without a project.')
     }
 
+    const html = this._html.clone()
     const componentIndex = this._project.getComponentIndex(this._id)
     const key = this._project.isProduction() ? `c${componentIndex}` : `${this._id}__`
-    const checksum = hash(key + this._html.getRawHTML())
+    const checksum = hash(key + html.getRawHTML())
 
     let inlineCSSIndex: number = 1
 
     if (this._jsCache.checksum !== checksum) {
       const componentIndex = this._project.getComponentIndex(this._id)
-      const rootNodes = this._html.getRootNodes()
+      const rootNodes = html.getRootNodes()
       const rootElement =
         rootNodes.length === 1 && HTML.adapter.isElementNode(rootNodes[0]) ? rootNodes[0] : null
 
-      if (!rootElement) {
+      if (!rootElement || rootElement.tagName === 'template') {
         return ''
+      }
+
+      for (const node of html.walk()) {
+        if (HTML.adapter.isElementNode(node) && node.tagName === 'template') {
+          const parent = HTML.adapter.getParentNode(node)!
+          const div = HTML.createElement(
+            'div',
+            Object.fromEntries(node.attrs.map((attr) => [attr.name, attr.value])),
+          )
+
+          HTML.adapter.insertBefore(parent, div, node)
+          HTML.adapter.detachNode(node)
+
+          for (const childNode of (node as TemplateElement).content.childNodes) {
+            HTML.adapter.appendChild(div, childNode)
+          }
+        }
       }
 
       const xData = rootElement.attrs.find((attr) => attr.name === 'x-data')?.value || '{}'
@@ -287,7 +305,7 @@ export class Component extends Template {
       const runtime: { element: Element; properties: string[] }[] = []
       const bindings: string[] = []
 
-      for (const node of this._html.walk()) {
+      for (const node of html.walk()) {
         if (HTML.adapter.isElementNode(node)) {
           const hasXBind = node.attrs.some((attr) => attr.name === 'x-bind')
           const xForAttribute = node.attrs.find((attr) => attr.name === 'x-for')
