@@ -438,7 +438,11 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
       throw new Error('Cannot render templates without a project.')
     }
 
-    const variables = { ...properties, ...this._project.getGlobals() }
+    const variables = {
+      ...Object.fromEntries(this.getPropertyNames().map((name) => [name, ''])),
+      ...properties,
+      ...this._project.getGlobals(),
+    }
     const html: HTML =
       _iterations.length === 0 && this._type === 'component'
         ? (this as any).prepareHTML().replaceMustaches(variables)
