@@ -304,7 +304,7 @@ function formatHTML(code: string, project: Project): string {
             }
           } else if (attr.value.trim()) {
             attr.value = prettierFormat(`const $ = ${attr.value}`, { ...options, parser: 'babel' })
-              .replace('const $ = ', '')
+              .replace('const $ =', '')
               .trim()
               .replace(/^\((.+)\)$/s, '$1')
           }
@@ -352,7 +352,7 @@ function formatHTML(code: string, project: Project): string {
   // Fix indents, format mustaches, remove empty attribute values, and return
   return formattedHTML
     .replace(
-      /(( *)[^\n]*?([@:a-z0-9\.-]+)="{\n)(.+?)\n(\s*}")/gs,
+      /(( *)[^\n]*?([@:a-z0-9\.-]+)="[^"]*?$\n)(.+?)\n(^[^"\n]*?"$)/gms,
       (match, start: string, indent: string, name: string, between: string, end: string) => {
         if (name === 'css' || isAlpineDirective(name)) {
           return start + between.replace(/^/gm, indent) + `\n${indent}${end}`
