@@ -303,10 +303,16 @@ function formatHTML(code: string, project: Project): string {
                 .replace(/^(\s*)\[([\s\S]*?)\]/, '$1($2)')
             }
           } else if (attr.value.trim()) {
-            attr.value = prettierFormat(`const $ = ${attr.value}`, { ...options, parser: 'babel' })
+            attr.value = prettierFormat(`const $ = ${attr.value}`, {
+              ...options,
+              parser: 'babel',
+            })
               .replace('const $ =', '')
               .trim()
               .replace(/^\((.+)\)$/s, '$1')
+              .split('\n')
+              .map((line, i) => (i === 0 ? line : line.replace('  ', '')))
+              .join('\n')
           }
         }
       }
