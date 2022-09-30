@@ -1001,7 +1001,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             (isText && !hasSpaceLeft && prevNode.isEmpty))
         ) {
           const textNode = prevNode.node as TextNode
-          textNode.value = textNode.value.replace(/\s$/, '')
+          textNode.value = textNode.value.replace(/\s+$/, '')
           prevNode.hasSpaceRight = false
         }
 
@@ -1013,7 +1013,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
             (prevNode.isElement && !prevNode.isInlineElement) ||
             (prevNode.isText && !prevNode.isEmpty && prevNode.hasSpaceRight))
         ) {
-          node.value = node.value.replace(/^\s/, '')
+          node.value = node.value.replace(/^\s+/, '')
         }
 
         prevNode = {
@@ -1028,7 +1028,7 @@ export class HTML extends Diagnostics<HTMLDiagnostics> {
 
       if (prevNode && prevNode.isText) {
         const textNode = prevNode.node as TextNode
-        textNode.value = textNode.value.replace(/\s$/, '')
+        textNode.value = textNode.value.replace(/\s+$/, '')
       }
 
       code = html.toString()
