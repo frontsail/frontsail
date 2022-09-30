@@ -186,7 +186,9 @@ export function printContainer(
 
   process.stdout.write(
     table(
-      contents.map((line) => [[format(truncate(line, -4))]]),
+      contents.map((line) => [
+        [format(truncate(line, -4).replace(/[\u0001-\u0006\u0008\u0009\u000B-\u001A]/g, ''))],
+      ]),
       {
         border: {
           topBody: tabs.length > 0 ? `` : `─`,
