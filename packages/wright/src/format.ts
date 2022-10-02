@@ -312,9 +312,6 @@ function formatHTML(code: string, project: Project): string {
               .replace('const $ =', '')
               .trim()
               .replace(/^\((.+)\)$/s, '$1')
-              .split('\n')
-              .map((line, i) => (i === 0 ? line : line.replace('  ', '')))
-              .join('\n')
           }
         }
       }
