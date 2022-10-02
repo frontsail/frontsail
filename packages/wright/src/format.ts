@@ -262,6 +262,7 @@ function formatHTML(code: string, project: Project): string {
   })
 
   const html = new HTML(code)
+  const css: string[] = []
   const markdown: string[] = []
 
   let markdownIndex: number = 0
@@ -290,7 +291,8 @@ function formatHTML(code: string, project: Project): string {
         // Format `css` and Alpine attributes
         if (attr.name === 'css') {
           const preparedValue = attr.value.trim().replace(/^\s*{?\s*(.*?)\s*}?\s*$/s, '{\n$1\n}')
-          attr.value = formatCSS(preparedValue).trim()
+          attr.value = `§_css_${css.length}_D`
+          css.push(css.length + preparedValue)
         } else if (isAlpineDirective(attr.name)) {
           if (isXForDirective(attr.value)) {
             const value = attr.value.replace(/^(\s*)\(([\s\S]*?)\)/, '$1[$2]')
@@ -340,8 +342,21 @@ function formatHTML(code: string, project: Project): string {
     }
   }
 
+  let formattedCSS = ''
+  let preparedHTML = html.toString()
+
+  // Format CSS
+  try {
+    formattedCSS = formatCSS(css.join('\n')).trim()
+  } catch (_) {}
+
+  css.forEach((value, index) => {
+    const match = new RegExp(`${index} ({.+?^})`, 'ms').exec(formattedCSS)
+    preparedHTML = preparedHTML.replace(`§_css_${index}_D`, match ? match[1] : value)
+  })
+
   // Format HTML
-  let formattedHTML = prettierFormat(html.toString(), { ...options, parser: 'html' })
+  let formattedHTML = prettierFormat(preparedHTML, { ...options, parser: 'html' })
 
   // Replace md placeholders
   formattedHTML = formattedHTML.replace(

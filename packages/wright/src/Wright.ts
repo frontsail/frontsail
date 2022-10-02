@@ -118,6 +118,11 @@ export class Wright {
   protected _cssReset: boolean = true
 
   /**
+   * Cache for formatted code.
+   */
+  protected _formatCache: { [relativePath: string]: string } = {}
+
+  /**
    * Event emitter instance.
    */
   events = new EventEmitter()
@@ -541,13 +546,17 @@ export class Wright {
   protected _format(relativePath: string): this {
     try {
       const code = fs.readFileSync(relativePath, 'utf-8')
-      const formattedCode = format(code, relativePath, this._project)
 
-      while (code !== formattedCode) {
-        try {
-          fs.outputFileSync(relativePath, formattedCode)
-          break
-        } catch (_) {}
+      if (this._formatCache[relativePath] !== code) {
+        const formattedCode = format(code, relativePath, this._project)
+
+        while (code !== formattedCode) {
+          try {
+            this._formatCache[relativePath] = formattedCode
+            fs.outputFileSync(relativePath, formattedCode)
+            break
+          } catch (_) {}
+        }
       }
     } catch (_) {}
 
@@ -758,6 +767,13 @@ export class Wright {
       })
       .sort((a) => (a.type === 'delete' ? -1 : 0))
       .forEach(async (event) => {
+        //
+        // Delete event
+        //
+        if (event.type === 'delete') {
+          delete this._formatCache[event.path]
+        }
+        //
         // Project files
         //
         if (
