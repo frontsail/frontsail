@@ -3,3 +3,4 @@ packages/*/bin/
 packages/*/dist/
 packages/*/types/
 .DS_Store
+package-lock.json
