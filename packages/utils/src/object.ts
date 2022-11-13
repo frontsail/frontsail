@@ -31,3 +31,37 @@ export function fillObject<T extends object>(object1: T, object2: T): T {
 
   return object1
 }
+
+/**
+ * Fill in missing entries in `object1` with entries from `object2` recursively.
+ *
+ * @example
+ * fillObjectDeep({ foo: { bar: 'baz' } }, { foo: { baz: 'qux' } }) // { foo: { bar: 'baz', baz: 'qux' } }
+ */
+export function fillObjectDeep<T extends object>(object1: T, object2: T): T {
+  Object.entries(object2).forEach(([key, defaultValue]) => {
+    if (object1.hasOwnProperty(key) && isObject(object1[key])) {
+      fillObjectDeep(object1[key], defaultValue)
+    } else if (!object1.hasOwnProperty(key)) {
+      if (isObject(defaultValue)) {
+        object1[key] = {}
+        fillObjectDeep(object1[key], defaultValue)
+      } else {
+        object1[key] = defaultValue
+      }
+    }
+  })
+
+  return object1
+}
+
+/**
+ * Check if an `item` is an object, but not an array or null.
+ *
+ * @example
+ * isObject({}) // true
+ * isObject([]) // false
+ */
+export function isObject(item: any): boolean {
+  return !!item && typeof item === 'object' && !Array.isArray(item)
+}
