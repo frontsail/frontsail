@@ -1,5 +1,4 @@
-import { clearArray, hash, uniqueArray } from '@frontsail/utils'
-import { flattenIndents } from '@frontsail/utils/src/code'
+import { clearArray, flattenIndents, hash, uniqueArray } from '@frontsail/utils'
 import { marked } from 'marked'
 import { Attribute } from 'parse5/dist/common/token'
 import { Element, Template as TemplateElement } from 'parse5/dist/tree-adapters/default'
