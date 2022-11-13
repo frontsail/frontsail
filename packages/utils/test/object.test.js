@@ -1,4 +1,4 @@
-import { clearObject, fillObject, fillObjectDeep, isObject } from '../dist/index.esm'
+import { clearObject, fillObject, fillObjectDeep, isObject } from '../dist'
 
 test('clearObject', () => {
   const baz = { foo: 'bar' }

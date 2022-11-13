@@ -2,7 +2,7 @@ import esbuild from 'esbuild'
 
 esbuild.build({
   entryPoints: ['src/index.ts'],
-  outfile: 'dist/index.esm.js',
+  outfile: 'dist/index.js',
   bundle: true,
   platform: 'neutral',
   mainFields: ['module', 'main'],
@@ -12,7 +12,7 @@ esbuild.build({
 
 esbuild.build({
   entryPoints: ['src/index.ts'],
-  outfile: 'dist/index.cjs.js',
+  outfile: 'dist/index.cjs',
   bundle: true,
   platform: 'node',
   target: ['node16.3.0'],

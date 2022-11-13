@@ -6,7 +6,7 @@ import {
   last,
   nth,
   uniqueArray,
-} from '../dist/index.esm'
+} from '../dist'
 
 test('clearArray', () => {
   const bar = ['foo']

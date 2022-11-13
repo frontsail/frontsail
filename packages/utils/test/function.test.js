@@ -1,4 +1,4 @@
-import { debounce } from '../dist/index.esm'
+import { debounce } from '../dist'
 
 test('debounce', async () => {
   let foo = 0

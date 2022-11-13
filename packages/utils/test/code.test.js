@@ -1,4 +1,4 @@
-import { flattenIndents, lineColumnToOffset, offsetToLineColumn } from '../dist/index.esm'
+import { flattenIndents, lineColumnToOffset, offsetToLineColumn } from '../dist'
 
 test('flattenIndents', () => {
   expect(flattenIndents(' foo\n  bar')).toBe('foo\n bar')
