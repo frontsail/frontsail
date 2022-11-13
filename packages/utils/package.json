@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/utils",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "description": "Opinionated collection of JavaScript utility functions.",
   "type": "module",
   "exports": {
