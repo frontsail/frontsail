@@ -3,7 +3,12 @@
   "version": "0.1.26",
   "description": "Opinionated collection of JavaScript utility functions.",
   "type": "module",
-  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs.js"
+    }
+  },
   "types": "types/index.d.ts",
   "scripts": {
     "build": "rimraf dist types && node esbuild.js && tsc",

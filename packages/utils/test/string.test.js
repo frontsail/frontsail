@@ -1,4 +1,4 @@
-import { camelize, escape, hash, slugify, split } from '..'
+import { camelize, escape, hash, slugify, split } from '../dist/index.esm'
 
 test('camelize', () => {
   expect(camelize('foo bar')).toBe('fooBar')

@@ -1,4 +1,12 @@
-import { clearArray, compareArrays, diffArrays, intersectArrays, last, nth, uniqueArray } from '..'
+import {
+  clearArray,
+  compareArrays,
+  diffArrays,
+  intersectArrays,
+  last,
+  nth,
+  uniqueArray,
+} from '../dist/index.esm'
 
 test('clearArray', () => {
   const bar = ['foo']
