@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/hooks",
-  "version": "0.1.28",
+  "version": "0.1.29",
   "description": "Production build utilities for FrontSail projects.",
   "type": "module",
   "main": "dist/index.cjs",
@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@frontsail/core": "^0.1.28",
-    "@frontsail/wright": "^0.1.28",
+    "@frontsail/wright": "^0.1.29",
     "fs-extra": "^10.1.0"
   },
   "devDependencies": {
