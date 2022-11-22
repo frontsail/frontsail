@@ -11,3 +11,5 @@ Make sure you have installed Node.js with a minimum version of 16.13.0.
 # Learn the basics with an example
 
 Using FrontSail is straightforward. If you're familiar with HTML and CSS, you can jump right in and build a fully functional website. The best way to get to know the framework is through examples. If you need more details, read the official documentation pages.
+
+TBD
