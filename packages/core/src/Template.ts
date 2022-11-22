@@ -451,7 +451,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
       this._type === 'component'
         ? this._project.getComponentIndex(this._id)
         : this._project.getPageIndex(this._id)
-    const key = this._project.isProduction() ? `c${templateIndex}` : `${this._id}__`
+    const key = this._project.isProduction() ? `${this._type[0]}${templateIndex}` : `${this._id}__`
 
     let inlineCSSIndex: number = 1
 

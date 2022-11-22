@@ -317,7 +317,7 @@ export class Project extends ProjectDiagnostics {
     })
 
     this.listPages().forEach((path) => {
-      const key = this.isProduction() ? `c${this.getPageIndex(path)}` : `${path}__`
+      const key = this.isProduction() ? `p${this.getPageIndex(path)}` : `${path}__`
       output.push(this.getPage(path).buildInlineCSS(key, globals))
     })
 
