@@ -620,7 +620,7 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
    * Extract assets and pages from the HTML.
    */
   protected _resolveReferences(): void {
-    const regex = /(data|href|srcset|src)="(\/[^{]+?)"/g
+    const regex = /(data|href|srcset|src)="(\/[^{]*?)"/g
     let match: RegExpExecArray | null = null
     clearArray(this._references)
 
