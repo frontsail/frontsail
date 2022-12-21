@@ -8,11 +8,11 @@ import {
   TemplateDiagnostics,
 } from '@frontsail/core'
 import {
-  bind,
+  Bind,
   camelize,
   clearArray,
   clearObject,
-  debounce,
+  debounceParallel,
   fillObject,
   lineColumnToOffset,
   offsetToLineColumn,
@@ -521,7 +521,7 @@ export class Wright {
    * Emit an event with debouncing.
    */
   protected _emit(eventName: 'diagnostics' | 'stats'): void {
-    debounce(`event:${eventName}`, this.events.emit.bind(this.events, eventName))
+    debounceParallel(`event:${eventName}`, this.events.emit.bind(this.events, eventName))
   }
 
   /**
@@ -755,7 +755,8 @@ export class Wright {
   /**
    * Handle file changes from the local `src` directory and project configuration files.
    */
-  @bind protected async _onFileChange(_: Error | null, events: watcher.Event[]): Promise<void> {
+  @Bind
+  protected async _onFileChange(_: Error | null, events: watcher.Event[]): Promise<void> {
     events
       .filter((event) => {
         event.path = path.relative(process.cwd(), event.path).replace(/\\/g, '/')

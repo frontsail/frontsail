@@ -1,9 +1,27 @@
-import { camelize, escape, hash, slugify, split } from '../dist'
+import {
+  camelize,
+  camelToSnake,
+  escape,
+  hash,
+  lowerCaseFirstLetter,
+  pluralize,
+  slugify,
+  split,
+  uppercaseFirstLetter,
+} from '../dist'
 
 test('camelize', () => {
   expect(camelize('foo bar')).toBe('fooBar')
   expect(camelize('FOO')).toBe('foo')
   expect(camelize('SEO Friendly String!')).toBe('seoFriendlyString')
+})
+
+test('camelToSnake', () => {
+  expect(camelToSnake('fooBar')).toBe('foo_bar')
+  expect(camelToSnake('foo')).toBe('foo')
+  expect(camelToSnake('fooBarBaz')).toBe('foo_bar_baz')
+  expect(camelToSnake('FOO')).toBe('f_o_o')
+  expect(camelToSnake('FooBar')).toBe('foo_bar')
 })
 
 test('escape', () => {
@@ -18,6 +36,24 @@ test('hash', () => {
   expect(hash('')).toBe(0)
 })
 
+test('lowerCaseFirstLetter', () => {
+  expect(lowerCaseFirstLetter('Foo')).toBe('foo')
+  expect(lowerCaseFirstLetter('foo')).toBe('foo')
+  expect(lowerCaseFirstLetter('FOO')).toBe('fOO')
+})
+
+test('pluralize', () => {
+  expect(pluralize('foo')).toBe('foos')
+  expect(pluralize('Bar')).toBe('Bars')
+  expect(pluralize('baz')).toBe('bazs')
+  expect(pluralize('entry')).toBe('entries')
+})
+
+test('slugify', () => {
+  expect(slugify('SEO Friendly String!')).toBe('seo-friendly-string')
+  expect(slugify('123 foo bar', '_', true)).toBe('foo_bar')
+})
+
 test('split', () => {
   expect(split('a|b', '|')).toEqual([
     { value: 'a', from: 0, to: 1 },
@@ -25,7 +61,8 @@ test('split', () => {
   ])
 })
 
-test('slugify', () => {
-  expect(slugify('SEO Friendly String!')).toBe('seo-friendly-string')
-  expect(slugify('123 foo bar', '_', true)).toBe('foo_bar')
+test('uppercaseFirstLetter', () => {
+  expect(uppercaseFirstLetter('foo')).toBe('Foo')
+  expect(uppercaseFirstLetter('fOO')).toBe('FOO')
+  expect(uppercaseFirstLetter('FOO')).toBe('FOO')
 })

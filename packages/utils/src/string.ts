@@ -1,3 +1,5 @@
+import { plural } from 'pluralize'
+
 /**
  * Convert a `text` to camelCase.
  *
@@ -6,6 +8,16 @@
  */
 export function camelize(text: string): string {
   return slugify(text).replace(/-./g, (match) => match[1].toUpperCase())
+}
+
+/**
+ * Convert a camel cased `text` to snake format.
+ *
+ * @example
+ * camelToSnake('fooBar') // 'foo_bar'
+ */
+export function camelToSnake(text: string): string {
+  return lowerCaseFirstLetter(text).replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 }
 
 /**
@@ -48,6 +60,26 @@ export function hash(text: string): number {
   }
 
   return hash
+}
+
+/**
+ * Lowercase the first letter of a given `text`.
+ *
+ * @example
+ * lowerCaseFirstLetter('Foo') // 'foo'
+ */
+export function lowerCaseFirstLetter(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1)
+}
+
+/**
+ * Make a `text` plural.
+ *
+ * @example
+ * pluralize('foo') // 'foos'
+ */
+export function pluralize(text: string): string {
+  return plural(text)
 }
 
 /**
@@ -137,4 +169,14 @@ export function split(
     index = to + delimiter.length
     return { value, from, to }
   })
+}
+
+/**
+ * Capitalize the first letter of a given `text`.
+ *
+ * @example
+ * uppercaseFirstLetter('foo') // 'Foo'
+ */
+export function uppercaseFirstLetter(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }

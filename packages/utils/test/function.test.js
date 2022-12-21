@@ -1,15 +1,15 @@
-import { debounce } from '../dist'
+import { debounceParallel } from '../dist'
 
-test('debounce', async () => {
+test('debounceParallel', async () => {
   let foo = 0
 
   function bar() {
     foo++
   }
 
-  debounce('baz', bar, 50)
-  debounce('baz', bar, 50)
-  debounce('qux', bar, 50)
+  debounceParallel('baz', bar, 50)
+  debounceParallel('baz', bar, 50)
+  debounceParallel('qux', bar, 50)
   await new Promise((resolve) => setTimeout(resolve, 100))
 
   expect(foo).toBe(2)

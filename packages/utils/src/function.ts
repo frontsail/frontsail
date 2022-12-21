@@ -1,25 +1,25 @@
 /**
  * Collection of debounced callbacks.
  */
-const debounced = {}
+const debouncePool = {}
 
 /**
  * Force a `callback` to wait a certain amount of time before running again.
  * The callbacks are identified by an `id`, so they can be called in parallel.
  */
-export async function debounce(
+export async function debounceParallel(
   id: string,
   callback: (...args: string[]) => any | Promise<any>,
   delay: number | false = 150,
 ): Promise<void> {
-  if (debounced[id]) {
-    clearTimeout(debounced[id])
-    delete debounced[id]
+  if (debouncePool[id]) {
+    clearTimeout(debouncePool[id])
+    delete debouncePool[id]
   }
 
   if (delay !== false) {
-    debounced[id] = setTimeout(() => {
-      delete debounced[id]
+    debouncePool[id] = setTimeout(() => {
+      delete debouncePool[id]
       callback()
     }, delay)
   } else {

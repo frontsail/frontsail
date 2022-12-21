@@ -63,10 +63,21 @@ export function last<T>(array: T[]): T {
  * nth(['foo', bar'], 2) // 'foo'
  */
 export function nth<T>(array: T[], n: number): T {
+  return array[nthIndex(array, n)]
+}
+
+/**
+ * Get the normalized index at index `n` of an `array`. If `n` is negative, the nth normalized
+ * index from the end is returned.
+ *
+ * @example
+ * nth(['foo', bar'], 2) // 0
+ */
+export function nthIndex<T>(array: T[], n: number): number {
   n = n % array.length
   n += n < 0 ? array.length : 0
 
-  return array[n]
+  return n
 }
 
 /**

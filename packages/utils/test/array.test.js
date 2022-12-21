@@ -5,6 +5,7 @@ import {
   intersectArrays,
   last,
   nth,
+  nthIndex,
   uniqueArray,
 } from '../dist'
 
@@ -46,6 +47,15 @@ test('nth', () => {
   expect(nth(['foo', 'bar'], -1)).toEqual('bar')
   expect(nth(['foo'], 2)).toEqual('foo')
   expect(nth([], 1)).toEqual(undefined)
+})
+
+test('nthIndex', () => {
+  expect(nthIndex(['foo', 'bar'], 2)).toEqual(0)
+  expect(nthIndex(['foo', 'bar'], 0)).toEqual(0)
+  expect(nthIndex(['foo', 'bar'], 1)).toEqual(1)
+  expect(nthIndex(['foo', 'bar'], -1)).toEqual(1)
+  expect(nthIndex(['foo'], 2)).toEqual(0)
+  expect(nthIndex([], 1)).toEqual(NaN)
 })
 
 test('uniqueArray', () => {

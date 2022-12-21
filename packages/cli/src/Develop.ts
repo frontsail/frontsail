@@ -1,4 +1,4 @@
-import { bind, nth } from '@frontsail/utils'
+import { Bind, nth } from '@frontsail/utils'
 import { pagePathToFilePath, wright } from '@frontsail/wright'
 import bs from 'browser-sync'
 import fs from 'fs-extra'
@@ -110,7 +110,8 @@ export class Develop {
   /**
    * Repaint the current screen.
    */
-  @bind protected _refresh(): void {
+  @Bind
+  protected _refresh(): void {
     clear()
 
     const contents: string[] = []
