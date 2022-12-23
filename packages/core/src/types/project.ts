@@ -46,7 +46,7 @@ export interface ProjectOptions {
    *
    * - Alpine data and directives are extracted from all elements and inserted into
    *   the project's scripts file. Only the `x-data` (with the template key), `x-bind`,
-   *   `x-for`, and `x-cloak` attributes remain in the HTML.
+   *   `x-ref`, `x-for`, and `x-cloak` attributes remain in the HTML.
    *
    * - HTML and CSS outputs are minified.
    */

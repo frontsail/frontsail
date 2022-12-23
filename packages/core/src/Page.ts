@@ -19,7 +19,7 @@ import { isAlpineDirective, isPagePath, isPropertyName } from './validation'
  * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
  *   Values from Alpine directives are extracted from all elements and appended into
  *   the project's script file. Only the `x-data` (with the template key), `x-bind`,
- *   `x-for`, and `x-cloak` attributes remain in the HTML.
+ *   `x-ref`, `x-for`, and `x-cloak` attributes remain in the HTML.
  *
  * - **AST** - Refers to an HTML abstract sytax tree.
  *

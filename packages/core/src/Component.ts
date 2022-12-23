@@ -20,7 +20,7 @@ import { isAlpineDirective, isComponentName } from './validation'
  * - **Alpine** - A lightweight JavaScript framework ([link](https://alpinejs.dev/)).
  *   Values from Alpine directives are extracted from all elements and appended into
  *   the project's script file. Only the `x-data` (with the template key), `x-bind`,
- *   `x-for`, and `x-cloak` attributes remain in the HTML.
+ *   `x-ref`, `x-for`, and `x-cloak` attributes remain in the HTML.
  *
  * - **AST** - Refers to an HTML abstract sytax tree.
  *
@@ -350,7 +350,10 @@ export class Component extends Template {
 
           for (const attr of node.attrs) {
             if (isAlpineDirective(attr.name)) {
-              if (!hasXBind && !['x-data', 'x-bind', 'x-for', 'x-cloak'].includes(attr.name)) {
+              if (
+                !hasXBind &&
+                !['x-data', 'x-bind', 'x-ref', 'x-for', 'x-cloak'].includes(attr.name)
+              ) {
                 const runtimeProperties: string[] = []
                 let relative: Element | null = node
 
@@ -431,7 +434,7 @@ export class Component extends Template {
               } else if (attr.name.startsWith(':')) {
                 attr.name = 'x-bind:' + attr.name.slice(1)
               }
-            } else if (!['x-bind', 'x-for', 'x-cloak'].includes(attr.name)) {
+            } else if (!['x-bind', 'x-ref', 'x-for', 'x-cloak'].includes(attr.name)) {
               if (attr.name !== 'x-data') {
                 shouldHaveXBind = true
               }
