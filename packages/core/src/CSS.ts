@@ -163,9 +163,15 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
         last(_parentAtRules).append(clone)
       }
 
-      CSS.getAnyRules(anyRule).forEach((childRule) => {
-        clone.append(this._builder(childRule, _parentRules, [..._parentAtRules, clone]))
-      })
+      if (anyRule.name === 'media') {
+        CSS.getAnyRules(anyRule).forEach((childRule) => {
+          clone.append(this._builder(childRule, _parentRules, [..._parentAtRules, clone]))
+        })
+      } else {
+        CSS.getDeclarations(anyRule).forEach((declaration) => {
+          clone.append(declaration)
+        })
+      }
     }
 
     return output
@@ -394,22 +400,24 @@ export class CSS extends Diagnostics<CSSDiagnostics> {
   static sortAndMergeMediaQueries(ast: Root, order: string[]): Root {
     const newAtRules: AtRule[] = []
 
-    CSS.getAtRules(ast).forEach((atRule) => {
-      if (
-        !newAtRules.some(
+    CSS.getAtRules(ast)
+      .filter((atRule) => atRule.name === 'media')
+      .forEach((atRule) => {
+        if (
+          !newAtRules.some(
+            (_newAtRule) => _newAtRule.name === atRule.name && _newAtRule.params === atRule.params,
+          )
+        ) {
+          newAtRules.push(atRule.clone({ nodes: [] }))
+        }
+
+        const newAtRule = newAtRules.find(
           (_newAtRule) => _newAtRule.name === atRule.name && _newAtRule.params === atRule.params,
-        )
-      ) {
-        newAtRules.push(atRule.clone({ nodes: [] }))
-      }
+        )!
 
-      const newAtRule = newAtRules.find(
-        (_newAtRule) => _newAtRule.name === atRule.name && _newAtRule.params === atRule.params,
-      )!
-
-      newAtRule.append(atRule.nodes)
-      atRule.remove()
-    })
+        newAtRule.append(atRule.nodes)
+        atRule.remove()
+      })
 
     newAtRules.sort((a, b) => order.indexOf(a.params) - order.indexOf(b.params))
 
