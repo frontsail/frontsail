@@ -8,6 +8,7 @@
     "build": "lerna run build",
     "dev": "node dev.js",
     "dev:utils": "npm run dev -w @frontsail/utils",
+    "dev:build": "npm run dev -w @frontsail/build",
     "dev:core": "npm run dev -w @frontsail/core",
     "dev:wright": "npm run dev -w @frontsail/wright",
     "dev:hooks": "npm run dev -w @frontsail/hooks",

@@ -1,0 +1,36 @@
+{
+  "name": "@frontsail/build",
+  "version": "0.1.0",
+  "description": "Opinionated JS build tools.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "types": "types/index.d.ts",
+  "scripts": {
+    "build": "node esbuild.js",
+    "dev": "node esbuild.js --watch"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "devDependencies": {
+    "@babel/code-frame": "^7.18.6",
+    "@types/babel__code-frame": "^7.0.3",
+    "@types/fs-extra": "^9.0.13",
+    "@types/node": "^18.11.13",
+    "prettier": "^2.8.1",
+    "pretty-ms": "^8.0.0",
+    "rxjs": "^7.6.0"
+  },
+  "dependencies": {
+    "@frontsail/utils": "^0.1.0",
+    "esbuild": "^0.16.4",
+    "fs-extra": "^11.1.0",
+    "picocolors": "^1.0.0",
+    "typescript": "^4.9.4"
+  }
+}

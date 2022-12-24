@@ -1,6 +1,6 @@
 import { spawn } from 'child_process'
 
-const packages = ['utils', 'core', 'wright', 'hooks', 'cli']
+const packages = ['utils', 'build', 'core', 'wright', 'hooks', 'cli']
 let index = 0
 
 function run() {
