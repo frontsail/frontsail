@@ -11,7 +11,7 @@ const options: Options = {
   arrowParens: 'always',
   bracketSpacing: true,
   htmlWhitespaceSensitivity: 'ignore',
-  printWidth: 100,
+  printWidth: 99999,
   quoteProps: 'consistent',
   semi: false,
   singleQuote: true,
