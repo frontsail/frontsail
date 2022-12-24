@@ -14,6 +14,22 @@
     "build": "node esbuild.js",
     "dev": "node esbuild.js --watch"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontsail/build.git"
+  },
+  "keywords": [
+    "frontsail"
+  ],
+  "author": "Muris Ceman <muris@frontsail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/frontsail/build/issues"
+  },
+  "homepage": "https://github.com/frontsail/build/tree/main/packages/utils#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=16.13.0"
   },
