@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/build",
-  "version": "0.1.0",
+  "version": "0.1.35",
   "description": "Opinionated JS build tools.",
   "type": "module",
   "exports": {
@@ -43,7 +43,7 @@
     "rxjs": "^7.6.0"
   },
   "dependencies": {
-    "@frontsail/utils": "^0.1.0",
+    "@frontsail/utils": "^0.1.35",
     "esbuild": "^0.16.4",
     "fs-extra": "^11.1.0",
     "picocolors": "^1.0.0",
