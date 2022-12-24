@@ -11,7 +11,7 @@ const options: Options = {
   arrowParens: 'always',
   bracketSpacing: true,
   htmlWhitespaceSensitivity: 'ignore',
-  printWidth: 99999,
+  printWidth: 100,
   quoteProps: 'consistent',
   semi: false,
   singleQuote: true,
@@ -216,7 +216,7 @@ function formatCSS(code: string): string {
     })
     .join('\n')
 
-  return prettierFormat(code, { ...options, parser: 'css' })
+  return prettierFormat(code, { ...options, printWidth: 99999, parser: 'css' })
 }
 
 /**
