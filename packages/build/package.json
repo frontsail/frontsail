@@ -34,7 +34,6 @@
     "node": ">=16.13.0"
   },
   "devDependencies": {
-    "@babel/code-frame": "^7.18.6",
     "@types/babel__code-frame": "^7.0.3",
     "@types/fs-extra": "^9.0.13",
     "@types/node": "^18.11.13",
@@ -43,6 +42,7 @@
     "rxjs": "^7.6.0"
   },
   "dependencies": {
+    "@babel/code-frame": "^7.18.6",
     "@frontsail/utils": "^0.1.35",
     "esbuild": "^0.16.4",
     "fs-extra": "^11.1.0",
