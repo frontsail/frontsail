@@ -248,13 +248,14 @@ export class Template extends Diagnostics<TemplateDiagnostics> {
         if (this.shouldTest('references', tests) && this._project) {
           this._references.forEach((reference) => {
             let message: string = ''
+            const referencePath = reference.name.split('#')[0]
 
-            if (reference.name.startsWith('/assets/')) {
-              if (!this._project!.hasAsset(reference.name)) {
-                message = `Asset '${reference.name}' does not exist.`
+            if (referencePath.startsWith('/assets/')) {
+              if (!this._project!.hasAsset(referencePath)) {
+                message = `Asset '${referencePath}' does not exist.`
               }
-            } else if (!this._project!.hasPage(reference.name)) {
-              message = `Page '${reference.name}' does not exist.`
+            } else if (!this._project!.hasPage(referencePath)) {
+              message = `Page '${referencePath}' does not exist.`
             }
 
             if (message) {
