@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/build",
-  "version": "0.1.35",
+  "version": "0.1.38",
   "description": "Opinionated JS build tools.",
   "type": "module",
   "exports": {
