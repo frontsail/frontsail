@@ -23,6 +23,7 @@ export class Spawn {
       ...options,
 
       // Default options
+      cwd: undefined,
       showOutput: false,
       outputPrefix: '',
     })
@@ -32,6 +33,7 @@ export class Spawn {
     this.process = spawn(this.options.command, [], {
       shell: true,
       stdio: 'pipe',
+      cwd: this.options.cwd,
       env: { ...process.env, FORCE_COLOR: '1' },
     })
 
