@@ -1,4 +1,60 @@
 /**
+ * Parse and return at-parameters from comment blocks and the keyword after.
+ *
+ * @example
+ * extractComments('/**\n * @foo bar\n *\/') // [{ params: { foo: 'bar' }, index: 0 }]
+ */
+export function extractComments(
+  code: string,
+): { params: { [param: string]: string }; keyword?: string; index: number }[] {
+  const regex = /^\s*\/\*\*(.+?)^\s*\*\/\n* *([a-z][a-zA-Z0-9]*)?/gms
+  const blocks: { params: { [param: string]: string }; keyword?: string; index: number }[] = []
+  let match: RegExpExecArray | null
+
+  do {
+    match = regex.exec(code)
+
+    if (match) {
+      const block = { params: {}, index: match.index }
+      let currentParam: { param: string; value: string } | undefined
+
+      match[1]
+        .replace(/^ *\* */gm, '')
+        .split('\n')
+        .forEach((line) => {
+          if (line.startsWith('@')) {
+            const paramMatch = line.match(/^@([a-z][a-zA-Z0-9]*) +(.+)$/)
+
+            if (currentParam) {
+              block.params[currentParam.param] = currentParam.value
+              currentParam = undefined
+            }
+
+            if (paramMatch) {
+              currentParam = { param: paramMatch[1], value: paramMatch[2].trim() }
+            }
+          } else if (currentParam && line.trim()) {
+            currentParam.value += ' ' + line.trim()
+          }
+        })
+
+      if (currentParam) {
+        block.params[currentParam.param] = currentParam.value
+        currentParam = undefined
+      }
+
+      if (match[2]) {
+        block['keyword'] = match[2]
+      }
+
+      blocks.push(block)
+    }
+  } while (match)
+
+  return blocks
+}
+
+/**
  * Transform an indented `code` by removing base indents from every line and assuring
  * that all lines start with `minSpaces` spaces.
  *

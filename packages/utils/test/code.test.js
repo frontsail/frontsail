@@ -1,4 +1,47 @@
-import { flattenIndents, lineColumnToOffset, offsetToLineColumn } from '../dist'
+import { extractComments, flattenIndents, lineColumnToOffset, offsetToLineColumn } from '../dist'
+
+test('extractComments', () => {
+  expect(extractComments('/**\n * @foo bar\n */')).toEqual([{ params: { foo: 'bar' }, index: 0 }])
+
+  expect(
+    extractComments(
+      [
+        '/**',
+        ' * @fooBar Baz',
+        ' * @bar Lorem ipsum dolor sit amet,',
+        '        consectetur adipiscing elit.',
+        ' */',
+      ].join('\n'),
+    ),
+  ).toEqual([
+    {
+      params: { fooBar: 'Baz', bar: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
+      index: 0,
+    },
+  ])
+
+  expect(extractComments(['/**', ' * @foo bar', ' */', 'baz: "baz"'].join('\n'))).toEqual([
+    { params: { foo: 'bar' }, keyword: 'baz', index: 0 },
+  ])
+
+  expect(
+    extractComments(['/**', ' * @foo bar', ' */', '/**', ' * @bar baz', ' */'].join('\n')),
+  ).toEqual([
+    { params: { foo: 'bar' }, index: 0 },
+    { params: { bar: 'baz' }, index: 20 },
+  ])
+
+  expect(
+    extractComments(
+      ['/**', ' * @foo bar', ' */', 'baz: baz', '/**', ' * @bar baz', ' */', '', 'qux: "qux"'].join(
+        '\n',
+      ),
+    ),
+  ).toEqual([
+    { params: { foo: 'bar' }, keyword: 'baz', index: 0 },
+    { params: { bar: 'baz' }, keyword: 'qux', index: 29 },
+  ])
+})
 
 test('flattenIndents', () => {
   expect(flattenIndents(' foo\n  bar')).toBe('foo\n bar')

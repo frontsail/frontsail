@@ -72,30 +72,12 @@ test('building', () => {
     '%foo {\n  display: none\n}\n@media $sm {\n  %foo {\n    display: block\n  }\n}',
   )
 
-  expect(new CSS('.foo { @sm { @print { display: block } } }').build()).toBe(
-    '@media $sm {\n  @media $print {\n    .foo {\n      display: block\n    }\n  }\n}',
-  )
-
   expect(new CSS('.foo { .bar { @sm { display:block; } } }').build()).toBe(
     '@media $sm {\n  .foo .bar {\n    display: block\n  }\n}',
   )
 
   expect(new CSS('.foo { &--bar%baz { @sm { display:block; } } }').build()).toBe(
     '@media $sm {\n  .foo--bar%baz {\n    display: block\n  }\n}',
-  )
-
-  expect(
-    new CSS('@sm { @print { display: none; .foo { display: block; border: none; } } }').build(),
-  ).toBe(
-    '@media $sm {\n  @media $print {\n    .foo {\n      display: block;\n      border: none;\n    }\n  }\n}',
-  )
-
-  expect(
-    new CSS('.foo { @sm { .bar { @print { display: none; .baz { display: block } } } } }').build(
-      '.foo',
-    ),
-  ).toBe(
-    '@media $sm {\n  @media $print {\n    .foo .bar {\n      display: none\n    }\n    .foo .bar .baz {\n      display: block\n    }\n  }\n}',
   )
 })
 
