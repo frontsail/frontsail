@@ -8,7 +8,7 @@ import { Message } from './types'
 export class Spawn {
   protected options: SpawnOptions
 
-  protected process: ChildProcessWithoutNullStreams
+  public process: ChildProcessWithoutNullStreams
 
   get output$(): Observable<Message> {
     return this._output$.asObservable()
