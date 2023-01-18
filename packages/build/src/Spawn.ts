@@ -24,6 +24,7 @@ export class Spawn {
 
       // Default options
       cwd: undefined,
+      env: {},
       showOutput: false,
       outputPrefix: '',
     })
@@ -34,7 +35,7 @@ export class Spawn {
       shell: true,
       stdio: 'pipe',
       cwd: this.options.cwd,
-      env: { ...process.env, FORCE_COLOR: '1' },
+      env: { ...process.env, FORCE_COLOR: '1', ...this.options.env },
     })
 
     this.process.stdout.setEncoding('utf8')

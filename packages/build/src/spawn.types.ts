@@ -12,6 +12,13 @@ export interface SpawnOptions {
   cwd?: string | URL | undefined
 
   /**
+   * Environment key-value pairs.
+   *
+   * Defaults to `{}`.
+   */
+  env?: Record<string, string>
+
+  /**
    * Whether to stream the output to the console.
    *
    * Defaults to `false`.
