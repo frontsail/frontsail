@@ -1,5 +1,5 @@
 import fs from 'fs-extra'
-import fetch from 'node-fetch'
+import fetch from 'node-fetch/lib'
 import semver from 'semver'
 import { emptyLine, print } from './helpers'
 
