@@ -25,7 +25,7 @@
   },
   "devDependencies": {
     "lerna": "^5.5.1",
-    "nx": "^14.7.5",
+    "nx": "^13.0.0",
     "prettier": "^2.7.1"
   }
 }
