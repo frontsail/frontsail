@@ -40,6 +40,6 @@ export function codeFrame(
 
   console.log('')
   console.log(bgColor(' '.repeat(severity.length + 2)), pc.gray(`${path}:${location.start.line}`))
-  console.log(bgColor(` ${pc.black(uppercaseFirstLetter(severity))} `), pc.yellow(message))
+  console.log(bgColor(` ${pc.black(uppercaseFirstLetter(severity))} `), color(message))
   console.log(frame)
 }
