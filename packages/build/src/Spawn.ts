@@ -64,9 +64,15 @@ export class Spawn {
 
     this.unsubscribeAll$.pipe(takeUntil(subject$)).subscribe(() => {
       if (!subject$.closed) {
-        throw new Error(
-          `Process "${this.options.command}" closed without output matching pattern ${pattern}`,
+        console.log('')
+        console.log(
+          pc.bgRed(' Fatal '),
+          `Process "${this.options.command}" closed without output matching pattern ${pc.red(
+            pattern.toString(),
+          )}`,
         )
+
+        process.exit(1)
       }
     })
 
