@@ -1,6 +1,5 @@
 import { codeFrameColumns } from '@babel/code-frame'
-import fs from 'fs-extra'
-import path from 'path'
+import { uppercaseFirstLetter } from '@frontsail/utils'
 import pc from 'picocolors'
 import { Message } from './types'
 
@@ -21,24 +20,26 @@ export function log(message: Message): void {
 }
 
 export function codeFrame(
-  file: string,
-  start: [line: number, column: number],
-  end: [line: number, column: number],
-  severity: 'error' | 'warning',
+  message: string,
+  path: string,
+  code: string,
+  start: [line: number, column: number] | { line: number; column: number },
+  end: [line: number, column: number] | { line: number; column: number },
+  severity: 'error' | 'warn' | 'info',
 ): void {
-  if (fs.existsSync(file)) {
-    const filePath = path.resolve(path.relative(process.cwd(), file))
-    const code = fs.readFileSync(filePath, 'utf-8')
-    const color = severity === 'error' ? pc.red : pc.yellow
-    const frame = codeFrameColumns(code, {
-      start: { line: start[0], column: start[1] },
-      end: { line: end[0], column: end[1] },
-    })
-      .replace(/^( *\|\s*)(\^+)/gm, `$1${color('$2')}`)
-      .replace(/^(> *[0-9]*)( *\|)/gm, color('$1') + pc.gray('$2'))
-      .replace(/^( *[0-9]* *\|)/gm, pc.gray('$1'))
-
-    console.log(frame)
-    console.log(pc.gray(filePath))
+  const color = severity === 'error' ? pc.red : severity === 'warn' ? pc.yellow : pc.cyan
+  const bgColor = severity === 'error' ? pc.bgRed : severity === 'warn' ? pc.bgYellow : pc.bgCyan
+  const location = {
+    start: Array.isArray(start) ? { line: start[0], column: start[1] } : start,
+    end: Array.isArray(end) ? { line: end[0], column: end[1] } : end,
   }
+  const frame = codeFrameColumns(code, location)
+    .replace(/^( *\|\s*)(\^+)/gm, `$1${color('$2')}`)
+    .replace(/^(> *[0-9]*)( *\|)/gm, color('$1') + pc.gray('$2'))
+    .replace(/^( *[0-9]* *\|)/gm, pc.gray('$1'))
+
+  console.log('')
+  console.log(bgColor(' '.repeat(severity.length + 2)), pc.gray(`${path}:${location.start.line}`))
+  console.log(bgColor(` ${pc.black(uppercaseFirstLetter(severity))} `), pc.yellow(message))
+  console.log(frame)
 }

@@ -13,6 +13,7 @@ const baseOptions = {
   watch: process.argv.includes('--watch'),
   external: [
     '@babel/code-frame',
+    '@frontsail/utils',
     'child_process',
     'esbuild',
     'fs-extra',

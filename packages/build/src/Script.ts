@@ -472,12 +472,8 @@ export class Script {
     end?: [line: number, column: number],
   ): void {
     if (!this.options.silent) {
-      console.log('')
-      console.log(pc.bold(pc.red('Error:')), pc.red(text))
-
       if (file && start && end) {
-        codeFrame(file, start, end, 'error')
-        console.log('')
+        codeFrame(text, file, fs.readFileSync(file, 'utf-8'), start, end, 'error')
       }
     }
   }
@@ -489,12 +485,8 @@ export class Script {
     end?: [line: number, column: number],
   ): void {
     if (!this.options.silent) {
-      console.log('')
-      console.log(pc.bold(pc.yellow('Warning:')), pc.yellow(text))
-
       if (file && start && end) {
-        codeFrame(file, start, end, 'warning')
-        console.log('')
+        codeFrame(text, file, fs.readFileSync(file, 'utf-8'), start, end, 'warn')
       }
     }
   }
