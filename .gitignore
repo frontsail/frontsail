@@ -3,4 +3,5 @@ packages/*/bin/
 packages/*/dist/
 packages/*/types/
 .DS_Store
+lerna-debug.log
 package-lock.json
