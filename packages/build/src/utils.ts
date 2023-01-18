@@ -39,7 +39,10 @@ export function codeFrame(
     .replace(/^( *[0-9]* *\|)/gm, pc.gray('$1'))
 
   console.log('')
-  console.log(bgColor(' '.repeat(severity.length + 2)), pc.gray(`${path}:${location.start.line}`))
+  console.log(
+    bgColor(' '.repeat(severity.length + 2)),
+    pc.gray(`${path}:${location.start.line}:${location.start.column}`),
+  )
   console.log(bgColor(` ${pc.black(uppercaseFirstLetter(severity))} `), color(message))
   console.log(frame)
 }
