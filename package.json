@@ -24,7 +24,7 @@
     "node": ">=16.13.0"
   },
   "devDependencies": {
-    "lerna": "^5.5.1",
+    "lerna": "^4.0.0",
     "nx": "^13.0.0",
     "prettier": "^2.7.1"
   }
