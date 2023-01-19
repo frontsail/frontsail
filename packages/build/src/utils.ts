@@ -41,10 +41,10 @@ export function codeFrame(
 
   const output = [
     '',
-    bgColor(' '.repeat(severity.length + 2)),
-    pc.gray(`${path}:${location.start.line}:${location.start.column}`),
-    bgColor(` ${pc.black(uppercaseFirstLetter(severity))} `),
-    color(message),
+    bgColor(' '.repeat(severity.length + 2)) +
+      ' ' +
+      pc.gray(`${path}:${location.start.line}:${location.start.column}`),
+    bgColor(` ${pc.black(uppercaseFirstLetter(severity))} `) + ' ' + color(message),
     frame,
   ].join('\n')
 
