@@ -26,7 +26,8 @@ export function codeFrame(
   start: [line: number, column: number] | { line: number; column: number },
   end: [line: number, column: number] | { line: number; column: number },
   severity: 'error' | 'warn' | 'info',
-): void {
+  silent: boolean = false,
+): string {
   const color = severity === 'error' ? pc.red : severity === 'warn' ? pc.yellow : pc.cyan
   const bgColor = severity === 'error' ? pc.bgRed : severity === 'warn' ? pc.bgYellow : pc.bgCyan
   const location = {
@@ -38,8 +39,18 @@ export function codeFrame(
     .replace(/^(> *[0-9]*)( *\|)/gm, color('$1') + pc.gray('$2'))
     .replace(/^( *[0-9]* *\|)/gm, pc.gray('$1'))
 
-  console.log('')
-  console.log(bgColor(' '.repeat(severity.length + 2)), pc.gray(`${path}:${location.start.line}`))
-  console.log(bgColor(` ${pc.black(uppercaseFirstLetter(severity))} `), color(message))
-  console.log(frame)
+  const output = [
+    '',
+    bgColor(' '.repeat(severity.length + 2)),
+    pc.gray(`${path}:${location.start.line}`),
+    bgColor(` ${pc.black(uppercaseFirstLetter(severity))} `),
+    color(message),
+    frame,
+  ].join('\n')
+
+  if (!silent) {
+    console.log(output)
+  }
+
+  return output
 }
