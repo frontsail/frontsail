@@ -1,6 +1,6 @@
 {
   "name": "@frontsail/cli",
-  "version": "0.1.44",
+  "version": "0.1.45",
   "description": "Command line interface for managing FrontSail projects.",
   "type": "module",
   "main": "dist/index.cjs",
